@@ -1,25 +1,36 @@
-# Team 7 Lambda — SP2026 Midterm
-# Install with: pip install -r requirements.txt
+# GeoSentinel Terminal — VARTA
+# Team 7 Lambda | SP2026 Final Project
+# Install: pip install -r requirements.txt
+# Verified on macOS ARM64, Python 3.12
 
-# Core data
-pandas==2.2.2
-numpy==1.26.4
-pyarrow==14.0.2
-openpyxl==3.1.2
+# ── Frontend ──────────────────────────────────────────────────────────────────
+streamlit>=1.42.0
+plotly>=5.22.0
+folium>=0.16.0
+streamlit-folium>=0.22.0
 
-# Visualization
-matplotlib==3.8.4
-seaborn==0.13.2
-plotly==5.22.0
+# ── Data ──────────────────────────────────────────────────────────────────────
+polars>=0.20.0
+duckdb>=0.10.0
+pyarrow>=14.0.2
+numpy>=1.26.4
 
-# Data sources
-requests==2.32.2
-yfinance==0.2.66
-python-dotenv==0.21.0
+# ── Data Sources ──────────────────────────────────────────────────────────────
+yfinance>=0.2.66
+fredapi>=0.5.0
+requests>=2.32.2
+python-dotenv>=1.0.0
 
-# Country normalization (optional but recommended)
-pycountry==26.2.16
+# ── Machine Learning ──────────────────────────────────────────────────────────
+scikit-learn>=1.4.0
+xgboost>=2.0.0
+hmmlearn>=0.3.0
 
-# Notebook
-jupyter>=1.0.0
-ipykernel>=6.0.0
+# ── Kronos Foundation Model ───────────────────────────────────────────────────
+# Kronos-base (AAAI 2026, Tsinghua) — install separately:
+#   pip install git+https://github.com/amazon-science/chronos-forecasting.git
+# Requires: torch>=2.2.0 (MPS backend for Apple Silicon)
+torch>=2.2.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+pycountry>=26.2.16

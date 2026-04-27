@@ -1,50 +1,38 @@
-# Environment & secrets
+# Environment
 .env
-*.env
-
-# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 .Python
-*.egg-info/
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
+# Data — raw and processed are local only
+data/raw/
+data/processed/
+# data/demo/ is committed — required for cloud hosting (offline demo mode)
 
-# macOS
+# Outputs
+outputs/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS
 .DS_Store
-.AppleDouble
 
-# Raw data (large binary files — see data/raw/DOWNLOAD.md for sources)
-data/raw/**
-!data/raw/**/
-!data/raw/**/.gitkeep
-!data/raw/DOWNLOAD.md
+# Python packaging
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
 
-# Outputs — track charts and tables, ignore checkpoints
-!outputs/
-!outputs/**
+# Jupyter — clear outputs before committing
+.ipynb_checkpoints/
+# Never commit notebooks with cell outputs — clear them first:
+#   jupyter nbconvert --clear-output --inplace notebooks/*.ipynb
 
-# IDE
-.vscode/
-.idea/
-
-# LaTeX build artifacts
-*.aux
-*.log
-*.out
-*.toc
-*.synctex.gz
-*.fls
-*.fdb_latexmk
-
-# Claude internal
-.claude/
-
-# Misc project files (keep local, don't commit)
-*.docx
-*.pptx
-presentation_plan.md
-team_lambda_midterm_report.pdf
+# Models
+*.pkl
+*.joblib
