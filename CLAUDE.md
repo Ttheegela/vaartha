@@ -17,7 +17,7 @@ Validated across **14 distinct geopolitical shocks from 2010–2024**.
 > using GPR and Brent volatility, and shows that regime-conditional return patterns are persistent
 > and repeatable across 14 independent geopolitical events spanning 14 years."
 
-**Due dates:** Presentation May 4, 2026 · Full submission May 9, 2026
+**Due dates:** Presentation May 5, 2026 · Full submission May 9, 2026
 
 **Team:** Tarun Theegela (Ttheegela) · Sai Raunak Bidesi (ssb196) · Chaitanya Deogaonkar (cmd517) · Satwik Nadipelli (srn91)
 
@@ -190,5 +190,5 @@ Say exactly: "I don't have verified data on this. Please search and share the so
 | W1 | Apr 14–20 | config.py ✓ · fetchers · validators · loaders · demo mode confirmed offline |
 | W2 | Apr 21–27 | regime.py · signals.py · llm.py · kronos.py · all tabs wired |
 | W3 | Apr 28–May 4 | integration · demo freeze · dry run · report |
-| Presentation | May 4 | 15-20 min, ≤20 slides |
+| Presentation | May 5 | 15-20 min, ≤20 slides |
 | Submission | May 9 | Report (4+ pages) + code |

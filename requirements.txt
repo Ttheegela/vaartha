@@ -26,11 +26,16 @@ scikit-learn>=1.4.0
 xgboost>=2.0.0
 hmmlearn>=0.3.0
 
-# ── Kronos Foundation Model ───────────────────────────────────────────────────
-# Kronos-base (AAAI 2026, Tsinghua) — install separately:
-#   pip install git+https://github.com/amazon-science/chronos-forecasting.git
+# ── Kronos Foundation Model (shiyu-coder/Kronos, AAAI 2026) ──────────────────
+# NeoQuasar/Kronos-small — OHLCV decoder-only Transformer, 24.7M params
+# Clone separately:  git clone https://github.com/shiyu-coder/Kronos src/models/kronos_repo
 # Requires: torch>=2.2.0 (MPS backend for Apple Silicon)
 torch>=2.2.0
+transformers>=4.40.0
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 pycountry>=26.2.16
+pandas>=2.0.0          # transitive dep for yfinance — do not use directly in app code (use Polars)
+
+# ── Brokerage ─────────────────────────────────────────────────────────────────
+alpaca-py>=0.26.0

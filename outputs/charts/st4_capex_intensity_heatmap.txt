@@ -1,1 +1,0 @@
-Heatmap of CapEx intensity (capital expenditure as % of revenue) for 10 companies 2010-2022. Orange dividers separate sector groups (semiconductor, hyperscaler, energy, mining). Rising intensity post-2022 in semiconductor and hyperscaler firms reflects supply chain decoupling investment — building redundant capacity to reduce geopolitical exposure.

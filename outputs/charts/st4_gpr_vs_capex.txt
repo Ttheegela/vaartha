@@ -1,1 +1,0 @@
-Dual-axis chart: left axis shows average CapEx intensity for semiconductor firms (NVDA, INTC, AMD); right axis shows the GPR geopolitical risk index. CapEx intensity increases following GPR spikes with a 1-2 year lag, consistent with firms front-loading fabrication capacity investment in response to supply chain risk.

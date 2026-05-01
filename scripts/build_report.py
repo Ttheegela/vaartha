@@ -282,7 +282,7 @@ why_block(
 why_block(
     "Kronos / Chronos T5-base",
     "Zero-shot probabilistic forecasting: no per-asset training, no fine-tuning, no risk of overfitting to historical patterns.",
-    "Amazon's foundation model (AAAI 2026) pre-trained on a large corpus of time series. Takes up to 512 days of price history "
+    "Amazon's foundation model (ICML 2024, Ansari et al.) pre-trained on a large corpus of time series. Takes up to 512 days of price history "
     "and outputs 20 Monte Carlo sample paths for 21 future days. We take the mean as the point forecast and "
     "10th/90th percentiles as the 80% confidence interval. Runs on Apple MPS backend."
 )

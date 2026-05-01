@@ -75,7 +75,11 @@ def load_gdelt(demo_mode: bool = True) -> pl.DataFrame:
         if not path.exists():
             log.warning("Demo gdelt CSV not found — run scripts/build_demo_bundle.py first")
             return pl.DataFrame()
-        return pl.read_csv(path, try_parse_dates=True)
+        df = pl.read_csv(path, try_parse_dates=True)
+        # Truncate datetime to date so string-based filtering works consistently
+        if "date" in df.columns and df["date"].dtype != pl.Date:
+            df = df.with_columns(pl.col("date").cast(pl.Date))
+        return df
     path = DATA_PROC / "gdelt.parquet"
     if not path.exists():
         log.warning("Processed gdelt.parquet not found")
@@ -169,9 +173,9 @@ def load_kronos(demo_mode: bool = True) -> pl.DataFrame:
         df = load_kronos(demo_mode=True)
     """
     if demo_mode:
-        path = DATA_DEMO / "kronos.csv"
+        path = DATA_DEMO / "kronos_forecasts.csv"
         if not path.exists():
-            log.warning("Demo kronos.csv not found — run scripts/build_demo_bundle.py first")
+            log.warning("Demo kronos_forecasts.csv not found — run scripts/build_demo_bundle.py first")
             return pl.DataFrame()
         return pl.read_csv(path, try_parse_dates=True)
     path = DATA_PROC / "kronos_forecasts.parquet"

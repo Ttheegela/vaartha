@@ -1,1 +1,0 @@
-Sankey diagram maps the top 8 producer countries to the top 6 critical minerals by production volume (2022). Link width represents production tonnage, revealing which countries dominate multiple mineral supply chains simultaneously and creating compounded geopolitical exposure for technology supply chains.

@@ -36,3 +36,9 @@ env/
 # Models
 *.pkl
 *.joblib
+
+# Kronos — cloned separately (see README setup step)
+src/models/kronos_repo/
+
+# Claude Code session memory — local only
+.claude/

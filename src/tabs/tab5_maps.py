@@ -8,7 +8,7 @@ Display code only — all data access goes through loaders.py.
 
 import streamlit as st
 import folium
-from folium.plugins import PolyLineTextPath
+
 from streamlit_folium import st_folium
 
 

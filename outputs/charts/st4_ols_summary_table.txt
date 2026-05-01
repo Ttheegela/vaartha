@@ -1,1 +1,0 @@
-Descriptive OLS table showing the association between annual GPR and CapEx intensity by sector. Positive GPR coefficients in semiconductor and hyperscaler sectors confirm that heightened geopolitical risk is associated with increased capital investment intensity, consistent with firms building redundant capacity to mitigate supply chain exposure.

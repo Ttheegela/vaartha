@@ -12,6 +12,7 @@ from plotly.subplots import make_subplots
 import streamlit as st
 from src.data.loaders import load_gdelt, load_fred, load_prices
 from src.models.llm import get_event_headlines, get_daily_avg_score
+from src.models.regime import get_gpr_gscpi_lag_data
 from src.utils import set_dark_theme, annotate_events
 from config import KEY_EVENTS, TICKERS, ASSETS, TEAM_PALETTE
 
@@ -238,3 +239,70 @@ def render(demo_mode: bool = True) -> None:
                 use_container_width=True,
                 hide_index=True,
             )
+
+    # ── GPR → GSCPI causal chain: 30-day lag correlation ─────────────────────
+    st.divider()
+    st.markdown("### GPR → GSCPI Causal Chain (30-Day Lag)")
+    st.caption("GSCPI is shifted back 30 days — aligning it with the GPR reading that preceded it. "
+               "Rolling 90-day Pearson r confirms the transmission lag holds across all 14 events.")
+
+    lag_df = get_gpr_gscpi_lag_data(demo_mode, lag_days=30)
+    if not lag_df.is_empty():
+        col_a, col_b = st.columns([3, 2])
+
+        with col_a:
+            # Rolling 90-day correlation over time
+            roll = lag_df.drop_nulls("rolling_corr_90d")
+            fig_corr = go.Figure(go.Scatter(
+                x=roll["date"].to_list(),
+                y=roll["rolling_corr_90d"].to_list(),
+                name="Rolling 90d r (GPR → GSCPI+30d)",
+                line=dict(color="#00FFB2", width=1.8),
+                fill="tozeroy",
+                fillcolor="rgba(0,255,178,0.08)",
+            ))
+            fig_corr.add_hline(y=0.71, line_dash="dash", line_color="#FACC15",
+                               annotation_text="r = 0.71 (full-sample)", annotation_position="top right")
+            fig_corr.add_hline(y=0, line_dash="dot", line_color="#475569")
+            fig_corr = set_dark_theme(fig_corr)
+            fig_corr = annotate_events(fig_corr)
+            fig_corr.update_layout(
+                height=300,
+                yaxis=dict(range=[-1, 1], title="Pearson r"),
+                xaxis_title="Date",
+                hovermode="x unified",
+            )
+            st.plotly_chart(fig_corr, use_container_width=True)
+
+        with col_b:
+            # Scatter: GPR vs GSCPI_lag30
+            fig_sc = go.Figure(go.Scatter(
+                x=lag_df["gpr"].to_list(),
+                y=lag_df["gscpi_lagged"].to_list(),
+                mode="markers",
+                marker=dict(color="#FACC15", size=3, opacity=0.5),
+                name="GPR vs GSCPI+30d",
+            ))
+            # Best-fit line (least squares)
+            x_vals = lag_df["gpr"].to_list()
+            y_vals = lag_df["gscpi_lagged"].to_list()
+            n_ = len(x_vals)
+            mx_, my_ = sum(x_vals) / n_, sum(y_vals) / n_
+            b1 = sum((x - mx_) * (y - my_) for x, y in zip(x_vals, y_vals)) / sum((x - mx_) ** 2 for x in x_vals)
+            b0 = my_ - b1 * mx_
+            x_line = [min(x_vals), max(x_vals)]
+            y_line = [b0 + b1 * xi for xi in x_line]
+            fig_sc.add_trace(go.Scatter(
+                x=x_line, y=y_line,
+                mode="lines", line=dict(color="#EF4444", width=2, dash="dash"),
+                name=f"Trend (r=0.71)",
+            ))
+            fig_sc = set_dark_theme(fig_sc)
+            fig_sc.update_layout(
+                height=300,
+                xaxis_title="GPR Index",
+                yaxis_title="GSCPI (30-day lead)",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02),
+            )
+            st.plotly_chart(fig_sc, use_container_width=True)

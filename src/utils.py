@@ -5,7 +5,7 @@ Import from here — never reimplement.
 """
 
 import logging
-import pandas as pd
+import datetime
 import polars as pl
 import plotly.graph_objects as go
 from config import TEAM_PALETTE, KEY_EVENTS
@@ -56,7 +56,7 @@ def annotate_events(fig: go.Figure, events: list[tuple] | None = None) -> go.Fig
         events = KEY_EVENTS
     for date_str, label in events:
         fig.add_vline(
-            x=pd.Timestamp(date_str).timestamp() * 1000,  # milliseconds for Plotly datetime axis
+            x=datetime.datetime.fromisoformat(date_str).timestamp() * 1000,  # milliseconds for Plotly datetime axis
             line_dash="dash",
             line_color="#475569",
             annotation_text=label,

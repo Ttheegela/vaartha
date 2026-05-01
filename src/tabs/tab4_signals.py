@@ -9,8 +9,8 @@ import polars as pl
 import plotly.graph_objects as go
 import streamlit as st
 from src.data.loaders import load_prices, load_regimes
-from src.models.signals import load_signals, load_oos_metrics, get_all_tickers_oos_summary, get_ticker_oos_summary
-from src.models.kronos import load_kronos, get_ticker_forecast, get_forecast_summary
+from src.models.signals import load_oos_metrics, get_all_tickers_oos_summary, get_ticker_oos_summary
+from src.models.kronos import get_ticker_forecast, get_forecast_summary
 from src.utils import set_dark_theme, annotate_events
 from config import TICKERS, ASSETS
 

@@ -1,6 +1,0 @@
-Sector,N Obs,Intercept,Coef (GPR),R²
-All Sectors,239,0.4084,-0.001824,0.007
-Semiconductor,72,-0.0507,0.001856,0.069
-Hyperscaler,45,0.2303,-0.000847,0.018
-Energy,97,0.7536,-0.004418,0.02
-Mining,25,0.5378,-0.002233,0.097

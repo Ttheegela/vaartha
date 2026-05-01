@@ -1,1 +1,0 @@
-Choropleth shows each country share of global lithium production in 2022. Geographic concentration in a handful of countries quantifies single-point-of-failure supply risk and motivates the HHI analysis in Chart 1.

@@ -23,9 +23,12 @@ for p in [DATA_RAW, DATA_PROC, DATA_DEMO, CHARTS, TABLES]:
     p.mkdir(parents=True, exist_ok=True)
 
 # ── API Keys ──────────────────────────────────────────────────────────────────
-FRED_API_KEY   = os.getenv("FRED_API_KEY", "")
-TIINGO_API_KEY = os.getenv("TIINGO_API_KEY", "")
-FINNHUB_API_KEY= os.getenv("FINNHUB_API_KEY", "")
+FRED_API_KEY      = os.getenv("FRED_API_KEY", "")
+TIINGO_API_KEY    = os.getenv("TIINGO_API_KEY", "")
+FINNHUB_API_KEY   = os.getenv("FINNHUB_API_KEY", "")
+ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY", "")
+ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "")
+ALPACA_PAPER      = True   # hardcoded — never set to False accidentally
 
 # ── Data Windows (Locked) ─────────────────────────────────────────────────────
 # Aug 2010: earliest date all 12 tickers have clean data (REMX, LIT, BNO inception)
@@ -81,10 +84,13 @@ XGB_MAX_DEPTH      = 4
 XGB_LEARNING_RATE  = 0.05
 XGB_SUBSAMPLE      = 0.8
 
-# ── Kronos Model ─────────────────────────────────────────────────────────────
-KRONOS_MODEL_ID    = "amazon/chronos-t5-base"  # Kronos-base via HuggingFace
-KRONOS_CONTEXT_LEN = 512
-KRONOS_DEVICE      = "mps"   # Apple Silicon; falls back to cpu
+# ── Kronos Model (shiyu-coder/Kronos — financial OHLCV foundation model) ──────
+KRONOS_MODEL_ID      = "NeoQuasar/Kronos-small"          # 24.7M param decoder Transformer
+KRONOS_TOKENIZER_ID  = "NeoQuasar/Kronos-Tokenizer-base" # Specialized OHLCV tokenizer
+KRONOS_CONTEXT_LEN   = 512   # max context window (trading bars)
+KRONOS_PRED_LEN      = 21    # 21 trading days ≈ 1 calendar month forecast
+KRONOS_SAMPLE_COUNT  = 1     # 1 sample keeps inference fast (~3s); increase to 3 for smoother output
+KRONOS_DEVICE        = "mps" # Apple Silicon; auto-falls back to cpu
 
 # ── Ollama LLM ────────────────────────────────────────────────────────────────
 OLLAMA_HOST        = "http://localhost:11434"
@@ -140,3 +146,54 @@ KEY_EVENTS = [
 
 # ── Demo Mode ─────────────────────────────────────────────────────────────────
 DEMO_MODE = True   # default — switches to live fetch when False
+
+# ── Per-Asset GeoRisk Sensitivity ─────────────────────────────────────────────
+GEORISK_SENSITIVITY = {
+    "TSM":  1.40,  # Taiwan Strait — highest
+    "REMX": 1.35,  # Rare earths — China HHI 0.71
+    "LIT":  1.30,  # Lithium — Chile/China triangle
+    "ALB":  1.25,  # Lithium processor — upstream exposure
+    "FCX":  1.20,  # Copper — Chile/DRC choke
+    "BNO":  1.20,  # Brent — Hormuz / Red Sea direct
+    "NVDA": 1.15,  # AI hardware — TSM dependency
+    "AMD":  1.10,  # Semiconductor — partial TSM dependency
+    "XOM":  1.10,  # Energy — oil supply chain
+    "CVX":  1.05,  # Energy — diversified
+    "SPY":  0.70,  # Benchmark — muted
+    "GLD":  0.55,  # Safe haven — inverse geo-risk
+}
+
+# ── Regime Target Weights (for portfolio optimizer) ───────────────────────────
+REGIME_TARGET_WEIGHTS = {
+    "Crisis": {
+        "GLD":  0.25, "BNO":  0.12, "XOM":  0.10, "CVX":  0.08,
+        "SPY":  0.15, "FCX":  0.08, "ALB":  0.06, "LIT":  0.06,
+        "REMX": 0.04, "AMD":  0.02, "NVDA": 0.02, "TSM":  0.02,
+    },
+    "Normal": {
+        "NVDA": 0.18, "TSM":  0.15, "AMD":  0.10, "REMX": 0.12,
+        "LIT":  0.10, "ALB":  0.08, "FCX":  0.08, "SPY":  0.10,
+        "GLD":  0.04, "BNO":  0.02, "XOM":  0.02, "CVX":  0.01,
+    },
+}
+
+# ── Portfolio Analytics ────────────────────────────────────────────────────────
+RISK_FREE_RATE        = 0.045   # 4.5% — approximate 3-month T-bill
+VAR_CONFIDENCE        = 0.95
+N_FRONTIER_PORTFOLIOS = 500
+
+# ── Ticker → News Query Terms ─────────────────────────────────────────────────
+TICKER_QUERY_TERMS = {
+    "TSM":  ["TSMC", "Taiwan Semiconductor", "Taiwan Strait"],
+    "NVDA": ["NVIDIA", "Blackwell", "Jensen Huang", "H100"],
+    "AMD":  ["AMD", "Advanced Micro Devices", "Lisa Su"],
+    "GLD":  ["gold", "safe haven", "gold price"],
+    "REMX": ["rare earth", "REE", "critical minerals"],
+    "LIT":  ["lithium", "battery metals", "EV battery"],
+    "ALB":  ["Albemarle", "lithium processing"],
+    "FCX":  ["Freeport", "copper", "copper price"],
+    "BNO":  ["Brent crude", "oil price", "Hormuz", "OPEC"],
+    "XOM":  ["ExxonMobil", "Exxon", "oil major"],
+    "CVX":  ["Chevron", "oil major"],
+    "SPY":  ["S&P 500", "market rally", "equity market"],
+}

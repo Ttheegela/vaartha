@@ -1,1 +1,0 @@
-Lower-triangle Pearson correlation matrix across key annual indicators from all four subtopics (2010-2022). Strong positive GPR-GSCPI correlation confirms the ST2→ST1 transmission pathway; GPR-semiconductor CapEx positive correlation validates the ST2→ST4 response; renewables share negative correlation with avg HHI reflects the compounding ST3→ST1 demand pressure.

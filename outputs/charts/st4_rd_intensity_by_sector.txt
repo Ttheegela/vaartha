@@ -1,1 +1,0 @@
-Grouped bar chart of average R&D intensity (R&D expense / revenue) by sector and year. Semiconductor firms maintain structurally higher R&D intensity than energy or mining; the post-2022 increase (post-CHIPS Act) confirms that geopolitical supply risk is channeled into R&D as firms develop alternative materials and domestic fabrication capability.
