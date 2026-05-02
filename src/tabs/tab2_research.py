@@ -480,7 +480,14 @@ def render(demo_mode: bool = True) -> None:
                 # Live model not available (cloud / no repo) — use pre-computed demo forecasts
                 _demo_fc = _get_demo_forecast(ticker, demo_mode=True)
                 if not _demo_fc.is_empty():
-                    kronos_fc = _demo_fc
+                    # Demo CSV uses forecast_date; chart expects date + OHLC columns
+                    kronos_fc = _demo_fc.rename({"forecast_date": "date"}).with_columns([
+                        pl.col("mean").alias("close"),
+                        pl.col("mean").alias("open"),
+                        pl.col("high_80").alias("high"),
+                        pl.col("low_80").alias("low"),
+                        pl.lit(0).alias("volume"),
+                    ])
                     st.caption("Kronos forecast: pre-computed (live model unavailable in this environment)")
             elif (
                 _k_cache_key in st.session_state
