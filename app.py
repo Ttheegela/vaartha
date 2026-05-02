@@ -16,10 +16,13 @@ st.set_page_config(
 )
 
 # ── Password Gate ─────────────────────────────────────────────────────────────
-# Active only when APP_PASSWORD is set in .streamlit/secrets.toml (or the
-# Streamlit Cloud secrets dashboard). Skipped entirely in local dev when the
-# key is absent — no friction on your own machine.
-_app_pw = st.secrets.get("APP_PASSWORD", "")
+# Active only when APP_PASSWORD is set — works on both Streamlit Cloud
+# (secrets.toml) and Railway (environment variables). Skipped locally when absent.
+import os as _os
+try:
+    _app_pw = st.secrets.get("APP_PASSWORD", "") or _os.environ.get("APP_PASSWORD", "")
+except Exception:
+    _app_pw = _os.environ.get("APP_PASSWORD", "")
 if _app_pw and not st.session_state.get("_authenticated"):
     st.markdown("""
     <div style='max-width:360px;margin:120px auto 0 auto;
