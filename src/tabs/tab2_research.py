@@ -489,10 +489,11 @@ def render(demo_mode: bool = True) -> None:
                     # Scale demo returns onto today's price so bars sit at the right level
                     _scale = _today_close / _demo_base if _demo_base > 0 else 1.0
                     _means  = [v * _scale for v in _demo_fc["mean"].to_list()]
-                    _highs  = [v * _scale for v in _demo_fc["high_80"].to_list()]
-                    _lows   = [v * _scale for v in _demo_fc["low_80"].to_list()]
                     # Chain opens to previous close so candlestick bodies are visible
                     _opens  = [_today_close] + _means[:-1]
+                    # Use tight intraday range (±0.4% of close) — CI bands are too wide for wicks
+                    _highs  = [max(o, c) * 1.004 for o, c in zip(_opens, _means)]
+                    _lows   = [min(o, c) * 0.996 for o, c in zip(_opens, _means)]
                     kronos_fc = pl.DataFrame({
                         "date":   _future,
                         "open":   _opens,
