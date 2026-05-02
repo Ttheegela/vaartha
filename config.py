@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ── Root Paths ────────────────────────────────────────────────────────────────
 ROOT       = Path(__file__).resolve().parent
