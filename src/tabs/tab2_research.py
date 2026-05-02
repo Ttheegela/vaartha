@@ -480,8 +480,13 @@ def render(demo_mode: bool = True) -> None:
                 # Live model not available (cloud / no repo) — use pre-computed demo forecasts
                 _demo_fc = _get_demo_forecast(ticker, demo_mode=True)
                 if not _demo_fc.is_empty():
-                    # Demo CSV uses forecast_date; chart expects date + OHLC columns
-                    kronos_fc = _demo_fc.rename({"forecast_date": "date"}).with_columns([
+                    import pandas as _pd
+                    from datetime import date as _date
+                    # Shift forecast dates to start from today so they appear on the chart
+                    _n = len(_demo_fc)
+                    _future = list(_pd.bdate_range(start=_date.today(), periods=_n).date)
+                    kronos_fc = _demo_fc.with_columns([
+                        pl.Series("date", _future),
                         pl.col("mean").alias("close"),
                         pl.col("mean").alias("open"),
                         pl.col("high_80").alias("high"),
