@@ -482,16 +482,17 @@ def render(demo_mode: bool = True) -> None:
                 if not _demo_fc.is_empty():
                     import pandas as _pd
                     from datetime import date as _date
-                    # Shift forecast dates to start from today
-                    _n = len(_demo_fc)
-                    _future = list(_pd.bdate_range(start=_date.today(), periods=_n).date)
-                    _means  = _demo_fc["mean"].to_list()
-                    _highs  = _demo_fc["high_80"].to_list()
-                    _lows   = _demo_fc["low_80"].to_list()
-                    # Chain bars: open = previous close so candlestick bodies are visible
-                    # Anchor first open to last known close from price history
-                    _anchor = float(hist.sort("date")["close"][-1]) if not hist.is_empty() else _means[0]
-                    _opens  = [_anchor] + _means[:-1]
+                    _n          = len(_demo_fc)
+                    _future     = list(_pd.bdate_range(start=_date.today(), periods=_n).date)
+                    _demo_base  = float(_demo_fc["last_close"][0])
+                    _today_close = float(hist.sort("date")["close"][-1]) if not hist.is_empty() else _demo_base
+                    # Scale demo returns onto today's price so bars sit at the right level
+                    _scale = _today_close / _demo_base if _demo_base > 0 else 1.0
+                    _means  = [v * _scale for v in _demo_fc["mean"].to_list()]
+                    _highs  = [v * _scale for v in _demo_fc["high_80"].to_list()]
+                    _lows   = [v * _scale for v in _demo_fc["low_80"].to_list()]
+                    # Chain opens to previous close so candlestick bodies are visible
+                    _opens  = [_today_close] + _means[:-1]
                     kronos_fc = pl.DataFrame({
                         "date":   _future,
                         "open":   _opens,
