@@ -19,6 +19,9 @@ from src.utils import log
 from config import (
     ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_PAPER,
     FINNHUB_API_KEY, TICKERS, TICKER_QUERY_TERMS,
+    EDGAR_COMPANY_TICKERS_URL, EDGAR_SUBMISSIONS_URL, EDGAR_OPERATING_TICKERS,
+    CONGRESS_HOUSE_URL, CONGRESS_SENATE_URL,
+    GOOGLE_TRENDS_KEYWORDS,
 )
 
 
@@ -124,7 +127,7 @@ def fetch_alpaca_account() -> dict:
 
 # ── Alpaca News ───────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900)
+@st.cache_data(ttl=120)
 def fetch_alpaca_news(tickers: list[str] | None = None, limit: int = 50) -> pl.DataFrame:
     """
     Fetch latest news from Alpaca News API filtered to given tickers.
@@ -340,7 +343,7 @@ def fetch_polymarket_geo(max_markets: int = 10) -> pl.DataFrame:
 
 # ── Finnhub News ─────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=900)
+@st.cache_data(ttl=120)
 def fetch_finnhub_news(tickers: list[str] | None = None, limit: int = 50) -> pl.DataFrame:
     """
     Fetch company news from Finnhub API for given tickers.
@@ -486,4 +489,434 @@ def fetch_recent_orders(limit: int = 20) -> pl.DataFrame:
         return pl.DataFrame(rows)
     except Exception as e:
         log.error(f"Fetch orders failed: {e}")
+        return pl.DataFrame()
+
+
+# ── WSJ / MarketWatch RSS ─────────────────────────────────────────────────────
+
+# WSJ tried first (works when subscriber cookies are present server-side).
+# MarketWatch (same Dow Jones) is the public fallback — always accessible.
+_WSJ_RSS_FEEDS = [
+    ("WSJ",         "https://feeds.a.newsfeed.wsj.com/wsj/xml/rss/3_7455.xml"),
+    ("WSJ",         "https://feeds.a.newsfeed.wsj.com/wsj/xml/rss/3_7014.xml"),
+    ("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
+    ("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"),
+]
+
+
+@st.cache_data(ttl=120)
+def fetch_wsj_rss() -> pl.DataFrame:
+    """
+    Fetch WSJ headlines via RSS, falling back to MarketWatch (Dow Jones) if blocked.
+    No API key required. Uses stdlib xml + requests only.
+    Cached for 15 minutes.
+
+    Returns:
+        DataFrame with columns: headline, summary, url, source, published_at, tickers
+    Example:
+        df = fetch_wsj_rss()
+    """
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+
+    rows: list[dict] = []
+
+    for src_name, rss_url in _WSJ_RSS_FEEDS:
+        if rows:
+            break
+        try:
+            resp = requests.get(
+                rss_url,
+                timeout=8,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; GeoSentinel/1.0)"},
+            )
+            if resp.status_code != 200:
+                continue
+            root = ET.fromstring(resp.content)
+            items = root.findall(".//item")
+            if not items:
+                continue
+
+            for item in items[:30]:
+                title   = (item.findtext("title") or "").strip()
+                link    = (item.findtext("link")  or "").strip()
+                desc    = (item.findtext("description") or "").strip()
+                pubdate = (item.findtext("pubDate") or "").strip()
+
+                if not title:
+                    continue
+
+                pub_str = ""
+                if pubdate:
+                    try:
+                        pub_str = parsedate_to_datetime(pubdate).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    except Exception:
+                        pass
+
+                rows.append({
+                    "headline":     title,
+                    "summary":      desc[:300],
+                    "url":          link,
+                    "source":       src_name,
+                    "published_at": pub_str,
+                    "tickers":      "",
+                })
+
+        except Exception as e:
+            log.warning(f"WSJ/MarketWatch RSS fetch failed ({rss_url}): {e}")
+            continue
+
+    if not rows:
+        return pl.DataFrame()
+
+    df = pl.DataFrame(rows)
+    try:
+        df = df.with_columns(
+            pl.col("published_at").str.to_datetime(
+                format="%Y-%m-%dT%H:%M:%SZ", strict=False,
+                time_unit="us", time_zone="UTC",
+            )
+        )
+    except Exception:
+        pass
+    return df
+
+
+# ── SEC EDGAR 8-K Filings ─────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600)
+def _fetch_edgar_cik_map() -> dict[str, str]:
+    """
+    Fetch EDGAR's canonical ticker → padded CIK mapping (cached 1 hour).
+    Returns dict: ticker → zero-padded 10-digit CIK string.
+    """
+    try:
+        resp = requests.get(
+            EDGAR_COMPANY_TICKERS_URL,
+            timeout=10,
+            headers={"User-Agent": "GeoSentinel/1.0 contact@varta.dev"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            v["ticker"]: str(v["cik_str"]).zfill(10)
+            for v in data.values()
+        }
+    except Exception as e:
+        log.warning(f"EDGAR CIK map fetch failed: {e}")
+        return {}
+
+
+@st.cache_data(ttl=300)
+def fetch_edgar_filings(tickers: list[str] | None = None, max_per_ticker: int = 5) -> pl.DataFrame:
+    """
+    Fetch recent 8-K (material event) filings from SEC EDGAR for VARTA tickers.
+    No API key required — uses public data.sec.gov endpoints.
+    Cached for 5 minutes.
+
+    Args:
+        tickers: Tickers to query. Defaults to EDGAR_OPERATING_TICKERS (ETFs excluded).
+        max_per_ticker: Max 8-K filings to return per ticker (default 5).
+    Returns:
+        DataFrame with columns: ticker, company, form_type, filed_at, description, url
+    Example:
+        df = fetch_edgar_filings()
+    """
+    import json as _json
+
+    symbols = tickers or EDGAR_OPERATING_TICKERS
+    cik_map = _fetch_edgar_cik_map()
+
+    rows: list[dict] = []
+
+    for tkr in symbols:
+        cik = cik_map.get(tkr)
+        if not cik:
+            log.warning(f"EDGAR: no CIK found for {tkr}")
+            continue
+
+        try:
+            url = EDGAR_SUBMISSIONS_URL.format(cik=cik)
+            resp = requests.get(
+                url,
+                timeout=10,
+                headers={"User-Agent": "GeoSentinel/1.0 contact@varta.dev"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            company_name = data.get("name", tkr)
+            recent = data.get("filings", {}).get("recent", {})
+
+            forms       = recent.get("form", [])
+            filed_dates = recent.get("filingDate", [])
+            accessions  = recent.get("accessionNumber", [])
+            descriptions = recent.get("items", [])  # 8-K item numbers e.g. "2.02,9.01"
+
+            count = 0
+            for form, filed, acc, desc in zip(forms, filed_dates, accessions, descriptions):
+                if form != "8-K":
+                    continue
+                if count >= max_per_ticker:
+                    break
+
+                # Build EDGAR filing URL from accession number
+                acc_clean = acc.replace("-", "")
+                filing_url = (
+                    f"https://www.sec.gov/Archives/edgar/data/"
+                    f"{int(cik)}/{acc_clean}/{acc}.txt"
+                )
+                # Simpler viewer URL
+                viewer_url = (
+                    f"https://www.sec.gov/cgi-bin/browse-edgar?"
+                    f"action=getcompany&CIK={cik}&type=8-K&dateb=&owner=include&count=10"
+                )
+
+                rows.append({
+                    "ticker":      tkr,
+                    "company":     company_name,
+                    "form_type":   form,
+                    "filed_at":    filed,
+                    "description": f"Items: {desc}" if desc else "8-K filing",
+                    "url":         viewer_url,
+                })
+                count += 1
+
+        except Exception as e:
+            log.warning(f"EDGAR filings fetch failed for {tkr}: {e}")
+            continue
+
+    if not rows:
+        return pl.DataFrame()
+
+    return (
+        pl.DataFrame(rows)
+        .with_columns(pl.col("filed_at").str.to_date(format="%Y-%m-%d", strict=False))
+        .sort("filed_at", descending=True)
+    )
+
+
+# ── Congress Trading ──────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600)
+def fetch_congress_trades(tickers: list[str] | None = None) -> pl.DataFrame:
+    """
+    Fetch congressional stock trades from House and Senate Stock Watcher
+    (public S3 endpoints — no API key required).
+    Filters to VARTA tickers only. Cached for 1 hour (data updates daily).
+
+    Args:
+        tickers: Tickers to filter by. Defaults to all VARTA TICKERS.
+    Returns:
+        DataFrame with columns: chamber, representative, ticker, transaction_date,
+                                trade_type, amount_range, asset_description
+    Example:
+        df = fetch_congress_trades()
+    """
+    import json as _json
+
+    symbols = set(tickers or TICKERS)
+    rows: list[dict] = []
+
+    # ── House of Representatives ──────────────────────────────────────────────
+    try:
+        resp = requests.get(CONGRESS_HOUSE_URL, timeout=15)
+        resp.raise_for_status()
+        house_data = resp.json()
+
+        for trade in house_data:
+            tkr = (trade.get("ticker") or "").strip().upper()
+            if tkr not in symbols:
+                continue
+            rows.append({
+                "chamber":           "House",
+                "representative":    trade.get("representative", ""),
+                "ticker":            tkr,
+                "transaction_date":  trade.get("transaction_date", ""),
+                "trade_type":        trade.get("type", ""),
+                "amount_range":      trade.get("amount", ""),
+                "asset_description": trade.get("asset_description", ""),
+            })
+    except Exception as e:
+        log.warning(f"Congress House trades fetch failed: {e}")
+
+    # ── Senate ────────────────────────────────────────────────────────────────
+    try:
+        resp = requests.get(CONGRESS_SENATE_URL, timeout=15)
+        resp.raise_for_status()
+        senate_data = resp.json()
+
+        # Senate Stock Watcher may return a list or a dict keyed by senator
+        if isinstance(senate_data, dict):
+            trades_list = []
+            for senator, trades in senate_data.items():
+                if isinstance(trades, list):
+                    for t in trades:
+                        t["senator"] = senator
+                    trades_list.extend(trades)
+            senate_data = trades_list
+
+        for trade in senate_data:
+            # Handle both "ticker" and "asset_description" formats
+            tkr = (trade.get("ticker") or "").strip().upper()
+            if not tkr:
+                # Try to extract ticker from asset_description
+                desc = trade.get("asset_description", "")
+                for sym in symbols:
+                    if sym in desc:
+                        tkr = sym
+                        break
+            if tkr not in symbols:
+                continue
+            rows.append({
+                "chamber":           "Senate",
+                "representative":    trade.get("senator", trade.get("first_name", "") + " " + trade.get("last_name", "")),
+                "ticker":            tkr,
+                "transaction_date":  trade.get("transaction_date", trade.get("date", "")),
+                "trade_type":        trade.get("type", trade.get("transaction_type", "")),
+                "amount_range":      trade.get("amount", ""),
+                "asset_description": trade.get("asset_description", ""),
+            })
+    except Exception as e:
+        log.warning(f"Congress Senate trades fetch failed: {e}")
+
+    if not rows:
+        return pl.DataFrame()
+
+    df = pl.DataFrame(rows)
+    try:
+        df = df.with_columns(
+            pl.col("transaction_date").str.to_date(
+                format="%m/%d/%Y", strict=False
+            ).alias("transaction_date")
+        )
+    except Exception:
+        pass
+
+    return df.sort("transaction_date", descending=True)
+
+
+# ── Google Trends ─────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=21600)   # 6-hour cache — trends are slow-moving signals
+def fetch_google_trends(keywords: list[str] | None = None) -> pl.DataFrame:
+    """
+    Fetch Google Trends interest-over-time for VARTA keywords via pytrends.
+    Covers 90 days to capture regime-level signal movements.
+    Cached for 6 hours (trends are slow-moving, rate limit protection).
+
+    Falls back to empty DataFrame gracefully if pytrends is unavailable
+    or Google rate-limits the request.
+
+    Args:
+        keywords: Search terms to query. Defaults to GOOGLE_TRENDS_KEYWORDS from config.
+    Returns:
+        DataFrame with columns: date + one column per keyword (0-100 interest index)
+    Example:
+        df = fetch_google_trends()
+        # columns: date, rare earth, semiconductor shortage, geopolitical risk, ...
+    """
+    terms = keywords or GOOGLE_TRENDS_KEYWORDS
+
+    try:
+        from pytrends.request import TrendReq  # type: ignore[import]
+    except ImportError:
+        log.warning("pytrends not installed — skipping Google Trends fetch. "
+                    "Install with: pip install pytrends")
+        return pl.DataFrame()
+
+    try:
+        pt = TrendReq(hl="en-US", tz=0, timeout=(5, 15), retries=1, backoff_factor=0.5)
+
+        # Google Trends allows max 5 keywords per request
+        batches = [terms[i:i + 5] for i in range(0, len(terms), 5)]
+        combined: pl.DataFrame | None = None
+
+        for batch in batches:
+            pt.build_payload(batch, timeframe="today 3-m", geo="")
+            raw = pt.interest_over_time()
+
+            if raw.empty:
+                continue
+
+            # Drop the isPartial column if present
+            if "isPartial" in raw.columns:
+                raw = raw.drop(columns=["isPartial"])
+
+            # Convert pandas → Polars (pytrends returns pandas)
+            batch_df = pl.from_pandas(raw.reset_index())
+            batch_df = batch_df.rename({"date": "date"})
+
+            if combined is None:
+                combined = batch_df
+            else:
+                combined = (
+                    combined.join(batch_df, on="date", how="full", coalesce=True)
+                )
+
+        if combined is None or combined.is_empty():
+            return pl.DataFrame()
+
+        return combined.sort("date", descending=True)
+
+    except Exception as e:
+        log.warning(f"Google Trends fetch failed: {e}")
+        return pl.DataFrame()
+
+
+# ── Caldara-Iacoviello GPR Index ──────────────────────────────────────────────
+
+@st.cache_data(ttl=86400)   # 24hr cache — GPR updates monthly
+def fetch_gpr_index() -> pl.DataFrame:
+    """
+    Fetch the Caldara-Iacoviello Geopolitical Risk (GPR) Index.
+    Source: matteoiacoviello.com — updated monthly through present.
+    Covers 2010-present when available.
+
+    Returns:
+        DataFrame with columns: date (Date), gpr (Float64).
+        Empty DataFrame if fetch fails.
+    """
+    from config import GPR_URL
+    import requests
+    import io
+
+    try:
+        resp = requests.get(GPR_URL, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+
+        # The file is .xls — read via openpyxl/xlrd through polars
+        try:
+            import pandas as _pd
+            xls = _pd.read_excel(io.BytesIO(resp.content), engine="xlrd")
+
+            # Locate date and GPR columns — column names vary across versions
+            date_col = next(
+                (c for c in xls.columns if str(c).lower() in ("date", "month", "year", "time")),
+                None,
+            )
+            gpr_col = next(
+                (c for c in xls.columns if "gpr" in str(c).lower() and "threat" not in str(c).lower()),
+                None,
+            )
+            if date_col is None or gpr_col is None:
+                # Fallback: assume first two columns are date, gpr
+                date_col, gpr_col = xls.columns[0], xls.columns[1]
+
+            df = _pd.DataFrame({"date": xls[date_col], "gpr": xls[gpr_col]}).dropna()
+            df["date"] = _pd.to_datetime(df["date"], errors="coerce")
+            df = df.dropna(subset=["date"])
+            df["gpr"] = _pd.to_numeric(df["gpr"], errors="coerce")
+            df = df.dropna(subset=["gpr"])
+
+            result = pl.from_pandas(df)
+            result = result.with_columns(pl.col("date").cast(pl.Date))
+            return result.sort("date")
+
+        except Exception as parse_err:
+            log.warning(f"GPR Excel parse failed: {parse_err}")
+            return pl.DataFrame()
+
+    except Exception as e:
+        log.warning(f"GPR index fetch failed: {e}")
         return pl.DataFrame()

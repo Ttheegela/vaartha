@@ -4,9 +4,11 @@ Live Alpaca paper portfolio: holdings, P&L, regime stress test, trade execution.
 Display code only — all data via fetchers.py and models/portfolio.py + trader.py.
 """
 
+import json
 import polars as pl
 import plotly.graph_objects as go
 import streamlit as st
+from datetime import datetime, timezone
 from src.data.fetchers import (
     fetch_alpaca_portfolio, fetch_alpaca_account,
     fetch_recent_orders,
@@ -19,7 +21,135 @@ from src.models.portfolio import (
 from src.models.trader import generate_regime_orders, execute_strategy
 from src.models.regime import get_current_regime
 from src.utils import set_dark_theme, annotate_events
+from src.db.settings_store import get_setting, set_setting
 from config import ASSETS, TICKERS, TEAM_PALETTE, RISK_FREE_RATE
+
+
+# ── Alert rules helpers ───────────────────────────────────────────────────────
+_RULES_KEY = "alert_rules"
+
+
+def _load_rules() -> list[dict]:
+    """Load alert rules from SQLite. Returns list of rule dicts."""
+    raw = get_setting(_RULES_KEY, default="[]")
+    try:
+        return json.loads(raw)
+    except Exception:
+        return []
+
+
+def _save_rules(rules: list[dict]) -> None:
+    """Persist alert rules to SQLite as JSON."""
+    set_setting(_RULES_KEY, json.dumps(rules))
+
+
+def _next_id(rules: list[dict]) -> int:
+    """Return next available rule ID."""
+    return max((r.get("id", 0) for r in rules), default=0) + 1
+
+
+def _check_alerts(rules: list[dict]) -> list[dict]:
+    """
+    Evaluate all active alert rules against live data.
+    Returns list of triggered alert dicts with added 'message' key.
+    """
+    if not rules:
+        return []
+
+    triggered = []
+    prices_dict: dict[str, float] = {}
+    regime_label = "Normal"
+    regime_prob  = 0.0
+
+    try:
+        from src.data.fetchers import fetch_live_prices
+        prices_df = fetch_live_prices(TICKERS)
+        if not prices_df.is_empty():
+            latest = prices_df.sort("date", descending=True).group_by("ticker").first()
+            prices_dict = dict(zip(latest["ticker"].to_list(), latest["close"].to_list()))
+    except Exception:
+        pass
+
+    try:
+        from src.models.regime_live import get_live_regime
+        ri = get_live_regime()
+        regime_label = ri.get("label", "Normal")
+        regime_prob  = ri.get("prob", 0.0)
+    except Exception:
+        pass
+
+    for rule in rules:
+        if not rule.get("active", True):
+            continue
+        rtype = rule.get("type", "")
+        try:
+            if rtype == "regime_change":
+                target = rule.get("threshold", "Crisis")
+                if regime_label == target:
+                    triggered.append({**rule, "message":
+                        f"REGIME ALERT: VARTA regime is now {regime_label} "
+                        f"(P={regime_prob:.0%})"})
+            elif rtype == "price_cross":
+                tkr   = rule.get("ticker", "SPY")
+                level = float(rule.get("threshold", 0))
+                dirn  = rule.get("direction", "above")
+                price = prices_dict.get(tkr)
+                if price is not None:
+                    hit = (price >= level and dirn == "above") or \
+                          (price <= level and dirn == "below")
+                    if hit:
+                        triggered.append({**rule, "message":
+                            f"PRICE ALERT: {tkr} is ${price:.2f} "
+                            f"({'above' if dirn=='above' else 'below'} ${level:.2f})"})
+            elif rtype == "drawdown":
+                tkr    = rule.get("ticker", "SPY")
+                max_dd = float(rule.get("threshold", 5.0)) / 100
+                price  = prices_dict.get(tkr)
+                peak_key = f"alert_peak_{tkr}"
+                if price is not None:
+                    peak = st.session_state.get(peak_key, price)
+                    st.session_state[peak_key] = max(peak, price)
+                    current_dd = (price - peak) / peak if peak > 0 else 0
+                    if current_dd <= -max_dd:
+                        triggered.append({**rule, "message":
+                            f"DRAWDOWN ALERT: {tkr} is down {current_dd:.1%} "
+                            f"from recent peak (trigger: {-max_dd:.1%})"})
+        except Exception:
+            pass
+
+    return triggered
+
+
+@st.fragment(run_every=120)
+def _alerts_fragment() -> None:
+    """Auto-refresh alert checker — runs every 120s."""
+    rules     = _load_rules()
+    triggered = _check_alerts(rules)
+
+    if triggered:
+        for alert in triggered:
+            msg  = alert.get("message", "Alert triggered")
+            at   = alert.get("type", "")
+            icon = "🔴" if at == "regime_change" else "📊" if at == "price_cross" else "📉"
+            st.markdown(
+                f"<div style='background:#f8514918;border:1px solid #f85149;"
+                f"border-radius:6px;padding:12px 16px;margin-bottom:8px'>"
+                f"<span style='font-family:IBM Plex Mono,monospace;font-size:12px;"
+                f"color:#f85149;font-weight:700'>{icon} {msg}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown(
+            "<div style='background:#3fb95015;border:1px solid #3fb95040;"
+            "border-radius:6px;padding:10px 16px;font-family:IBM Plex Mono,monospace;"
+            "font-size:11px;color:#3fb950'>✓ No alerts triggered — all clear</div>",
+            unsafe_allow_html=True,
+        )
+    st.caption(
+        f"Last checked: {datetime.now(timezone.utc).strftime('%H:%M:%S UTC')} "
+        "· Auto-refreshes every 120s"
+    )
 
 
 def render(demo_mode: bool = True) -> None:
@@ -258,27 +388,46 @@ def render(demo_mode: bool = True) -> None:
         ])
         st.dataframe(orders_display, width="stretch", hide_index=True)
 
-        col_exec, col_reset = st.columns([1, 4])
-        with col_exec:
-            execute = st.button(
-                "Execute Strategy",
-                type="primary",
-                help="Places all orders above as paper trades on Alpaca",
-            )
-        with col_reset:
-            st.caption("Paper trading only — no real money. Orders execute at market price.")
+        # ── Two-step order confirmation (safety gate) ─────────────────────────
+        _confirm_key = "order_confirm_pending"
 
-        if execute:
-            with st.spinner("Executing paper trades..."):
-                results = execute_strategy(orders)
+        if not st.session_state.get(_confirm_key, False):
+            col_exec, col_reset = st.columns([1, 4])
+            with col_exec:
+                if st.button("Confirm Order", type="primary",
+                             help="Review order details before executing"):
+                    st.session_state[_confirm_key] = True
+                    st.rerun()
+            with col_reset:
+                st.caption("Paper trading only — no real money. Click Confirm Order to review before executing.")
+        else:
+            st.warning("Review the orders above carefully. This action cannot be undone.")
+            with st.expander("Order Summary", expanded=True):
+                st.dataframe(orders_display, width="stretch", hide_index=True)
+                total_est = orders["estimated_value"].sum()
+                st.markdown(
+                    f"<div style='font-family:IBM Plex Mono,monospace;font-size:12px;"
+                    f"color:#e3b341;margin-top:8px'>Estimated total trade value: "
+                    f"<b>${total_est:,.0f}</b></div>",
+                    unsafe_allow_html=True,
+                )
 
-            if not results.is_empty():
-                st.success(f"Strategy executed — {len(results)} orders placed")
-                st.dataframe(results, width="stretch", hide_index=True)
-                # Clear cached portfolio so it reloads
-                fetch_alpaca_portfolio.clear()
-                fetch_alpaca_account.clear()
-                st.rerun()
+            col_yes, col_no, _ = st.columns([1, 1, 3])
+            with col_yes:
+                if st.button("YES, EXECUTE", type="primary"):
+                    st.session_state[_confirm_key] = False
+                    with st.spinner("Executing paper trades..."):
+                        results = execute_strategy(orders)
+                    if not results.is_empty():
+                        st.success(f"Strategy executed — {len(results)} orders placed")
+                        st.dataframe(results, width="stretch", hide_index=True)
+                        fetch_alpaca_portfolio.clear()
+                        fetch_alpaca_account.clear()
+                        st.rerun()
+            with col_no:
+                if st.button("Cancel", type="secondary"):
+                    st.session_state[_confirm_key] = False
+                    st.rerun()
 
     # ── Recent orders log ─────────────────────────────────────────────────────
     with st.expander("Order History (last 20)"):
@@ -287,6 +436,102 @@ def render(demo_mode: bool = True) -> None:
             st.dataframe(recent, width="stretch", hide_index=True)
         else:
             st.caption("No orders yet.")
+
+    # ── Alerts Engine ─────────────────────────────────────────────────────────
+    st.divider()
+    st.markdown("### Alerts Engine")
+    st.caption("Price, regime, and drawdown alerts · Auto-checks every 120s · Stored across sessions")
+
+    rules = _load_rules()
+
+    st.markdown("#### Live Alert Status")
+    _alerts_fragment()
+
+    st.divider()
+    st.markdown("#### Add Alert Rule")
+
+    with st.form("add_alert_form", clear_on_submit=True):
+        col_type, col_ticker = st.columns(2)
+        with col_type:
+            rule_type = st.selectbox(
+                "Alert Type",
+                ["price_cross", "regime_change", "drawdown"],
+                format_func=lambda x: {
+                    "price_cross":   "Price Cross (above/below level)",
+                    "regime_change": "Regime Change (Crisis or Normal)",
+                    "drawdown":      "Drawdown from Peak (%)",
+                }[x],
+            )
+        with col_ticker:
+            ticker_alert = st.selectbox(
+                "Ticker", TICKERS,
+                help="Not required for regime_change alerts",
+            )
+
+        col_thresh, col_dir = st.columns(2)
+        with col_thresh:
+            threshold = st.number_input(
+                "Threshold", value=100.0,
+                help="Price level (price_cross), drawdown % (drawdown), or ignored (regime_change)",
+            )
+        with col_dir:
+            direction = st.selectbox(
+                "Direction / Target Regime",
+                ["above", "below", "Crisis", "Normal"],
+                help="above/below for price_cross; Crisis/Normal for regime_change",
+            )
+
+        submitted = st.form_submit_button("Add Alert", type="primary")
+        if submitted:
+            new_rule = {
+                "id":         _next_id(rules),
+                "type":       rule_type,
+                "ticker":     ticker_alert,
+                "threshold":  threshold,
+                "direction":  direction,
+                "active":     True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            rules.append(new_rule)
+            _save_rules(rules)
+            st.success(f"Alert added: {rule_type} on {ticker_alert}")
+            st.rerun()
+
+    if rules:
+        st.divider()
+        st.markdown("#### Active Alert Rules")
+        for rule in rules:
+            col_info, col_toggle, col_del = st.columns([5, 1, 1])
+            with col_info:
+                rt = rule.get("type", "")
+                if rt == "price_cross":
+                    desc = (f"**{rule.get('ticker','—')}** "
+                            f"{rule.get('direction','above')} "
+                            f"${rule.get('threshold',0):.2f}")
+                elif rt == "regime_change":
+                    desc = f"Regime → **{rule.get('direction','Crisis')}**"
+                else:
+                    desc = (f"**{rule.get('ticker','—')}** drawdown ≥ "
+                            f"{rule.get('threshold',5):.1f}%")
+                status = "🟢 Active" if rule.get("active", True) else "⚫ Paused"
+                st.markdown(
+                    f"{status} &nbsp; {desc} &nbsp; "
+                    f"<span style='font-size:10px;color:#8b949e'>#{rule.get('id',0)}</span>",
+                    unsafe_allow_html=True,
+                )
+            with col_toggle:
+                lbl = "Pause" if rule.get("active", True) else "Resume"
+                if st.button(lbl, key=f"ptog_{rule['id']}"):
+                    for r in rules:
+                        if r["id"] == rule["id"]:
+                            r["active"] = not r.get("active", True)
+                    _save_rules(rules)
+                    st.rerun()
+            with col_del:
+                if st.button("Delete", key=f"pdel_{rule['id']}"):
+                    rules = [r for r in rules if r["id"] != rule["id"]]
+                    _save_rules(rules)
+                    st.rerun()
 
 
 def _show_seed_instructions() -> None:

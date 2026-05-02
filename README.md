@@ -6,7 +6,7 @@
 
 ## What this is
 
-GeoSentinel Terminal is a Bloomberg-style intelligence dashboard built on top of a historically-validated geopolitical regime detection engine. It identifies whether global markets are in a **Crisis**, **Elevated**, or **Normal** regime using real market signals, and uses that regime classification to drive portfolio rebalancing recommendations and per-asset risk scoring — backed by 14 years of validated historical data across 14 independent geopolitical events.
+GeoSentinel Terminal is a Bloomberg-style intelligence dashboard built on top of a historically-validated geopolitical regime detection engine. It identifies whether global markets are in a **Crisis**, **Elevated**, or **Normal** regime using real market signals, and uses that regime classification to drive portfolio rebalancing recommendations and per-asset risk scoring — backed by 14+ years of validated historical data across 16 geopolitical events (2010–2025).
 
 The terminal runs fully offline in demo mode and connects to live market data and Alpaca paper trading when API keys are provided.
 
@@ -34,9 +34,9 @@ Key validated relationships from that analysis:
 | Germanium supply concentration (HHI) | 0.76 | — |
 | Rare Earths supply concentration (HHI) | 0.71 | — |
 
-The terminal validates this chain across **14 distinct geopolitical shocks from 2010 to 2024** and demonstrates that regime-conditional return patterns are **persistent and repeatable** across all 14 events — the signal generalises, it is not crisis-specific.
+The terminal validates this chain across **16 geopolitical shocks from 2010 to 2025** and demonstrates that regime-conditional return patterns are **persistent and repeatable** — the signal generalises, it is not crisis-specific.
 
-### The 14 validated events
+### The 16 validated events
 
 | Date | Event |
 |------|-------|
@@ -54,6 +54,8 @@ The terminal validates this chain across **14 distinct geopolitical shocks from 
 | 2022-02-24 | Ukraine Invasion |
 | 2023-10-07 | Hamas Attack |
 | 2024-01-12 | Red Sea Disruption |
+| 2025-01-19 | Gaza Ceasefire |
+| 2025-04-02 | US Liberation Day Tariffs |
 
 ---
 
@@ -86,7 +88,7 @@ The terminal validates this chain across **14 distinct geopolitical shocks from 
 | SPY | SPDR S&P 500 ETF | Benchmark | 0.70 |
 | GLD | SPDR Gold Shares | Crisis Hedge | 0.55 |
 
-Data window: **2010-08-01 → 2024-12-31** — all 12 tickers have clean data across the full window with no nulls. REMX, LIT, and BNO inception dates (mid-2010) are the binding constraint.
+Data window: **2010-08-01 → present (live, rolling)** — all 12 tickers have clean data from 2010-08-01 with no nulls. REMX, LIT, and BNO inception dates (mid-2010) are the binding constraint.
 
 ---
 
@@ -115,10 +117,10 @@ GeoRisk = (sensitivity / 1.40) × (40 + 60 × crisis_prob) × 100
 | SPY 20-day drawdown from 252-day rolling high | 35% | < −12% |
 | Gold/Oil ratio trend (safe-haven flight) | 20% | ratio > 28 or +15% over 30d |
 
-Composite: `prob = 0.45×vol_signal + 0.35×dd_signal + 0.20×gold_oil_signal`  
+Composite: `prob = 0.45×vol_signal + 0.35×dd_signal + 0.20×gold_oil_signal`
 Labels: **Crisis** (≥ 0.55) · **Elevated** (≥ 0.30) · **Normal** (below 0.30)
 
-**Historical fallback:** Pre-computed HMM/GMM regime labels from the 2010–2024 training window in `data/demo/`.
+**Historical fallback:** Pre-computed HMM/GMM regime labels from the 2010–present training window in `data/demo/`.
 
 ---
 
@@ -126,12 +128,13 @@ Labels: **Crisis** (≥ 0.55) · **Elevated** (≥ 0.30) · **Normal** (below 0.
 
 | Tab | File | Content |
 |-----|------|---------|
-| PORTFOLIO | `tab8_portfolio.py` | Live Alpaca paper holdings, P&L, Sharpe/Sortino/VaR metrics, regime stress test, regime rebalancing engine, efficient frontier (Monte Carlo) |
-| LIVE NEWS | `tab6_news.py` | Alpaca + Finnhub dual-source feed, Polymarket crowd-sourced geopolitical probabilities, geo-risk tagging, sentiment counts |
-| RESEARCH | `tab7_research.py` | Per-ticker DCF model, analyst consensus, Kronos OHLCV 21-day forecast, regime overlay, 5-period price chart with MA-50/MA-200 |
-| SETTINGS | `tab9_settings.py` | Alpaca API credentials, asset universe selector, strategy preferences, GeoRisk sensitivity viewer |
+| PORTFOLIO | `tab3_portfolio.py` | Live Alpaca paper holdings, P&L, Sharpe/Sortino/VaR metrics, regime stress test, regime rebalancing engine, efficient frontier (Monte Carlo), configurable alerts engine |
+| LIVE NEWS | `tab1_news.py` | Alpaca + Finnhub + WSJ/MarketWatch RSS, Polymarket signals, live FRED macro panel (5 indicators + yield curve), auto-refresh every 2 min |
+| RESEARCH | `tab2_research.py` | Per-ticker DCF model, analyst consensus, Kronos OHLCV 21-day forecast, regime overlay, 5-period price chart with MA-50/MA-200 |
+| SCENARIO | `tab8_scenario.py` | GPR shock simulator — live yfinance sensitivities, live FRED causal chain coefficients, live Alpaca portfolio weights, comparable historical events auto-detected from live GPR index |
+| SETTINGS | `tab4_settings.py` | Alpaca API credentials, asset universe selector, strategy preferences, GeoRisk sensitivity viewer |
 
-Plus legacy research tabs (tab1–tab5) covering the full historical analysis: watchlist, crisis timeline, regime visualisation, XGBoost signals, and supply chain maps.
+All regime data, portfolio value, day P&L, and buying power are shown in the persistent **top bar** across all tabs. No sidebar.
 
 ---
 
@@ -139,7 +142,9 @@ Plus legacy research tabs (tab1–tab5) covering the full historical analysis: w
 
 The Research tab uses **shiyu-coder/Kronos** (AAAI 2026) — a decoder-only Transformer trained on OHLCV candlestick data from 45+ global exchanges. Model: `NeoQuasar/Kronos-small` (24.7M parameters).
 
-Unlike general time-series models, Kronos understands OHLCV structure: it forecasts full candlestick bars (open, high, low, close, volume) and enforces OHLC validity constraints. It forecasts **21 trading days** (~1 month) ahead and is cached per ticker per session to avoid re-running inference on every widget interaction.
+Unlike general time-series models, Kronos understands OHLCV structure: it forecasts full candlestick bars (open, high, low, close, volume) and enforces OHLC validity constraints. It forecasts **21 trading days** (~1 month) ahead. When the selected chart period is 1M (only ~21 bars), inference automatically uses a 1Y context window while the chart axis stays pinned to the 1M view.
+
+Kronos degrades gracefully if the repo is not cloned — the tab falls back to pre-computed demo forecasts.
 
 ---
 
@@ -153,14 +158,16 @@ Unlike general time-series models, Kronos understands OHLCV structure: it foreca
 | DataFrames | Polars (never pandas in app code) |
 | SQL queries | DuckDB |
 | Market data | yfinance, FRED API |
-| News | Alpaca News API, Finnhub |
+| News | Alpaca News API, Finnhub, WSJ/MarketWatch RSS |
 | Crowd signals | Polymarket REST API |
+| GPR index | Caldara-Iacoviello (matteoiacoviello.com, daily, live fetch) |
 | Regime detection | HMM / GMM (hmmlearn / sklearn) |
 | Walk-forward signal | XGBoost |
 | OHLCV foundation model | shiyu-coder/Kronos (AAAI 2026, NeoQuasar/Kronos-small) |
 | LLM crisis scoring (offline only) | Ollama — Gemma 4 26B (deep) + Gemma 4 4B (fast) |
+| Persistent settings | SQLite via stdlib `sqlite3` |
 | Brokerage | Alpaca paper trading (alpaca-py) |
-| Device | Apple M3 Pro, MPS backend |
+| Device | Apple M3 Pro, MPS backend (auto-falls back to CPU) |
 
 ---
 
@@ -168,15 +175,18 @@ Unlike general time-series models, Kronos understands OHLCV structure: it foreca
 
 ```
 VARTA/
-├── app.py                          # Streamlit entry point — top bar, CSS, 4 tabs
+├── app.py                          # Streamlit entry point — top bar, CSS, 5 tabs
 ├── config.py                       # All constants — tickers, dates, thresholds, weights
 ├── requirements.txt
 │
 ├── src/
 │   ├── data/
-│   │   ├── fetchers.py             # Live API calls — Alpaca, yfinance, Finnhub, Polymarket
+│   │   ├── fetchers.py             # Live API calls — Alpaca, yfinance, Finnhub, FRED, GPR
 │   │   ├── loaders.py              # Reads pre-processed parquet/CSV from data/demo/
 │   │   └── validators.py           # Schema validation on loaded data
+│   │
+│   ├── db/
+│   │   └── settings_store.py       # SQLite-backed persistent key-value settings
 │   │
 │   ├── models/
 │   │   ├── regime.py               # Regime series loader, quant risk stack (Kelly, VaR, Stoikov)
@@ -189,17 +199,13 @@ VARTA/
 │   │   └── llm.py                  # Loads pre-computed Gemma crisis scores (read-only)
 │   │
 │   ├── tabs/
-│   │   ├── tab1_watchlist.py       # Price watchlist + live GeoRisk scores
-│   │   ├── tab2_crisis_timeline.py # 14-event timeline with GPR + GDELT headlines
-│   │   ├── tab3_regime.py          # HMM/GMM regime visualisation + 6-model quant stack
-│   │   ├── tab4_signals.py         # XGBoost OOS results + Kronos historical forecasts
-│   │   ├── tab5_maps.py            # Supply chain geography — mineral sites + chokepoints
-│   │   ├── tab6_news.py            # Live intelligence feed + Polymarket signals
-│   │   ├── tab7_research.py        # Equity research + DCF + live Kronos forecast
-│   │   ├── tab8_portfolio.py       # Portfolio + regime rebalancing engine
-│   │   └── tab9_settings.py        # User settings + credential management
+│   │   ├── tab1_news.py            # Live intelligence feed + FRED macro panel
+│   │   ├── tab2_research.py        # Equity research + DCF + live Kronos forecast
+│   │   ├── tab3_portfolio.py       # Portfolio + regime rebalancing engine + alerts
+│   │   ├── tab4_settings.py        # User settings + credential management
+│   │   └── tab8_scenario.py        # GPR shock simulator + causal chain propagation
 │   │
-│   └── utils.py                    # set_dark_theme(), annotate_events(), log
+│   └── utils.py                    # set_dark_theme(), annotate_events(), render_error_card(), log
 │
 ├── data/
 │   └── demo/                       # Pre-built offline demo bundle (committed)
@@ -230,15 +236,13 @@ python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Clone Kronos
-
-Required for live OHLCV forecasts in the Research tab.
+### 3. Clone Kronos (optional — required for live OHLCV forecasts only)
 
 ```bash
 git clone https://github.com/shiyu-coder/Kronos src/models/kronos_repo
 ```
 
-On first use the model downloads `NeoQuasar/Kronos-small` (~100MB) from HuggingFace and caches it locally. Subsequent loads take ~1 second.
+On first use the model downloads `NeoQuasar/Kronos-small` (~100MB) from HuggingFace and caches it locally. If not cloned, the Research tab falls back to pre-computed demo forecasts.
 
 ### 4. Set API keys (optional — app works in demo mode without them)
 
@@ -284,4 +288,3 @@ After connecting Alpaca keys in Settings, buy these positions manually on [app.a
 | AMD | $6,000 |
 | CVX | $5,000 |
 | BNO | $4,000 |
-

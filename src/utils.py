@@ -1,22 +1,43 @@
 """
 utils.py — GeoSentinel Terminal (VARTA)
-Shared helpers: logger, palette, chart utilities.
+Shared helpers: logger, palette, chart utilities, error boundaries.
 Import from here — never reimplement.
 """
 
 import logging
 import datetime
+import traceback
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 import polars as pl
 import plotly.graph_objects as go
 from config import TEAM_PALETTE, KEY_EVENTS
 
-# ── Logger ────────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+# ── Logger — rotating file + console ─────────────────────────────────────────
+_LOG_DIR = Path(__file__).parent.parent / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
+
+_fmt = logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO,
 )
+
+_file_handler = RotatingFileHandler(
+    _LOG_DIR / "varta.log",
+    maxBytes=10 * 1024 * 1024,  # 10 MB
+    backupCount=3,
+    encoding="utf-8",
+)
+_file_handler.setFormatter(_fmt)
+
+_console_handler = logging.StreamHandler()
+_console_handler.setFormatter(_fmt)
+
 log = logging.getLogger("varta")
+log.setLevel(logging.INFO)
+if not log.handlers:  # avoid duplicate handlers on Streamlit hot-reload
+    log.addHandler(_file_handler)
+    log.addHandler(_console_handler)
 
 
 def set_dark_theme(fig: go.Figure) -> go.Figure:
@@ -115,3 +136,37 @@ def georisk_score(gpr: float, gpr_min: float, gpr_max: float) -> float:
     if gpr_max == gpr_min:
         return 50.0
     return round(((gpr - gpr_min) / (gpr_max - gpr_min)) * 100, 1)
+
+
+def render_error_card(tab_name: str, error: Exception) -> None:
+    """
+    Render a Bloomberg-styled error card when a tab crashes.
+
+    Logs the full traceback to varta.log and shows a condensed
+    user-facing message in the UI. Never exposes raw tracebacks
+    to the end user.
+
+    Args:
+        tab_name: Human-readable tab name (e.g. "PORTFOLIO").
+        error: The caught exception.
+    Example:
+        except Exception as e:
+            render_error_card("PORTFOLIO", e)
+    """
+    import streamlit as st  # lazy — avoids module-level circular import
+    tb = traceback.format_exc()
+    log.error(f"[{tab_name}] Unhandled error: {error}\n{tb}")
+    st.markdown(
+        f"""
+        <div style='background:#f8514918;border:1px solid #f8514940;border-radius:6px;
+                    padding:16px 20px;margin-top:16px'>
+          <div style='font-family:IBM Plex Mono,monospace;font-size:11px;color:#f85149;
+                      letter-spacing:1px;margin-bottom:6px'>⚠ {tab_name} — MODULE ERROR</div>
+          <div style='color:#c9d1d9;font-size:13px'>{type(error).__name__}: {str(error)[:200]}</div>
+          <div style='font-size:11px;color:#8b949e;margin-top:8px'>
+            Full traceback written to <code>logs/varta.log</code>. Refresh to retry.
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )

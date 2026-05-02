@@ -9,7 +9,11 @@ __pycache__/
 # Data — raw and processed are local only
 data/raw/
 data/processed/
+data/varta_settings.db
 # data/demo/ is committed — required for cloud hosting (offline demo mode)
+
+# Logs — runtime only, never commit
+logs/
 
 # Outputs
 outputs/

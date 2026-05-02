@@ -98,26 +98,24 @@ No live window. No 2025–2026 data. Historical prediction of historical outcome
 
 ---
 
-## Module Build Order (Hard — Do Not Skip Ahead)
-
-1. `config.py` ✓ done
-2. `src/data/fetchers.py` + `validators.py` + `loaders.py`
-3. `scripts/build_demo_bundle.py` → **confirm demo works offline**
-4. `src/models/regime.py` → `signals.py` → `llm.py` → `kronos.py`
-5. `src/tabs/tab1` → `tab2` → `tab3` → `tab4` → `tab5`
-6. Demo freeze before May 3
-
----
-
-## 5 Dashboard Tabs
+## Current Live Tabs (4 tabs — all production-ready)
 
 | Tab | File | Content |
 |-----|------|---------|
-| 1 | tab1_watchlist.py | 2010-2024 prices, regime label, GeoRisk Score 0-100 |
-| 2 | tab2_crisis_timeline.py | 14-event historical timeline, GPR+GSCPI, GDELT headlines per event |
-| 3 | tab3_regime.py | HMM/GMM regime visualization + 6-model quant risk stack |
-| 4 | tab4_signals.py | XGBoost walk-forward OOS results + Kronos forecasts |
-| 5 | tab5_maps.py | Supply chain geography — mineral sites + shipping chokepoints |
+| 1 | tab3_portfolio.py | Live holdings, P&L, risk metrics, regime stress test, rebalancing |
+| 2 | tab1_news.py | Live news (Alpaca + Finnhub + WSJ/MW), 2-min auto-refresh, Polymarket |
+| 3 | tab2_research.py | DCF, analyst consensus, price chart, Kronos forecast |
+| 4 | tab4_settings.py | Alpaca credentials, asset universe, strategy prefs |
+
+## Expansion Tabs (being built — see plan file)
+
+| Tab | File | Content |
+|-----|------|---------|
+| 5 | tab5_macro.py | FRED macro dashboard, Macro Regime Score, GPR/GSCPI scatter |
+| 6 | tab6_backtest.py | Walk-forward backtesting over 14 events, regime strategy vs SPY |
+| 7 | tab7_alerts.py | User-configurable alerts, in-app banners, 120s polling |
+| 8 | tab8_scenario.py | GPR shock simulator, causal chain propagation |
+| 9 | tab9_options.py | Alpaca options flow, Put/Call ratio, unusual activity |
 
 ---
 

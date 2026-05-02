@@ -9,25 +9,41 @@ from config import (
     ALPACA_API_KEY, ALPACA_SECRET_KEY,
     GEORISK_SENSITIVITY, REGIME_TARGET_WEIGHTS, ASSETS, TICKERS,
 )
+from src.db.settings_store import get_setting, set_setting, get_all_settings
 
 
-# ── Session state defaults ────────────────────────────────────────────────────
+# ── Session state defaults — reads from SQLite on first load ──────────────────
 def _init_state() -> None:
-    """Initialize session state with config.py defaults on first load."""
+    """
+    Initialize session state on first load.
+    Non-sensitive settings (strategy, tickers, risk) are loaded from SQLite.
+    API keys stay session-only (never persisted to disk).
+    """
     if "user_alpaca_key"    not in st.session_state:
         st.session_state.user_alpaca_key    = ALPACA_API_KEY
     if "user_alpaca_secret" not in st.session_state:
         st.session_state.user_alpaca_secret = ALPACA_SECRET_KEY
     if "user_paper_mode"    not in st.session_state:
         st.session_state.user_paper_mode    = True
-    if "user_tickers"       not in st.session_state:
-        st.session_state.user_tickers       = TICKERS[:]
+    if "user_tickers" not in st.session_state:
+        _saved_tickers = get_setting("user_tickers")
+        st.session_state.user_tickers = (
+            _saved_tickers.split(",") if _saved_tickers else TICKERS[:]
+        )
     if "user_risk_tolerance" not in st.session_state:
-        st.session_state.user_risk_tolerance = "Moderate"
-    if "user_strategy"      not in st.session_state:
-        st.session_state.user_strategy      = "regime_target"
+        st.session_state.user_risk_tolerance = (
+            get_setting("user_risk_tolerance", default="Moderate")
+        )
+    if "user_strategy" not in st.session_state:
+        st.session_state.user_strategy = (
+            get_setting("user_strategy", default="regime_target")
+        )
     if "user_rebalance_threshold" not in st.session_state:
-        st.session_state.user_rebalance_threshold = 5.0
+        _thresh = get_setting("user_rebalance_threshold", default="5.0")
+        try:
+            st.session_state.user_rebalance_threshold = float(_thresh or "5.0")
+        except ValueError:
+            st.session_state.user_rebalance_threshold = 5.0
     if "settings_saved"     not in st.session_state:
         st.session_state.settings_saved     = False
 
@@ -155,6 +171,7 @@ def render(demo_mode: bool = True) -> None:
             st.warning("Select at least one asset.")
         else:
             st.session_state.user_tickers = selected
+            set_setting("user_tickers", ",".join(selected))
             st.success(f"Tracking {len(selected)} assets: {', '.join(selected)}")
 
     st.divider()
@@ -223,7 +240,10 @@ def render(demo_mode: bool = True) -> None:
         st.session_state.user_risk_tolerance       = risk_tolerance
         st.session_state.user_strategy             = strategy
         st.session_state.user_rebalance_threshold  = threshold
-        st.success("Strategy settings saved for this session.")
+        set_setting("user_risk_tolerance", risk_tolerance)
+        set_setting("user_strategy", strategy)
+        set_setting("user_rebalance_threshold", str(threshold))
+        st.success("Strategy settings saved — will persist across sessions.")
 
     st.divider()
 

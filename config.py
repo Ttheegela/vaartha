@@ -5,6 +5,7 @@ Import this at the top of every module. Never hardcode values elsewhere.
 """
 
 import os
+from datetime import date
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -30,10 +31,11 @@ ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY", "")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "")
 ALPACA_PAPER      = True   # hardcoded — never set to False accidentally
 
-# ── Data Windows (Locked) ─────────────────────────────────────────────────────
+# ── Data Windows ─────────────────────────────────────────────────────────────
 # Aug 2010: earliest date all 12 tickers have clean data (REMX, LIT, BNO inception)
+# DATE_TRAIN_END is always today — never frozen at 2024
 DATE_TRAIN_START = "2010-08-01"
-DATE_TRAIN_END   = "2024-12-31"
+DATE_TRAIN_END   = date.today().strftime("%Y-%m-%d")
 
 # ── 12 Assets (Locked — No Additions) ────────────────────────────────────────
 ASSETS = {
@@ -126,8 +128,11 @@ TEAM_PALETTE = {
 }
 
 # ── Key Geopolitical Events (for chart annotation) ────────────────────────────
-# Full historical set 2010-2024 — used to annotate all time-series charts
+# Rolling set 2010–present — extended as new events occur.
+# GPR magnitudes for 2025+ events are live-fetched from Caldara-Iacoviello GPR_URL;
+# these labels are used for chart annotation regardless.
 KEY_EVENTS = [
+    # 2010–2024 (validated training set)
     ("2010-12-18", "Arab Spring"),
     ("2011-03-11", "Fukushima Disaster"),
     ("2014-02-27", "Russia-Crimea Annexation"),
@@ -142,6 +147,29 @@ KEY_EVENTS = [
     ("2022-02-24", "Ukraine Invasion"),
     ("2023-10-07", "Hamas Attack"),
     ("2024-01-12", "Red Sea Disruption"),
+    # 2025–present
+    ("2025-01-19", "Gaza Ceasefire"),
+    ("2025-04-02", "US Liberation Day Tariffs"),
+]
+
+# ── SEC EDGAR (no API key required — public data.sec.gov endpoints) ───────────
+EDGAR_COMPANY_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+EDGAR_SUBMISSIONS_URL     = "https://data.sec.gov/submissions/CIK{cik}.json"
+# ETFs (REMX, LIT, BNO, GLD, SPY) don't file material 8-Ks — operating cos only
+EDGAR_OPERATING_TICKERS   = ["NVDA", "AMD", "TSM", "ALB", "FCX", "XOM", "CVX"]
+
+# ── Congress Trading (House/Senate Stock Watcher — free public S3 endpoints) ──
+CONGRESS_HOUSE_URL  = "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json"
+CONGRESS_SENATE_URL = "https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions.json"
+
+# ── Google Trends keywords (mapped to VARTA causal chain) ─────────────────────
+GOOGLE_TRENDS_KEYWORDS = [
+    "rare earth",
+    "semiconductor shortage",
+    "geopolitical risk",
+    "oil price",
+    "supply chain disruption",
+    "Taiwan strait",
 ]
 
 # ── Demo Mode ─────────────────────────────────────────────────────────────────

@@ -487,7 +487,15 @@ def render(demo_mode: bool = True) -> None:
                     f"Running Kronos ({KRONOS_PRED_LEN}-day OHLCV forecast) — "
                     "first run loads model weights, ~10s..."
                 ):
-                    kronos_fc = generate_forecast(hist, pred_len=KRONOS_PRED_LEN)
+                    # Kronos needs ≥252 bars of context — 1M display period (~21 bars)
+                    # is far too short. Fetch 1Y for inference, keep hist for display.
+                    _kronos_input = hist
+                    if period == "1mo" and len(hist) < 252:
+                        _kronos_ctx = _get_price_history(ticker, "1y")
+                        if not _kronos_ctx.is_empty() and len(_kronos_ctx) >= 60:
+                            _kronos_input = _kronos_ctx
+
+                    kronos_fc = generate_forecast(_kronos_input, pred_len=KRONOS_PRED_LEN)
                     st.session_state[_k_cache_key] = kronos_fc
                     st.session_state[_k_date_key]  = _current_last  # staleness sentinel
 

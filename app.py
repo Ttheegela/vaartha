@@ -6,13 +6,42 @@ Run: streamlit run app.py
 
 import streamlit as st
 from config import DEMO_MODE
+from src.utils import render_error_card
 
 st.set_page_config(
     page_title="GeoSentinel Terminal",
     page_icon="⬛",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
+
+# ── Password Gate ─────────────────────────────────────────────────────────────
+# Active only when APP_PASSWORD is set in .streamlit/secrets.toml (or the
+# Streamlit Cloud secrets dashboard). Skipped entirely in local dev when the
+# key is absent — no friction on your own machine.
+_app_pw = st.secrets.get("APP_PASSWORD", "")
+if _app_pw and not st.session_state.get("_authenticated"):
+    st.markdown("""
+    <div style='max-width:360px;margin:120px auto 0 auto;
+                background:#161b22;border:1px solid #30363d;border-radius:8px;
+                padding:40px 36px;font-family:IBM Plex Mono,monospace;text-align:center'>
+      <div style='font-size:22px;font-weight:700;color:#00FFB2;
+                  letter-spacing:2px;margin-bottom:6px'>GEOSENTINEL</div>
+      <div style='font-size:10px;color:#8b949e;letter-spacing:2px;
+                  margin-bottom:32px'>REGIME-AWARE INTELLIGENCE</div>
+    </div>
+    """, unsafe_allow_html=True)
+    _col = st.columns([1, 2, 1])[1]
+    with _col:
+        _entered = st.text_input("Access code", type="password",
+                                 placeholder="enter access code",
+                                 label_visibility="collapsed")
+        if _entered == _app_pw:
+            st.session_state["_authenticated"] = True
+            st.rerun()
+        elif _entered:
+            st.error("Incorrect access code.")
+    st.stop()
 
 # ── Bloomberg Terminal CSS ────────────────────────────────────────────────────
 st.markdown("""
@@ -31,8 +60,8 @@ html, body, .stApp {
 [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
 
 /* Top bar */
-.t-bar { display:flex; gap:8px; padding:10px 0 14px 0;
-         border-bottom:1px solid #21262d; margin-bottom:18px; flex-wrap:wrap; }
+.t-bar { display:flex; gap:8px; padding:10px 0 10px 0;
+         border-bottom:1px solid #21262d; margin-bottom:6px; flex-wrap:wrap; }
 .t-card { background:#161b22; border:1px solid #30363d; border-radius:5px;
           padding:7px 14px; min-width:130px; font-family:'IBM Plex Mono',monospace; }
 .t-card .lbl { font-size:9px; color:#8b949e; letter-spacing:1.2px;
@@ -66,7 +95,7 @@ html, body, .stApp {
   background:#0d1117 !important;
 }
 .stTabs [data-baseweb="tab"]:hover { color:#c9d1d9 !important; background:#161b22 !important; }
-.stTabs [data-baseweb="tab-panel"] { background:#0d1117 !important; padding-top:20px; }
+.stTabs [data-baseweb="tab-panel"] { background:#0d1117 !important; padding-top:4px; }
 
 /* Metrics */
 [data-testid="stMetric"] {
@@ -178,6 +207,9 @@ li[role="option"],
 footer    { visibility:hidden; }
 header    { visibility:hidden; }
 [data-testid="stToolbar"] { display:none; }
+/* Hide sidebar entirely — all key info lives in the top bar */
+[data-testid="collapsedControl"] { display:none !important; }
+section[data-testid="stSidebar"]  { display:none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -250,7 +282,7 @@ st.markdown(f"""
     <div class="val {'green' if dpl >= 0 else 'red'}">${dpl:+,.2f}</div>
   </div>
   <div class="t-card">
-    <div class="lbl">Cash</div>
+    <div class="lbl">Buying Power</div>
     <div class="val">${cash:,.2f}</div>
   </div>
   <div class="t-card">
@@ -260,46 +292,38 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown(f"""
-    <div style='margin-bottom:20px'>
-      <div style='font-size:20px;font-weight:700;color:#00FFB2;
-                  font-family:IBM Plex Mono,monospace;letter-spacing:1px'>GEOSENTINEL</div>
-      <div style='font-size:9px;color:#8b949e;letter-spacing:2px;margin-top:2px'>
-        REGIME-AWARE INTELLIGENCE
-      </div>
-    </div>
-    <div style='background:{"#f8514915" if regime_label=="Crisis" else "#3fb95015"};
-                border-left:3px solid {"#f85149" if regime_label=="Crisis" else "#3fb950"};
-                padding:8px 12px;border-radius:4px;margin-bottom:16px'>
-      <div style='font-size:9px;color:#8b949e;letter-spacing:1px'>CURRENT REGIME</div>
-      <div style='font-size:18px;font-weight:700;
-                  color:{"#f85149" if regime_label=="Crisis" else "#3fb950"};
-                  font-family:IBM Plex Mono,monospace'>{regime_label.upper()}</div>
-      <div style='font-size:11px;color:#8b949e'>P(Crisis) = {regime_prob:.0%}</div>
-    </div>
-    <div style='font-size:9px;color:#8b949e;letter-spacing:1px;margin-bottom:6px'>PAPER ACCOUNT</div>
-    <div style='font-family:IBM Plex Mono,monospace'>
-      <div style='font-size:16px;color:#c9d1d9'>${pv:,.2f}</div>
-      <div style='font-size:11px;color:{"#3fb950" if dpl>=0 else "#f85149"}'>${dpl:+,.2f} today</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.divider()
-    st.markdown("<div style='font-size:9px;color:#8b949e;letter-spacing:1px'>ALPACA PAPER TRADING · LIVE</div>", unsafe_allow_html=True)
-
 # ── Tabs — imports deferred until render to avoid blocking cold start ─────────
-t1, t2, t3, t4 = st.tabs(["PORTFOLIO", "LIVE NEWS", "RESEARCH", "SETTINGS"])
+t1, t2, t3, t4, t5 = st.tabs([
+    "PORTFOLIO", "LIVE NEWS", "RESEARCH", "SCENARIO", "SETTINGS",
+])
 
 with t1:
-    from src.tabs.tab8_portfolio import render as tab_portfolio
-    tab_portfolio(demo_mode=DEMO_MODE)
+    try:
+        from src.tabs.tab3_portfolio import render as tab_portfolio
+        tab_portfolio(demo_mode=DEMO_MODE)
+    except Exception as _e:
+        render_error_card("PORTFOLIO", _e)
 with t2:
-    from src.tabs.tab6_news import render as tab_news
-    tab_news(demo_mode=DEMO_MODE)
+    try:
+        from src.tabs.tab1_news import render as tab_news
+        tab_news(demo_mode=DEMO_MODE)
+    except Exception as _e:
+        render_error_card("LIVE NEWS", _e)
 with t3:
-    from src.tabs.tab7_research import render as tab_research
-    tab_research(demo_mode=DEMO_MODE)
+    try:
+        from src.tabs.tab2_research import render as tab_research
+        tab_research(demo_mode=DEMO_MODE)
+    except Exception as _e:
+        render_error_card("RESEARCH", _e)
 with t4:
-    from src.tabs.tab9_settings import render as tab_settings
-    tab_settings(demo_mode=DEMO_MODE)
+    try:
+        from src.tabs.tab8_scenario import render as tab_scenario
+        tab_scenario(demo_mode=DEMO_MODE)
+    except Exception as _e:
+        render_error_card("SCENARIO", _e)
+with t5:
+    try:
+        from src.tabs.tab4_settings import render as tab_settings
+        tab_settings(demo_mode=DEMO_MODE)
+    except Exception as _e:
+        render_error_card("SETTINGS", _e)
