@@ -13,6 +13,7 @@ from src.data.fetchers import fetch_alpaca_portfolio
 from src.data.loaders import load_regimes
 from src.models.regime import get_current_regime
 from src.models.kronos_live import generate_forecast, is_available as kronos_available, get_load_error
+from src.models.kronos import get_ticker_forecast as _get_demo_forecast
 from src.utils import set_dark_theme
 from config import ASSETS, TICKERS, RISK_FREE_RATE, GEORISK_SENSITIVITY, FINNHUB_API_KEY, KRONOS_PRED_LEN
 
@@ -476,7 +477,11 @@ def render(demo_mode: bool = True) -> None:
         kronos_fc: pl.DataFrame | None = None
         if show_kronos:
             if not kronos_available():
-                st.warning("Kronos repo not found — check src/models/kronos_repo/.")
+                # Live model not available (cloud / no repo) — use pre-computed demo forecasts
+                _demo_fc = _get_demo_forecast(ticker, demo_mode=True)
+                if not _demo_fc.is_empty():
+                    kronos_fc = _demo_fc
+                    st.caption("Kronos forecast: pre-computed (live model unavailable in this environment)")
             elif (
                 _k_cache_key in st.session_state
                 and st.session_state.get(_k_date_key) == _current_last
