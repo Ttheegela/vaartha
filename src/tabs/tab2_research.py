@@ -482,17 +482,24 @@ def render(demo_mode: bool = True) -> None:
                 if not _demo_fc.is_empty():
                     import pandas as _pd
                     from datetime import date as _date
-                    # Shift forecast dates to start from today so they appear on the chart
+                    # Shift forecast dates to start from today
                     _n = len(_demo_fc)
                     _future = list(_pd.bdate_range(start=_date.today(), periods=_n).date)
-                    kronos_fc = _demo_fc.with_columns([
-                        pl.Series("date", _future),
-                        pl.col("mean").alias("close"),
-                        pl.col("mean").alias("open"),
-                        pl.col("high_80").alias("high"),
-                        pl.col("low_80").alias("low"),
-                        pl.lit(0).alias("volume"),
-                    ])
+                    _means  = _demo_fc["mean"].to_list()
+                    _highs  = _demo_fc["high_80"].to_list()
+                    _lows   = _demo_fc["low_80"].to_list()
+                    # Chain bars: open = previous close so candlestick bodies are visible
+                    # Anchor first open to last known close from price history
+                    _anchor = float(hist.sort("date")["close"][-1]) if not hist.is_empty() else _means[0]
+                    _opens  = [_anchor] + _means[:-1]
+                    kronos_fc = pl.DataFrame({
+                        "date":   _future,
+                        "open":   _opens,
+                        "high":   _highs,
+                        "low":    _lows,
+                        "close":  _means,
+                        "volume": [0] * _n,
+                    })
                     st.caption("Kronos forecast: pre-computed (live model unavailable in this environment)")
             elif (
                 _k_cache_key in st.session_state
