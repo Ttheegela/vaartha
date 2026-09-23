@@ -1,0 +1,85 @@
+[
+  {
+    "date": "2022-02-24",
+    "title": "Russia full-scale invasion of Ukraine",
+    "source_url": "https://www.reuters.com/world/europe/russia-invades-ukraine-2022-02-24/",
+    "evidence_urls": [
+      "https://www.reuters.com/world/europe/russia-invades-ukraine-2022-02-24/",
+      "https://fred.stlouisfed.org/series/GEPUCURRENT"
+    ],
+    "source": "reuters",
+    "tags": ["geopolitics", "energy", "europe", "risk-off"]
+  },
+  {
+    "date": "2023-10-07",
+    "title": "Hamas attack on Israel; Middle East escalation",
+    "source_url": "https://www.reuters.com/world/middle-east/hamas-attacks-israel-2023-10-07/",
+    "evidence_urls": [
+      "https://www.reuters.com/world/middle-east/hamas-attacks-israel-2023-10-07/"
+    ],
+    "source": "reuters",
+    "tags": ["geopolitics", "middle-east", "oil", "risk-off"]
+  },
+  {
+    "date": "2024-01-12",
+    "title": "Red Sea shipping disruption intensifies (Houthi attacks)",
+    "source_url": "https://www.reuters.com/world/middle-east/red-sea-shipping-attacks-2024-01/",
+    "evidence_urls": [
+      "https://www.reuters.com/world/middle-east/red-sea-shipping-attacks-2024-01/",
+      "https://www.bls.gov/ppi/"
+    ],
+    "source": "reuters",
+    "tags": ["supply-chain", "shipping", "transition", "gscpi"]
+  },
+  {
+    "date": "2025-01-19",
+    "title": "Gaza ceasefire announcement (de-escalation window)",
+    "source_url": "https://www.reuters.com/world/middle-east/gaza-ceasefire-2025-01-19/",
+    "evidence_urls": [
+      "https://www.reuters.com/world/middle-east/gaza-ceasefire-2025-01-19/"
+    ],
+    "source": "reuters",
+    "tags": ["middle-east", "de-escalation", "risk-on", "transition"]
+  },
+  {
+    "date": "2025-04-02",
+    "title": "US Liberation Day tariff package announced",
+    "source_url": "https://www.reuters.com/markets/us/us-tariffs-liberation-day-2025-04-02/",
+    "evidence_urls": [
+      "https://www.reuters.com/markets/us/us-tariffs-liberation-day-2025-04-02/"
+    ],
+    "source": "reuters",
+    "tags": ["trade", "tariffs", "equities", "risk-off"]
+  },
+  {
+    "date": "2020-03-11",
+    "title": "WHO declares COVID-19 a pandemic",
+    "source_url": "https://www.who.int/director-general/speeches/detail/who-director-general-s-opening-remarks-at-the-media-briefing-on-covid-19---11-march-2020",
+    "evidence_urls": [
+      "https://www.who.int/director-general/speeches/detail/who-director-general-s-opening-remarks-at-the-media-briefing-on-covid-19---11-march-2020",
+      "https://fred.stlouisfed.org/series/VIXCLS"
+    ],
+    "source": "who",
+    "tags": ["pandemic", "macro", "vol", "risk-off"]
+  },
+  {
+    "date": "2016-06-23",
+    "title": "UK votes to leave the European Union (Brexit)",
+    "source_url": "https://www.bbc.com/news/uk-politics-36615028",
+    "evidence_urls": [
+      "https://www.bbc.com/news/uk-politics-36615028"
+    ],
+    "source": "bbc",
+    "tags": ["europe", "fx", "politics", "transition"]
+  },
+  {
+    "date": "2018-03-01",
+    "title": "US–China trade war tariffs escalate",
+    "source_url": "https://www.reuters.com/article/us-usa-trade-china-idUSKCN1GD5CQ",
+    "evidence_urls": [
+      "https://www.reuters.com/article/us-usa-trade-china-idUSKCN1GD5CQ"
+    ],
+    "source": "reuters",
+    "tags": ["trade", "china", "semiconductors", "risk-off"]
+  }
+]
