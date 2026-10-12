@@ -134,6 +134,8 @@ No write tools. The agent cannot trade, move money, or edit budgets. Write actio
 
 **Models:** set in config, never in code. Owner: an Ollama model with tool-calling support that fits in 18 GB (target 8–14B), chosen by eval results. Demo: an OpenRouter model id.
 
+> **Decision 2026-10-12 (after evals):** both instances use OpenRouter (`anthropic/claude-haiku-4.5`, 24/25). Local qwen3:8b scored 12/25 at ~23 s per answer and qwen3:14b 5/10 before it was stopped; running them overheated the laptop. The owner instance therefore sends derived financial data (never tokens or account numbers) to OpenRouter, and the Ollama-reachability rule for the owner briefing no longer applies.
+
 **Evals (`evals/`)**
 - About 25 YAML tasks: a question plus checks, run against a fixed seeded demo DB.
 - Checks:

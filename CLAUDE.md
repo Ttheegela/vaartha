@@ -5,7 +5,7 @@ Plans: `docs/superpowers/plans/`. Current status, open items and next step: `doc
 
 ## What this is
 Personal finance + investing advisor agent (Origin-style). Two instances from one codebase:
-- owner: Tarun's real accounts (Plaid Trial), Tailscale-only, LLM = Ollama on his Mac
+- owner: Tarun's real accounts (Plaid Trial), Tailscale-only, LLM = OpenRouter (local Ollama dropped 2026-10-12: too slow, overheats the laptop)
 - demo: public, Plaid Sandbox, LLM = OpenRouter, rate-limited
 
 ## Layout
