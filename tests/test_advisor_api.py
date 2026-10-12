@@ -114,6 +114,8 @@ def test_conversations(tmp_path):
     msgs = c.get("/api/conversations/c-1").json()
     assert [(m["role"], m["content"][:3]) for m in msgs] == [("user", "aaa"), ("assistant", "one")]
     assert c.get("/api/conversations/nope").status_code == 404
+    # UTC timestamps carry a zone so browsers don't read them as local time
+    assert lst[0]["updated_at"].endswith("Z") and msgs[0]["created_at"].endswith("Z")
 
 
 def test_sources_round_trip(tmp_path):

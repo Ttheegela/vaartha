@@ -15,3 +15,10 @@ export function splitCitations(text: string, sources: { id: number }[]): Segment
   if (tail || out.length === 0) out.push({ kind: "text", text: tail })
   return out
 }
+
+/** Split `**bold**` runs (the only markdown models reliably emit) from plain text. */
+export function splitBold(text: string): { text: string; bold: boolean }[] {
+  return text.split(/\*\*(\S(?:.*?\S)?)\*\*/g)
+    .map((t, i) => ({ text: t, bold: i % 2 === 1 }))
+    .filter((s) => s.text !== "")
+}

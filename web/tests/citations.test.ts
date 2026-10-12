@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { splitCitations } from "../lib/citations.ts"
+import { splitBold, splitCitations } from "../lib/citations.ts"
 
 const sources = [{ id: 40 }, { id: 7 }]
 test("known ids become cites numbered by source order", () => {
@@ -18,4 +18,13 @@ test("same id twice gets the same n", () => {
 })
 test("no citations gives one text segment", () => {
   assert.deepEqual(splitCitations("plain", sources), [{ kind: "text", text: "plain" }])
+})
+
+test("splitBold marks **bold** runs and keeps the rest", () => {
+  assert.deepEqual(splitBold("a **b** c"), [
+    { text: "a ", bold: false }, { text: "b", bold: true }, { text: " c", bold: false },
+  ])
+  assert.deepEqual(splitBold("plain"), [{ text: "plain", bold: false }])
+  assert.deepEqual(splitBold("**x**"), [{ text: "x", bold: true }])
+  assert.deepEqual(splitBold("2 ** 3"), [{ text: "2 ** 3", bold: false }])
 })

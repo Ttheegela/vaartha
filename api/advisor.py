@@ -147,7 +147,9 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
         """Newest conversations first; the title is the first user message."""
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
-                "SELECT conversation_id AS id, MAX(created_at) AS updated_at, MAX(id) AS last, "
+                # created_at is SQLite datetime('now'): UTC, no zone marker; emit ISO-8601 Z
+                "SELECT conversation_id AS id, strftime('%Y-%m-%dT%H:%M:%SZ', MAX(created_at)) "
+                "AS updated_at, MAX(id) AS last, "
                 "(SELECT content FROM agent_messages f WHERE f.conversation_id = m.conversation_id "
                 "AND f.role = 'user' ORDER BY f.id LIMIT 1) AS title "
                 "FROM agent_messages m GROUP BY conversation_id ORDER BY last DESC LIMIT ?",
@@ -160,7 +162,8 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
         """User and assistant messages of one conversation, oldest first."""
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
-                "SELECT role, content, created_at, tool_calls FROM agent_messages "
+                "SELECT role, content, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) AS created_at, "
+                "tool_calls FROM agent_messages "
                 "WHERE conversation_id = ? ORDER BY id", (conversation_id,)).fetchall()
         if not rows:
             raise HTTPException(status_code=404, detail="conversation not found")

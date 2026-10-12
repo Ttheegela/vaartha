@@ -7,7 +7,7 @@ import { avatarColor, avatarInitial } from "@/lib/avatar"
 import { AlertFeed } from "@/components/alert-feed"
 import Link from "next/link"
 import { Fragment } from "react"
-import { splitCitations } from "@/lib/citations"
+import { splitBold, splitCitations } from "@/lib/citations"
 import { NetWorthChart } from "@/components/net-worth-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic"
 
 const TODAY_FMT = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })
 
-const withCites = (text: string, sources: { id?: number | null }[]) => splitCitations(text, sources.filter((s): s is { id: number } => s.id != null)).map((seg, i) => seg.kind === "text" ? <Fragment key={i}>{seg.text}</Fragment> : <sup key={i} className="ml-0.5 text-[#4f8cff]">[{seg.n}]</sup>)
+const withCites = (text: string, sources: { id?: number | null }[]) => splitCitations(text, sources.filter((s): s is { id: number } => s.id != null)).map((seg, i) => seg.kind === "text" ? <Fragment key={i}>{splitBold(seg.text).map((b, j) => b.bold ? <strong key={j}>{b.text}</strong> : b.text)}</Fragment> : <sup key={i} className="ml-0.5 text-[#4f8cff]">[{seg.n}]</sup>)
 
 export default async function HomePage() {
   const [recurring, points, accounts, briefing, alerts] = await Promise.all([
