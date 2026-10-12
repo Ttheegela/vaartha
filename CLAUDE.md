@@ -12,7 +12,8 @@ Personal finance + investing advisor agent (Origin-style). Two instances from on
 - `core/` pure Python analytics (Polars, no web deps, no I/O at import)
 - `api/` FastAPI app (`uvicorn --factory api.main:create_app`), SQLite via stdlib sqlite3 (WAL)
 - `web/` Next.js (from v0). Pure UI logic in `web/lib/*.ts` with relative `.ts` imports, tested by `pnpm test` (node:test). Typed client from `web/openapi.json` (`pnpm gen:api`).
-- `worker/` scheduled jobs (later), `evals/` (later), `deploy/` (later)
+- `evals/` advisor evals: `uv run python -m evals.run --model ID --base-url URL` (live, manual), `--report` writes `evals/RESULTS.md`; CI replays `evals/recordings/`
+- `worker/` scheduled jobs (later), `deploy/` (later)
 - `legacy/` v1 Streamlit app — frozen, reference only, never edit
 
 ## Rules
