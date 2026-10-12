@@ -192,6 +192,34 @@
         "title": "CategorySpend",
         "type": "object"
       },
+      "ExchangeIn": {
+        "description": "Public token returned by Plaid Link.",
+        "properties": {
+          "public_token": {
+            "title": "Public Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_token"
+        ],
+        "title": "ExchangeIn",
+        "type": "object"
+      },
+      "ExchangeOut": {
+        "description": "Linked item id.",
+        "properties": {
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id"
+        ],
+        "title": "ExchangeOut",
+        "type": "object"
+      },
       "GoalOut": {
         "description": "A savings goal with progress toward its target.",
         "properties": {
@@ -304,6 +332,20 @@
           "last_synced_at"
         ],
         "title": "ItemOut",
+        "type": "object"
+      },
+      "LinkTokenOut": {
+        "description": "Plaid Link token for the client.",
+        "properties": {
+          "link_token": {
+            "title": "Link Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "link_token"
+        ],
+        "title": "LinkTokenOut",
         "type": "object"
       },
       "MerchantSpendOut": {
@@ -560,6 +602,23 @@
         "title": "SpendingOut",
         "type": "object"
       },
+      "SyncOut": {
+        "description": "Per-item sync status: \"ok\" or a Plaid error code.",
+        "properties": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "object"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SyncOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -720,6 +779,64 @@
         "summary": "Networth"
       }
     },
+    "/api/plaid/exchange": {
+      "post": {
+        "description": "Exchange Link's public token and run the first sync.",
+        "operationId": "plaid_exchange_api_plaid_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plaid Exchange"
+      }
+    },
+    "/api/plaid/link_token": {
+      "post": {
+        "description": "Create a Plaid Link token for this instance's single user.",
+        "operationId": "plaid_link_token_api_plaid_link_token_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkTokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Plaid Link Token"
+      }
+    },
     "/api/recurring": {
       "get": {
         "description": "Detected subscriptions and bills with monthly-normalized totals (inactive excluded).",
@@ -803,6 +920,25 @@
           }
         },
         "summary": "Spending"
+      }
+    },
+    "/api/sync": {
+      "post": {
+        "description": "Sync every linked item; per-item status, never a 500 for one bad item.",
+        "operationId": "sync_api_sync_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync"
       }
     },
     "/healthz": {
