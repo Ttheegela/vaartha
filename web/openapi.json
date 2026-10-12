@@ -1,6 +1,319 @@
 {
   "components": {
     "schemas": {
+      "AccountOut": {
+        "description": "One account with its cached balances.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "balance_available": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Available"
+          },
+          "balance_current": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Current"
+          },
+          "institution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "is_liability": {
+            "title": "Is Liability",
+            "type": "boolean"
+          },
+          "mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtype"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "institution",
+          "name",
+          "type",
+          "subtype",
+          "mask",
+          "balance_current",
+          "balance_available",
+          "is_liability"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "AccountsOut": {
+        "description": "Accounts, items and asset/liability totals.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "assets": {
+            "title": "Assets",
+            "type": "number"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "liabilities": {
+            "title": "Liabilities",
+            "type": "number"
+          }
+        },
+        "required": [
+          "accounts",
+          "items",
+          "assets",
+          "liabilities"
+        ],
+        "title": "AccountsOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ItemOut": {
+        "description": "A linked institution connection.",
+        "properties": {
+          "institution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "institution",
+          "status",
+          "last_synced_at"
+        ],
+        "title": "ItemOut",
+        "type": "object"
+      },
+      "NetWorthPoint": {
+        "description": "One daily net-worth snapshot.",
+        "properties": {
+          "assets": {
+            "title": "Assets",
+            "type": "number"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "liabilities": {
+            "title": "Liabilities",
+            "type": "number"
+          },
+          "net": {
+            "title": "Net",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "assets",
+          "liabilities",
+          "net"
+        ],
+        "title": "NetWorthPoint",
+        "type": "object"
+      },
+      "RecurringListOut": {
+        "description": "Subscriptions and bills with active monthly totals.",
+        "properties": {
+          "bills": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringOut"
+            },
+            "title": "Bills",
+            "type": "array"
+          },
+          "bills_monthly": {
+            "title": "Bills Monthly",
+            "type": "number"
+          },
+          "subscriptions": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringOut"
+            },
+            "title": "Subscriptions",
+            "type": "array"
+          },
+          "subscriptions_monthly": {
+            "title": "Subscriptions Monthly",
+            "type": "number"
+          }
+        },
+        "required": [
+          "subscriptions",
+          "bills",
+          "subscriptions_monthly",
+          "bills_monthly"
+        ],
+        "title": "RecurringListOut",
+        "type": "object"
+      },
+      "RecurringOut": {
+        "description": "A detected recurring stream with its monthly-normalized amount.",
+        "properties": {
+          "avg_amount": {
+            "title": "Avg Amount",
+            "type": "number"
+          },
+          "frequency": {
+            "enum": [
+              "WEEKLY",
+              "MONTHLY",
+              "ANNUALLY"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "subscription",
+              "bill",
+              "income"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_amount": {
+            "title": "Last Amount",
+            "type": "number"
+          },
+          "last_date": {
+            "title": "Last Date",
+            "type": "string"
+          },
+          "merchant": {
+            "title": "Merchant",
+            "type": "string"
+          },
+          "monthly_amount": {
+            "title": "Monthly Amount",
+            "type": "number"
+          },
+          "predicted_next_date": {
+            "title": "Predicted Next Date",
+            "type": "string"
+          },
+          "stream_id": {
+            "title": "Stream Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stream_id",
+          "merchant",
+          "kind",
+          "frequency",
+          "avg_amount",
+          "last_amount",
+          "last_date",
+          "predicted_next_date",
+          "is_active",
+          "monthly_amount"
+        ],
+        "title": "RecurringOut",
+        "type": "object"
+      },
       "RegimeOut": {
         "description": "Regime as served to clients.",
         "properties": {
@@ -47,6 +360,46 @@
         ],
         "title": "RegimeOut",
         "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       }
     }
   },
@@ -56,6 +409,91 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/accounts": {
+      "get": {
+        "description": "Linked accounts with cached balances, items, and asset/liability totals.",
+        "operationId": "accounts_api_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Accounts"
+      }
+    },
+    "/api/networth": {
+      "get": {
+        "description": "Daily net-worth snapshots for the last `days` days, oldest first.",
+        "operationId": "networth_api_networth_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 365,
+              "maximum": 3650,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NetWorthPoint"
+                  },
+                  "title": "Response Networth Api Networth Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Networth"
+      }
+    },
+    "/api/recurring": {
+      "get": {
+        "description": "Detected subscriptions and bills with monthly-normalized totals (inactive excluded).",
+        "operationId": "recurring_api_recurring_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Recurring"
+      }
+    },
     "/api/regime": {
       "get": {
         "description": "Current market regime, cached for REGIME_TTL_SECONDS.",

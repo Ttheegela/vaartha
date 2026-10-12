@@ -4,6 +4,66 @@
  */
 
 export interface paths {
+    "/api/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accounts
+         * @description Linked accounts with cached balances, items, and asset/liability totals.
+         */
+        get: operations["accounts_api_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/networth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Networth
+         * @description Daily net-worth snapshots for the last `days` days, oldest first.
+         */
+        get: operations["networth_api_networth_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recurring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recurring
+         * @description Detected subscriptions and bills with monthly-normalized totals (inactive excluded).
+         */
+        get: operations["recurring_api_recurring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/regime": {
         parameters: {
             query?: never;
@@ -49,6 +109,123 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AccountOut
+         * @description One account with its cached balances.
+         */
+        AccountOut: {
+            /** Account Id */
+            account_id: string;
+            /** Balance Available */
+            balance_available: number | null;
+            /** Balance Current */
+            balance_current: number | null;
+            /** Institution */
+            institution: string | null;
+            /** Is Liability */
+            is_liability: boolean;
+            /** Mask */
+            mask: string | null;
+            /** Name */
+            name: string;
+            /** Subtype */
+            subtype: string | null;
+            /** Type */
+            type: string;
+        };
+        /**
+         * AccountsOut
+         * @description Accounts, items and asset/liability totals.
+         */
+        AccountsOut: {
+            /** Accounts */
+            accounts: components["schemas"]["AccountOut"][];
+            /** Assets */
+            assets: number;
+            /** Items */
+            items: components["schemas"]["ItemOut"][];
+            /** Liabilities */
+            liabilities: number;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * ItemOut
+         * @description A linked institution connection.
+         */
+        ItemOut: {
+            /** Institution */
+            institution: string | null;
+            /** Item Id */
+            item_id: string;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * NetWorthPoint
+         * @description One daily net-worth snapshot.
+         */
+        NetWorthPoint: {
+            /** Assets */
+            assets: number;
+            /** Date */
+            date: string;
+            /** Liabilities */
+            liabilities: number;
+            /** Net */
+            net: number;
+        };
+        /**
+         * RecurringListOut
+         * @description Subscriptions and bills with active monthly totals.
+         */
+        RecurringListOut: {
+            /** Bills */
+            bills: components["schemas"]["RecurringOut"][];
+            /** Bills Monthly */
+            bills_monthly: number;
+            /** Subscriptions */
+            subscriptions: components["schemas"]["RecurringOut"][];
+            /** Subscriptions Monthly */
+            subscriptions_monthly: number;
+        };
+        /**
+         * RecurringOut
+         * @description A detected recurring stream with its monthly-normalized amount.
+         */
+        RecurringOut: {
+            /** Avg Amount */
+            avg_amount: number;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "WEEKLY" | "MONTHLY" | "ANNUALLY";
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "subscription" | "bill" | "income";
+            /** Last Amount */
+            last_amount: number;
+            /** Last Date */
+            last_date: string;
+            /** Merchant */
+            merchant: string;
+            /** Monthly Amount */
+            monthly_amount: number;
+            /** Predicted Next Date */
+            predicted_next_date: string;
+            /** Stream Id */
+            stream_id: string;
+        };
+        /**
          * RegimeOut
          * @description Regime as served to clients.
          */
@@ -71,6 +248,19 @@ export interface components {
             /** Spy Dd */
             spy_dd: number;
         };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -80,6 +270,77 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    accounts_api_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountsOut"];
+                };
+            };
+        };
+    };
+    networth_api_networth_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NetWorthPoint"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recurring_api_recurring_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringListOut"];
+                };
+            };
+        };
+    };
     regime_api_regime_get: {
         parameters: {
             query?: never;

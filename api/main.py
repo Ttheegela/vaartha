@@ -8,12 +8,14 @@ import time
 from collections.abc import Callable
 from contextlib import closing
 from dataclasses import asdict
+from datetime import date
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from api.db import connect, init_db
+from api.finance import build_finance_router
 from api.settings import Settings
 from core.live import live_regime
 from core.regime import Regime
@@ -37,6 +39,7 @@ def create_app(
     settings: Settings | None = None,
     regime_provider: Callable[[], Regime] = live_regime,
     clock: Callable[[], float] = time.monotonic,
+    today: Callable[[], date] = date.today,
 ) -> FastAPI:
     """Build the API: initialise the DB and register routes."""
     settings = settings or Settings.from_env()
@@ -68,4 +71,5 @@ def create_app(
         cache["regime"] = (clock(), result)
         return asdict(result)
 
+    app.include_router(build_finance_router(settings.db_path, today))
     return app
