@@ -1,0 +1,12 @@
+{
+  "task_id": "afford-2000",
+  "model": "qwen3:8b",
+  "answer": "Your net worth is $79,481.57, and your monthly cash flow shows $2,185 in income and $1,977 in spend [c:30]. The $2,000 purchase would leave a $197 buffer, but your budget status shows 82% of your $3,000 monthly budget is already allocated [b:15]. Consider delaying non-essential purchases until after bill payments.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 28037,
+  "tokens_in": 823,
+  "tokens_out": 664,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

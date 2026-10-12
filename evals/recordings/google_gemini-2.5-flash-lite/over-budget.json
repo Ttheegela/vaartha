@@ -1,0 +1,17 @@
+{
+  "task_id": "over-budget",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "No, you are not over budget in any category. The highest percentage of your budget used is for Food and Drink, at 63.95%.",
+  "tool_calls": [
+    {
+      "name": "get_budget_status",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1383,
+  "tokens_in": 946,
+  "tokens_out": 44,
+  "cost_usd": 0.00011220000000000002,
+  "expected_pass": true
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "portfolio-risk",
+  "model": "qwen3:8b",
+  "answer": "Your portfolio's risk metrics as of 2026-10-12:  \n- **Volatility**: 8.6% (low-medium, indicating modest price swings)  \n- **Max Drawdown**: 6.15% (potential loss in a worst-case scenario)  \n- **Beta**: 0.297 (30% as volatile as the market, suggesting conservative exposure)  \n\nThe portfolio is fully covered with no leverage, but the top 31% weight in a single holding could amplify risk if that asset underperforms. In an elevated market regime, monitor for sector-specific risks. [n:123]",
+  "tool_calls": [
+    {
+      "name": "get_portfolio_risk",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 27177,
+  "tokens_in": 1724,
+  "tokens_out": 639,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

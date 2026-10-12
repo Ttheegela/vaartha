@@ -1,0 +1,12 @@
+{
+  "task_id": "market-worry",
+  "model": "qwen3:8b",
+  "answer": "The market is currently in an **Elevated** regime, indicating higher volatility and uncertainty [r:1]. Here's why:\n1. **Regime Signals** show increased market stress, often linked to interest rate changes or geopolitical factors [r:1].\n2. **Recent News** (past 1 day) may include earnings reports or macroeconomic data affecting investor sentiment [n:234].\n3. Historically, Elevated regimes often see 15-20% short-term volatility, but long-term trends depend on underlying fundamentals [r:1]. \n\nMonitor news and consider rebalancing if anxiety is high.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 16219,
+  "tokens_in": 818,
+  "tokens_out": 385,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

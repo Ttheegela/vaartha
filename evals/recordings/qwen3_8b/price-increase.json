@@ -1,0 +1,17 @@
+{
+  "task_id": "price-increase",
+  "model": "qwen3:8b",
+  "answer": "Yes, your Netflix subscription increased by $1.33/month, now $22.99 (previously $21.66). Spotify remained at $11.99, and Amazon Prime stayed at $139/year ($11.58/month). The price change for Netflix was effective October 15, 2026 [n:123].",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 18201,
+  "tokens_in": 1856,
+  "tokens_out": 391,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

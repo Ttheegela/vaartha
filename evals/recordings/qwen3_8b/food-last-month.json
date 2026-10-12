@@ -1,0 +1,20 @@
+{
+  "task_id": "food-last-month",
+  "model": "qwen3:8b",
+  "answer": "Last month, you spent $534.05 on food and drink. \n\n1. Total spending for September 2026 was $3,345.96.  \n2. RENT_AND_UTILITIES accounted for $2,634.43, the largest category.  \n3. Other categories included GENERAL_SERVICES ($142.50) and ENTERTAINMENT ($34.98).",
+  "tool_calls": [
+    {
+      "name": "get_spending",
+      "args": {
+        "group_by": "category",
+        "month": "2026-09"
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 24258,
+  "tokens_in": 1778,
+  "tokens_out": 556,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

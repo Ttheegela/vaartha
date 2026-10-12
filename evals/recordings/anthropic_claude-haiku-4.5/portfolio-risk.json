@@ -1,0 +1,17 @@
+{
+  "task_id": "portfolio-risk",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Your portfolio is **relatively conservative and low-risk**. Here are the key metrics:\n\n\u2022 **Volatility of 8.6%** \u2014 your portfolio swings roughly 8.6% on an average day, which is quite modest. For context, the S&P 500 typically has 15-18% annual volatility.\n\n\u2022 **Beta of 0.30** \u2014 your portfolio moves only about 30% as much as the broader market. When the market rises or falls significantly, your portfolio tends to move in the same direction but with much smaller swings.\n\n\u2022 **Maximum drawdown of -6.15%** \u2014 the worst single-day loss observed over the past 251 days was about 6%. This suggests you haven't experienced major portfolio shocks recently.\n\nYour portfolio appears well-diversified with no single holding dominating\u2014the largest position is 31% of your portfolio.",
+  "tool_calls": [
+    {
+      "name": "get_portfolio_risk",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 3705,
+  "tokens_in": 3217,
+  "tokens_out": 236,
+  "cost_usd": 0.004397,
+  "expected_pass": true
+}

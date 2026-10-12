@@ -1,0 +1,19 @@
+{
+  "task_id": "bills-this-week",
+  "model": "qwen3:8b",
+  "answer": "Three bills are due this week, totaling $207.42:  \n1. **Con Edison** ($96.43 due Oct 14)  \n2. **Netflix** ($22.99 due Oct 15)  \n3. **Verizon** ($88.00 due Oct 18)  \n\nEnsure payments are scheduled to avoid late fees.",
+  "tool_calls": [
+    {
+      "name": "get_upcoming_bills",
+      "args": {
+        "days": 7
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 21729,
+  "tokens_in": 1793,
+  "tokens_out": 443,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

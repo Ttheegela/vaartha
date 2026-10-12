@@ -1,0 +1,19 @@
+{
+  "task_id": "net-worth",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "Your net worth is $79,481.57. This is based on your assets of $80,722.12 and liabilities of $1,240.55.",
+  "tool_calls": [
+    {
+      "name": "get_net_worth",
+      "args": {
+        "days": null
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1347,
+  "tokens_in": 978,
+  "tokens_out": 61,
+  "cost_usd": 0.00012220000000000002,
+  "expected_pass": true
+}

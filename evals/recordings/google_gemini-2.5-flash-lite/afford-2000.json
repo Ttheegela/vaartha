@@ -1,0 +1,12 @@
+{
+  "task_id": "afford-2000",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "I need more information to tell you if you can afford this purchase. I need to know your income and how much you've already spent this month.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 1147,
+  "tokens_in": 443,
+  "tokens_out": 196,
+  "cost_usd": 0.00012270000000000003,
+  "expected_pass": false
+}

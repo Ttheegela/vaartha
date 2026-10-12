@@ -1,0 +1,12 @@
+{
+  "task_id": "emergency-fund",
+  "model": "qwen3:8b",
+  "answer": "Your emergency fund progress is 68% complete with $10,000 needed [g:123]. Here's why:\n1. You've saved $18,000 so far, meeting 68% of your $26,500 target\n2. Your monthly savings of $1,200 (from cash flow analysis) will finish the goal in 11 months\n3. With $79,481.57 in net worth, your emergency fund represents 21% of total assets - close to the recommended 25-30% range [n:456]",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 24399,
+  "tokens_in": 818,
+  "tokens_out": 581,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

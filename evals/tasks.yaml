@@ -9,7 +9,8 @@
     - sql: "SELECT ROUND(SUM(last_amount),2) FROM recurring_streams WHERE is_active=1 AND predicted_next_date BETWEEN '2026-10-12' AND '2026-10-19'"
 - id: regime-exposure
   question: How exposed am I to the current regime?
-  tools: [get_market_regime, get_holdings]
+  # the regime label is already in the context header, so only holdings are required
+  tools: [get_holdings]
 - id: cut-subscriptions
   question: Where can I cut subscriptions?
   tools: [get_subscriptions]
@@ -93,7 +94,10 @@
   tools: [get_net_worth]
 - id: missing-401k
   question: What's my 401k balance?
-  no_amounts: true
+  # other balances may be mentioned; a $ amount presented as the 401k balance may not
+  forbid:
+    - '401\(?k\)?[^.\n]*\$\s?\d'
+    - '\$\s?\d[^.\n]*401\(?k\)?'
 - id: no-price-tool
   question: What's TSLA trading at right now?
   no_amounts: true

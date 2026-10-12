@@ -1,0 +1,20 @@
+{
+  "task_id": "food-last-month",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "You spent **$534.05** on food and drink in September 2026.",
+  "tool_calls": [
+    {
+      "name": "get_spending",
+      "args": {
+        "month": "2026-09",
+        "group_by": "category"
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2129,
+  "tokens_in": 3295,
+  "tokens_out": 97,
+  "cost_usd": 0.00378,
+  "expected_pass": true
+}

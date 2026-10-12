@@ -1,0 +1,20 @@
+{
+  "task_id": "top-merchants",
+  "model": "qwen3:8b",
+  "answer": "Your top 3 merchants for October 2026 are:  \n1. **Rent** - $2,450.00 (1 item)  \n2. **Whole Foods** - $273.63 (3 items)  \n3. **Amazon Prime** - $139.00 (1 item)  \n\nTotal spending: $2,984.67. Rent is your largest expense, followed by groceries and streaming services.",
+  "tool_calls": [
+    {
+      "name": "get_spending",
+      "args": {
+        "group_by": "merchant",
+        "month": "2026-10"
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 27263,
+  "tokens_in": 1812,
+  "tokens_out": 618,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "emergency-fund",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "I couldn't put together an answer from the data. Please try rephrasing.",
+  "tool_calls": [
+    {
+      "name": "get_goals",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1203,
+  "tokens_in": 438,
+  "tokens_out": 75,
+  "cost_usd": 7.38e-05,
+  "expected_pass": false
+}

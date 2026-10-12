@@ -1,0 +1,12 @@
+{
+  "task_id": "bills-monthly",
+  "model": "qwen3:8b",
+  "answer": "The total monthly bills (excluding subscriptions) are not directly available in the provided data. However, the amount due in the next 7 days is $207.42 [bills:7]. To calculate monthly bills, you\u2019d need to aggregate all recurring payments, which isn\u2019t accessible via the current tools.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 39952,
+  "tokens_in": 823,
+  "tokens_out": 927,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

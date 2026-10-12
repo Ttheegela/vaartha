@@ -1,0 +1,12 @@
+{
+  "task_id": "net-worth",
+  "model": "qwen3:8b",
+  "answer": "Your net worth is $79,481.57.  \n1. This reflects your total assets minus liabilities across all accounts.  \n2. Recent transactions or changes would update this figure, but no changes have been recorded recently.  \n3. Your balance includes checking, savings, investments, and debts.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 14750,
+  "tokens_in": 817,
+  "tokens_out": 353,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

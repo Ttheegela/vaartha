@@ -1,0 +1,23 @@
+{
+  "task_id": "afford-2000",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "**No, a $2,000 purchase would be very tight this month.** Here's why:\n\n\u2022 **Net cash flow so far this month is only $1,135.33** \u2014 after income of $4,120 and spending of $2,984.67, that's not enough to cover a $2,000 purchase.\n\n\u2022 **Your budgets have remaining room in some categories** (Entertainment: $288, General Merchandise: $361, Transportation: $350), but collectively they only add up to about $1,000, well short of $2,000.\n\n\u2022 **There are 3 bills totaling $207.42 still due this month**, which will further reduce your available cash.\n\nIf this purchase is necessary, you might need to either defer it to next month or reduce other spending categories significantly.",
+  "tool_calls": [
+    {
+      "name": "get_cash_flow",
+      "args": {
+        "months": 1
+      }
+    },
+    {
+      "name": "get_budget_status",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 4331,
+  "tokens_in": 3453,
+  "tokens_out": 283,
+  "cost_usd": 0.004868,
+  "expected_pass": false
+}

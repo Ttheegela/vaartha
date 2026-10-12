@@ -1,0 +1,17 @@
+{
+  "task_id": "cut-subscriptions",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "You're spending **$46.56/month** across three subscriptions. Here's where you could cut:\n\n1. **Netflix at $22.99/month** \u2013 Your largest subscription, and it just increased by $1.33. If you don't heavily use it, canceling would save nearly half your subscription costs.\n\n2. **Spotify at $11.99/month** \u2013 Could switch to the free tier with ads, or share a family plan if available.\n\n3. **Amazon Prime at $11.58/month** (annualized) \u2013 Only cut if you rarely use Prime delivery or Video; otherwise it's often the most value-dense subscription.\n\nWhat's your usage pattern for these? That would help identify which ones you'd genuinely miss.",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 3507,
+  "tokens_in": 3327,
+  "tokens_out": 205,
+  "cost_usd": 0.004352,
+  "expected_pass": true
+}

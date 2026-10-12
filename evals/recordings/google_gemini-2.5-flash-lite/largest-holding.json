@@ -1,0 +1,17 @@
+{
+  "task_id": "largest-holding",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "The largest holding is NVIDIA Corp with 31.0% of the portfolio.",
+  "tool_calls": [
+    {
+      "name": "get_holdings",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1056,
+  "tokens_in": 956,
+  "tokens_out": 28,
+  "cost_usd": 0.00010680000000000001,
+  "expected_pass": false
+}

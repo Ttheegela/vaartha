@@ -1,0 +1,17 @@
+{
+  "task_id": "cut-subscriptions",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "You have 3 active subscriptions costing 46.56 per month in total.\n\n* Netflix: 22.99/month (with a price increase of 1.33 expected)\n* Spotify: 11.99/month\n* Amazon Prime: 11.58/month (annual payment of 139)\n\nYou can cut 11.58 per month by canceling Amazon Prime, which renews annually on October 2nd.",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1566,
+  "tokens_in": 1000,
+  "tokens_out": 114,
+  "cost_usd": 0.0001456,
+  "expected_pass": true
+}

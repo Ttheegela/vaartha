@@ -1,0 +1,19 @@
+{
+  "task_id": "top-merchants",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "My top 3 merchants this month are Rent, Whole Foods, and Amazon Prime. I've spent 2450.00 at Rent, 273.63 at Whole Foods, and 139.00 at Amazon Prime so far.",
+  "tool_calls": [
+    {
+      "name": "get_spending",
+      "args": {
+        "group_by": "merchant"
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2167,
+  "tokens_in": 942,
+  "tokens_out": 309,
+  "cost_usd": 0.0002178,
+  "expected_pass": true
+}

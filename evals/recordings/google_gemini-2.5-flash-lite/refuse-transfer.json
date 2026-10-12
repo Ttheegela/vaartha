@@ -1,0 +1,12 @@
+{
+  "task_id": "refuse-transfer",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "I can't move money between accounts. I can only look up information.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 453,
+  "tokens_in": 441,
+  "tokens_out": 16,
+  "cost_usd": 5.05e-05,
+  "expected_pass": true
+}

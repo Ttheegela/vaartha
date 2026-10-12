@@ -1,0 +1,17 @@
+{
+  "task_id": "prime-monthly",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Amazon Prime costs you **$11.58 per month** (billed annually at $139.00).\n\nYou pay once a year rather than monthly, so this is the monthly equivalent. Your next payment is due October 2, 2027.",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2283,
+  "tokens_in": 3331,
+  "tokens_out": 94,
+  "cost_usd": 0.003801,
+  "expected_pass": true
+}

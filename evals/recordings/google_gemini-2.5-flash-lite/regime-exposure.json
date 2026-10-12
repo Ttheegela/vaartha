@@ -1,0 +1,21 @@
+{
+  "task_id": "regime-exposure",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "Today's market regime is 'Elevated', meaning there is a higher than normal risk of significant market downturns.\nThe 'Elevated' regime is characterized by a 42% Brent volatility and a 0.55 probability. The market has a `dd_score` of 0.4, a `gold_oil_score` of 0.5, and a `vol_score` of 0.6.",
+  "tool_calls": [
+    {
+      "name": "get_portfolio_risk",
+      "args": {}
+    },
+    {
+      "name": "get_market_regime",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1339,
+  "tokens_in": 964,
+  "tokens_out": 118,
+  "cost_usd": 0.00014360000000000002,
+  "expected_pass": false
+}

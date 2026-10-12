@@ -1,0 +1,17 @@
+{
+  "task_id": "missing-401k",
+  "model": "qwen3:8b",
+  "answer": "Your 401(k) balance is $56,302.00, held in the \"Individual Brokerage\" account at First Platypus Bank. This represents 70.8% of your total net worth [n:123]. The account type appears to be a brokerage account rather than a traditional 401(k), so please verify with your employer's plan details. No recent activity is shown for this account in the history.",
+  "tool_calls": [
+    {
+      "name": "get_net_worth",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 25661,
+  "tokens_in": 1871,
+  "tokens_out": 587,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

@@ -1,0 +1,29 @@
+{
+  "task_id": "bills-monthly",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Based on your recent cash flow data, **you spend approximately $3,300 per month**, but that includes all spending, not just bills.\n\nLooking at your actual recurring bills (excluding subscriptions):\n- **Rent: $2,450/month**\n- **Con Edison (utilities): $96.43** (typical)\n- **Verizon: $88/month**\n- **Geico (insurance): $142.50/month**\n\nThis totals roughly **$2,777 in monthly bills** excluding subscriptions. Your subscriptions add another $46.56/month (Netflix, Spotify, and Amazon Prime amortized).\n\nThe difference between these fixed bills and your total monthly spend (~$3,300) goes toward variable spending like groceries, dining, transportation, and other purchases.",
+  "tool_calls": [
+    {
+      "name": "get_upcoming_bills",
+      "args": {
+        "days": 60
+      }
+    },
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    },
+    {
+      "name": "get_cash_flow",
+      "args": {
+        "months": 6
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 4413,
+  "tokens_in": 3880,
+  "tokens_out": 312,
+  "cost_usd": 0.00544,
+  "expected_pass": true
+}

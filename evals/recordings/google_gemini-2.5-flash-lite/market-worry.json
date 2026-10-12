@@ -1,0 +1,12 @@
+{
+  "task_id": "market-worry",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "The market regime is 'Elevated', which can be a cause for concern. You have upcoming bills totaling $207.42 due in the next 7 days.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 620,
+  "tokens_in": 438,
+  "tokens_out": 36,
+  "cost_usd": 5.8200000000000005e-05,
+  "expected_pass": false
+}

@@ -1,0 +1,19 @@
+{
+  "task_id": "bills-monthly",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "I pay 427.50 per month in bills. This is based on upcoming bills for the next year, not counting subscriptions.",
+  "tool_calls": [
+    {
+      "name": "get_upcoming_bills",
+      "args": {
+        "days": 365
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1279,
+  "tokens_in": 1027,
+  "tokens_out": 47,
+  "cost_usd": 0.0001215,
+  "expected_pass": false
+}

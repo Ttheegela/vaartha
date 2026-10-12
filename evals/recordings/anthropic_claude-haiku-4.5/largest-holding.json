@@ -1,0 +1,17 @@
+{
+  "task_id": "largest-holding",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Your largest holding is **NVIDIA (NVDA) at 31% of your portfolio**, worth $12,346.16.\n\n\u2022 That's more than 10 percentage points higher than your second-largest position (SPY at 27.6%)\n\u2022 Combined with your semiconductor exposure through TSM (23.8%), you have significant tech/chip sector concentration\n\u2022 Your portfolio total is $39,828.16 across these four holdings",
+  "tool_calls": [
+    {
+      "name": "get_holdings",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 3167,
+  "tokens_in": 3309,
+  "tokens_out": 135,
+  "cost_usd": 0.003984,
+  "expected_pass": true
+}

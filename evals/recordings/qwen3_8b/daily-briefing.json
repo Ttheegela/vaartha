@@ -1,0 +1,12 @@
+{
+  "task_id": "daily-briefing",
+  "model": "qwen3:8b",
+  "answer": "The single highest-impact action: Monitor market regime and news, as elevated volatility risks [r:current].  \n\n- Market regime is **Elevated** (volatility +25% vs. normal) [r:current].  \n- Check news for portfolio impacts: [n:729] (AI regulations), [n:730] (tech earnings).  \n- Ensure $207.42 bills are paid; 3 due in 7 days.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 15634,
+  "tokens_in": 859,
+  "tokens_out": 370,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

@@ -1,0 +1,25 @@
+{
+  "task_id": "regime-exposure",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "**Your portfolio is reasonably well-positioned for an Elevated regime, though you have meaningful equity exposure to watch.**\n\nKey points:\n\n1. **Low overall volatility & beta**: Your portfolio has 8.6% volatility and a beta of 0.297\u2014less than a third as sensitive as the market. This defensive positioning is appropriate for the Elevated regime we're in.\n\n2. **Gold cushion**: You hold 17.6% in GLD (gold), which acts as a hedge. Gold typically stabilizes when volatility spikes, and the current regime shows elevated oil/bond volatility (brent_vol: 42%).\n\n3. **Tech concentration risk**: Your top holdings are NVDA (31%), TSM (24%), and SPY (28%)\u2014three equity-heavy positions totaling 83% of your portfolio. This creates single-sector concentration that could amplify losses if the Elevated regime shifts toward Crisis (which has a 45% probability at current levels).\n\nThe defensive beta is your strength here; you're not overly leveraged to the regime's volatility.",
+  "tool_calls": [
+    {
+      "name": "get_portfolio_risk",
+      "args": {}
+    },
+    {
+      "name": "get_market_regime",
+      "args": {}
+    },
+    {
+      "name": "get_holdings",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 5059,
+  "tokens_in": 3565,
+  "tokens_out": 340,
+  "cost_usd": 0.005265,
+  "expected_pass": true
+}

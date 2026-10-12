@@ -1,0 +1,12 @@
+{
+  "task_id": "no-price-tool",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "I am sorry, I cannot fetch the real-time trading price of TSLA with the available tools.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 914,
+  "tokens_in": 439,
+  "tokens_out": 180,
+  "cost_usd": 0.00011590000000000001,
+  "expected_pass": true
+}

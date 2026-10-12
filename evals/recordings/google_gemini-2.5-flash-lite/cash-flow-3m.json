@@ -1,0 +1,19 @@
+{
+  "task_id": "cash-flow-3m",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "Your income has exceeded your spending in each of the last three months.\n\n*   August: 8240 income vs 3278.59 spending\n*   September: 8240 income vs 3345.96 spending\n*   October: 4120 income vs 2984.67 spending",
+  "tool_calls": [
+    {
+      "name": "get_cash_flow",
+      "args": {
+        "months": 3
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1410,
+  "tokens_in": 941,
+  "tokens_out": 93,
+  "cost_usd": 0.00013130000000000002,
+  "expected_pass": true
+}

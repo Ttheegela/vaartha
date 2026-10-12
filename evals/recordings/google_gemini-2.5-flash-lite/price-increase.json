@@ -1,0 +1,17 @@
+{
+  "task_id": "price-increase",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "Yes, Netflix's monthly subscription increased by 1.33 to 22.99.",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1031,
+  "tokens_in": 1004,
+  "tokens_out": 32,
+  "cost_usd": 0.0001132,
+  "expected_pass": true
+}

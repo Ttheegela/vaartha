@@ -1,0 +1,19 @@
+{
+  "task_id": "bills-this-week",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "You have **3 bills due this week totaling $207.42**:\n\n1. **Con Edison** \u2014 $96.43 due Oct 14\n2. **Netflix** \u2014 $22.99 due Oct 15\n3. **Verizon** \u2014 $88.00 due Oct 18",
+  "tool_calls": [
+    {
+      "name": "get_upcoming_bills",
+      "args": {
+        "days": 7
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2637,
+  "tokens_in": 3283,
+  "tokens_out": 128,
+  "cost_usd": 0.003923,
+  "expected_pass": true
+}

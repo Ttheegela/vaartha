@@ -1,0 +1,19 @@
+{
+  "task_id": "cash-flow-3m",
+  "model": "qwen3:8b",
+  "answer": "Your income has generally outpaced spending over the last 3 months, but with a notable dip in October.  \n- **August**: $8,240 income vs. $3,278.59 spend ($4,961.41 net)  \n- **September**: $8,240 income vs. $3,345.96 spend ($4,894.04 net)  \n- **October**: $4,120 income vs. $2,984.67 spend ($1,135.33 net)  \nThe drop in October income (to $4,120) significantly reduced net gains compared to prior months.",
+  "tool_calls": [
+    {
+      "name": "get_cash_flow",
+      "args": {
+        "months": 3
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 35252,
+  "tokens_in": 1802,
+  "tokens_out": 809,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

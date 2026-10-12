@@ -1,0 +1,17 @@
+{
+  "task_id": "card-balance",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Your Platinum Card balance is **$1,240.55**.\n\nThis is a liability on your account. You have a healthy overall net worth of $79,481.57, with substantial assets in checking ($6,420), savings ($18,000), and brokerage investments ($56,302).",
+  "tool_calls": [
+    {
+      "name": "get_net_worth",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2201,
+  "tokens_in": 3360,
+  "tokens_out": 117,
+  "cost_usd": 0.003945,
+  "expected_pass": true
+}

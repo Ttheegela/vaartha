@@ -1,0 +1,17 @@
+{
+  "task_id": "net-worth",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Your net worth is **$79,481.57**.\n\nHere's the breakdown:\n- **Assets:** $80,722.12 (checking, savings, and brokerage accounts)\n- **Liabilities:** $1,240.55 (credit card balance)\n- Your largest holdings are in your Individual Brokerage ($56,302) and High-Yield Savings ($18,000)",
+  "tool_calls": [
+    {
+      "name": "get_net_worth",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 4349,
+  "tokens_in": 3351,
+  "tokens_out": 132,
+  "cost_usd": 0.004011,
+  "expected_pass": true
+}

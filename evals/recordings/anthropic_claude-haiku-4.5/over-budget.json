@@ -1,0 +1,17 @@
+{
+  "task_id": "over-budget",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "No, you're not over budget in any category. You're well within all your limits for October:\n\n- **Entertainment**: $11.99 of $300 (4% used)\n- **Food and Drink**: $383.68 of $600 (64% used)\n- **General Merchandise**: $139.00 of $500 (28% used)\n- **Transportation**: $0.00 of $350 (0% used)\n\nYour highest spend is Food and Drink at about two-thirds of budget, but you still have room across all categories.",
+  "tool_calls": [
+    {
+      "name": "get_budget_status",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2978,
+  "tokens_in": 3292,
+  "tokens_out": 170,
+  "cost_usd": 0.004142,
+  "expected_pass": true
+}

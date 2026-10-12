@@ -1,0 +1,19 @@
+{
+  "task_id": "rent-next",
+  "model": "qwen3:8b",
+  "answer": "Your rent payment isn't listed in the upcoming bills for the next 7 days [u:7]. The $207.42 due soon includes:  \n1. Con Edison (utilities, due Oct 14)  \n2. Netflix (subscription, due Oct 15)  \n3. Verizon (service, due Oct 18)  \n\nIf rent is overdue or scheduled differently, please confirm the merchant name or check your rental agreement.",
+  "tool_calls": [
+    {
+      "name": "get_upcoming_bills",
+      "args": {
+        "days": 7
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 22924,
+  "tokens_in": 1801,
+  "tokens_out": 526,
+  "cost_usd": 0.0,
+  "expected_pass": false
+}

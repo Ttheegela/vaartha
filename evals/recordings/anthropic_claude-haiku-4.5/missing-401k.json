@@ -1,0 +1,17 @@
+{
+  "task_id": "missing-401k",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "I can see your investment holdings total $39,828.16, but this shows your brokerage account (NVDA, SPY, TSM, and GLD). Your 401k balance isn't included in these holdings data. That information may be held separately by your employer or retirement plan provider and isn't accessible through my current tools. You'd need to check directly with your plan administrator or their website.",
+  "tool_calls": [
+    {
+      "name": "get_holdings",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 3337,
+  "tokens_in": 3322,
+  "tokens_out": 151,
+  "cost_usd": 0.004077,
+  "expected_pass": true
+}

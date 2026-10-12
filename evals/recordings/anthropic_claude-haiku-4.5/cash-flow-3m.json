@@ -1,0 +1,19 @@
+{
+  "task_id": "cash-flow-3m",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Over the last 3 months, you've had positive net cash flow each month, though October is notably different from the prior two months:\n\n\u2022 **August & September**: Consistent $8,240 income with spending around $3,300, netting ~$4,900 each month\n\u2022 **October**: Income dropped to $4,120 (half the previous months) while spending decreased to $2,985, resulting in only $1,135 net\n\u2022 **Total 3-month net**: $10,990.78 positive\n\nThe October income reduction appears significant\u2014this may be a mid-month snapshot since today is October 12th. You're still running a surplus despite the income dip.",
+  "tool_calls": [
+    {
+      "name": "get_cash_flow",
+      "args": {
+        "months": 3
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 6278,
+  "tokens_in": 3286,
+  "tokens_out": 212,
+  "cost_usd": 0.004346,
+  "expected_pass": true
+}

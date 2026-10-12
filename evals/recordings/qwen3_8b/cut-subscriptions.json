@@ -1,0 +1,17 @@
+{
+  "task_id": "cut-subscriptions",
+  "model": "qwen3:8b",
+  "answer": "You have 3 active subscriptions totaling $46.56/month:\n\n1. **Netflix** - $22.99/month (\u2191$1.33 since last billed)  \n   *Next payment: 2026-10-15*  \n\n2. **Spotify** - $11.99/month (no price change)  \n   *Next payment: 2026-11-03*  \n\n3. **Amazon Prime** - $11.58/month (annual billing)  \n   *Next payment: 2027-10-02*  \n\nConsider pausing or canceling services you're underutilizing. The price increase for Netflix might make it more urgent to review its value.",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 28323,
+  "tokens_in": 1852,
+  "tokens_out": 640,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

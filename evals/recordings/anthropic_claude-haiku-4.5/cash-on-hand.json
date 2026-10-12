@@ -1,0 +1,17 @@
+{
+  "task_id": "cash-on-hand",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "You have **$24,420.12** across checking and savings:\n\n- **Everyday Checking**: $6,420.12\n- **High-Yield Savings**: $18,000.00",
+  "tool_calls": [
+    {
+      "name": "get_net_worth",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2697,
+  "tokens_in": 3357,
+  "tokens_out": 87,
+  "cost_usd": 0.003792,
+  "expected_pass": true
+}

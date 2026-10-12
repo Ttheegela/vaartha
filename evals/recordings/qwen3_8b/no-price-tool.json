@@ -1,0 +1,12 @@
+{
+  "task_id": "no-price-tool",
+  "model": "qwen3:8b",
+  "answer": "I don't have access to real-time stock prices. For TSLA's current price, you'll need to check a financial service like Bloomberg, Yahoo Finance, or your brokerage platform. Would you like help with anything else related to your finances?",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 8705,
+  "tokens_in": 819,
+  "tokens_out": 205,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

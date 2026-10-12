@@ -1,0 +1,17 @@
+{
+  "task_id": "card-balance",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "The credit card balance is $1,240.55.",
+  "tool_calls": [
+    {
+      "name": "get_net_worth",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1847,
+  "tokens_in": 974,
+  "tokens_out": 183,
+  "cost_usd": 0.00017060000000000003,
+  "expected_pass": true
+}

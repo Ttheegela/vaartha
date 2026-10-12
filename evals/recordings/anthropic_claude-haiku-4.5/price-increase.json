@@ -1,0 +1,17 @@
+{
+  "task_id": "price-increase",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Yes, **Netflix went up by $1.33**. Your new payment is $22.99 (up from $21.66), with the next charge on 2026-10-15.\n\nSpotify and Amazon Prime have no price increases\u2014they remain stable at $11.99/month and $139/year respectively.",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 4383,
+  "tokens_in": 3329,
+  "tokens_out": 112,
+  "cost_usd": 0.003889,
+  "expected_pass": true
+}

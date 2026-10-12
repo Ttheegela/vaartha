@@ -1,0 +1,17 @@
+{
+  "task_id": "prime-monthly",
+  "model": "qwen3:8b",
+  "answer": "Amazon Prime costs you **$11.58 per month**.  \n\n1. **Subscription details**: It's billed annually ($139/year), so the monthly equivalent is $11.58.  \n2. **Next payment**: Due on 2027-10-02.  \n3. **Price stability**: No recent price increase noted [s:123].",
+  "tool_calls": [
+    {
+      "name": "get_subscriptions",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 19933,
+  "tokens_in": 1858,
+  "tokens_out": 454,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

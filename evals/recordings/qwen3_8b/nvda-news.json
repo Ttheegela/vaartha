@@ -1,0 +1,41 @@
+{
+  "task_id": "nvda-news",
+  "model": "qwen3:8b",
+  "answer": "Nvidia's latest news includes:  \n1. **Earnings beat**: Nvidia exceeded estimates with data center revenue surges [n:1].  \n2. **Export controls**: The US tightened chip export rules on Nvidia sales to China [n:2].  \n3. **Regulatory filing**: Nvidia filed an 8-K form with the SEC [n:7].",
+  "tool_calls": [
+    {
+      "name": "get_news",
+      "args": {
+        "days": 7,
+        "tickers": [
+          "NVDA"
+        ]
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": 1,
+      "title": "Nvidia earnings beat estimates as data center revenue surges",
+      "source": "Alpaca",
+      "published_at": "2026-10-12T09:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "US tightens chip export controls on Nvidia sales to China",
+      "source": "Finnhub",
+      "published_at": "2026-10-12T04:00:00Z"
+    },
+    {
+      "id": 7,
+      "title": "NVDA filed an 8-K",
+      "source": "EDGAR",
+      "published_at": "2026-10-07T12:00:00Z"
+    }
+  ],
+  "latency_ms": 17912,
+  "tokens_in": 1870,
+  "tokens_out": 403,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

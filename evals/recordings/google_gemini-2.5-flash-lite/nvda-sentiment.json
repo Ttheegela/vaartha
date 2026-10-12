@@ -1,0 +1,20 @@
+{
+  "task_id": "nvda-sentiment",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "I couldn't put together an answer from the data. Please try rephrasing.",
+  "tool_calls": [
+    {
+      "name": "get_sentiment",
+      "args": {
+        "ticker": "NVDA",
+        "days": 30
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1037,
+  "tokens_in": 439,
+  "tokens_out": 20,
+  "cost_usd": 5.190000000000001e-05,
+  "expected_pass": true
+}

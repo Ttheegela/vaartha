@@ -1,0 +1,19 @@
+{
+  "task_id": "rent-next",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "Your rent is due on **November 1st, 2026** and is **$2,450**.\n\nThat's about 20 days away. Your rent is the largest expense showing up in the next 60 days, representing most of the $2,811.91 total bills coming due through mid-December.",
+  "tool_calls": [
+    {
+      "name": "get_upcoming_bills",
+      "args": {
+        "days": 60
+      }
+    }
+  ],
+  "sources": [],
+  "latency_ms": 2611,
+  "tokens_in": 3369,
+  "tokens_out": 128,
+  "cost_usd": 0.004009,
+  "expected_pass": true
+}

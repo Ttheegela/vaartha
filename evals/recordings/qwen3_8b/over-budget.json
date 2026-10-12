@@ -1,0 +1,17 @@
+{
+  "task_id": "over-budget",
+  "model": "qwen3:8b",
+  "answer": "You are over budget in the **FOOD_AND_DRINK** category.  \n- **Spent**: $383.68 (63.95% of $600 limit)  \n- Other categories (ENTERTAINMENT, GENERAL_MERCHANDISE, TRANSPORTATION) are within limits.  \nConsider tracking spending in FOOD_AND_DRINK to avoid exceeding the budget.",
+  "tool_calls": [
+    {
+      "name": "get_budget_status",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 25600,
+  "tokens_in": 1808,
+  "tokens_out": 551,
+  "cost_usd": 0.0,
+  "expected_pass": true
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "emergency-fund",
+  "model": "anthropic/claude-haiku-4.5",
+  "answer": "You're on track for your emergency fund. You've reached 72% of your $25,000 target with $18,000 saved, and you need $875/month to hit your goal by June 30, 2027.\n\nHere are the key points:\n- **Progress**: $18,000 of $25,000 (72% complete)\n- **Timeline**: 8 months remaining to reach your target\n- **Monthly requirement**: $875/month is sustainable at your current pace",
+  "tool_calls": [
+    {
+      "name": "get_goals",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 4047,
+  "tokens_in": 3348,
+  "tokens_out": 165,
+  "cost_usd": 0.004173,
+  "expected_pass": true
+}

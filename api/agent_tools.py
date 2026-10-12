@@ -246,7 +246,8 @@ def get_sentiment(tb: Toolbox, ticker: str, days: int = 30) -> dict:
 _NONE: dict = {}
 # name -> (description, properties, required)
 _TOOLS: dict[str, tuple[str, dict, list[str]]] = {
-    "get_net_worth": ("Net worth, assets, liabilities, account balances and recent history.",
+    "get_net_worth": (("Net worth, total assets and liabilities, and the balance of every account "
+                      "(checking, savings, credit cards, brokerage), plus recent history."),
                       {"days": _int(1, 3650, 90)}, []),
     "get_cash_flow": ("Monthly income, spend and net for recent months.",
                       {"months": _int(1, 6, 6)}, []),

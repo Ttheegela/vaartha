@@ -1,0 +1,12 @@
+{
+  "task_id": "daily-briefing",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "The market regime is Elevated, so be cautious with investments.\n- Bills totaling $207.42 are due in the next 7 days.\n- Your net worth is $79,481.57.\n- There are no urgent news alerts for today.",
+  "tool_calls": [],
+  "sources": [],
+  "latency_ms": 588,
+  "tokens_in": 479,
+  "tokens_out": 62,
+  "cost_usd": 7.27e-05,
+  "expected_pass": true
+}

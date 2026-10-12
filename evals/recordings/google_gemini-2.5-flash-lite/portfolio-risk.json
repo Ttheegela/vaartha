@@ -1,0 +1,17 @@
+{
+  "task_id": "portfolio-risk",
+  "model": "google/gemini-2.5-flash-lite",
+  "answer": "Your portfolio has a low risk profile. The volatility is 8.6% and the maximum drawdown is -6.15%. Beta, which measures volatility relative to the overall market, is 0.297.",
+  "tool_calls": [
+    {
+      "name": "get_portfolio_risk",
+      "args": {}
+    }
+  ],
+  "sources": [],
+  "latency_ms": 1363,
+  "tokens_in": 913,
+  "tokens_out": 58,
+  "cost_usd": 0.00011450000000000002,
+  "expected_pass": true
+}
