@@ -46,3 +46,12 @@ src/models/kronos_repo/
 
 # Claude Code session memory — local only
 .claude/
+
+# v2 runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Plan execution scratch
+.superpowers/

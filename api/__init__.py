@@ -1,0 +1,1 @@
+"""Vārtā FastAPI application."""
