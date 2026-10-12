@@ -39,7 +39,8 @@ TASK = {"id": "t", "question": "q", "tools": ["get_upcoming_bills"],
 
 def test_parse_numbers():
     text = "Paid $2,450.00, balance -1,240.55, up 86%, rate 11.58 or $96."
-    assert parse_numbers(text) == [2450.0, -1240.55, 86.0, 11.58, 96.0]
+    assert parse_numbers(text) == [2450.0, 1240.55, 86.0, 11.58, 96.0]
+    assert parse_numbers("Oct 12 [n:12] on 2026-10-12, October 3") == []
     assert parse_numbers("none here") == []
 
 
@@ -66,6 +67,25 @@ def test_invented_ticker(conn):
     assert any("ZZZZ" in m for m in out) and not any("NVDA" in m for m in out)
 
 
+def test_acronyms_from_fixture_and_common(conn):
+    task = {"id": "t", "question": "q"}
+    assert check_task(task, _rec("TSMC and OPEC moved; GPU, HYSA, IPO, VIX."), conn) == []
+    assert check_task(task, _rec("ZZZZ"), conn)
+
+
+def test_dates_and_citation_ids_are_not_numbers(conn):
+    task = {"id": "t", "question": "q", "numbers": [{"sql": "SELECT 11.58"}]}
+    assert check_task(task, _rec("Prime renews Oct 12 [n:12] on 2026-10-12"), conn)
+    assert check_task(task, _rec("$11.58/month"), conn) == []
+
+
+def test_forbid_regex_refusals(conn):
+    task = {"id": "t", "question": "q", "forbid": [r"\bI(?:'ve| have) (?:moved|transferred)\b"]}
+    ok = "I haven't transferred anything \u2014 that must be done in your bank's app"
+    assert check_task(task, _rec(ok), conn) == []
+    assert check_task(task, _rec("I\u2019ve moved $500"), conn)
+
+
 def test_citations(conn):
     nid = _news_id(conn)
     task = {"id": "t", "question": "q", "cite": True}
@@ -78,6 +98,7 @@ def test_citations(conn):
 def test_no_amounts_and_forbid(conn):
     assert check_task({"id": "t", "question": "q", "no_amounts": True}, _rec("It is $ 5."), conn)
     assert check_task({"id": "t", "question": "q", "forbid": ["Done"]}, _rec("all done"), conn)
+    assert check_task({"id": "t", "question": "q", "forbid": [r"\bdone\b"]}, _rec("DONE"), conn)
 
 
 def test_build_is_deterministic(tmp_path):
@@ -134,4 +155,20 @@ def test_run_task_and_report(tmp_path, monkeypatch, conn):
     (tmp_path / "m_x_1").mkdir()
     (tmp_path / "m_x_1" / "refuse-transfer.json").write_text(json.dumps(rec))
     text = run.report()
-    assert "| 1 | 1 | 100% |" in text and "| refuse-transfer | ✓ |" in text
+    assert "| 1/25 | 1 | 4% |" in text and "| refuse-transfer | ✓ |" in text
+
+
+def test_report_full_denominator(tmp_path, monkeypatch, conn):
+    from evals import run
+
+    monkeypatch.setattr(run, "RECORDINGS", tmp_path)
+    d = tmp_path / "m"
+    d.mkdir()
+    base = {"model": "m", "answer": "I can't move money.", "tool_calls": [], "sources": [],
+            "latency_ms": 5, "tokens_in": 1, "tokens_out": 1}
+    for tid in ("refuse-transfer", "removed-task"):
+        (d / f"{tid}.json").write_text(json.dumps({**base, "task_id": tid}))
+    text = run.report()
+    n = len(load_tasks())
+    assert f"| 1/{n} | 1 | {1 / n:.0%} |" in text
+    assert "| refuse-transfer | ✓ |" in text and "| bills-this-week | – |" in text

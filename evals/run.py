@@ -80,9 +80,12 @@ def run_live(args) -> None:
 def report() -> str:
     """Markdown report: a stats table per model, then the task x model pass matrix."""
     tasks = load_tasks()
+    known = {t["id"] for t in tasks}
     recs: dict[str, dict[str, dict]] = {}
     for f in sorted(RECORDINGS.glob("*/*.json")):
         r = json.loads(f.read_text())
+        if r["task_id"] not in known:  # task was removed from tasks.yaml
+            continue
         recs.setdefault(r["model"], {})[r["task_id"]] = r
     if not recs:
         return "# Eval results\n\nNo runs recorded yet.\n"
@@ -95,12 +98,12 @@ def report() -> str:
     lines = ["# Eval results", ""]
     for m, rs in recs.items():
         lat = [r["latency_ms"] for r in rs.values()]
-        n, ok = len(rs), sum(passed[m].values())
+        n, ok = len(tasks), sum(passed[m].values())
         lines += [f"## {m}", "",
-                  "| tasks | passed | pass rate | p50 latency ms | p95 latency ms "
+                  "| recorded | passed | pass rate | p50 latency ms | p95 latency ms "
                   "| mean tokens in | mean tokens out | total cost USD |",
                   "|---|---|---|---|---|---|---|---|",
-                  f"| {n} | {ok} | {ok / n:.0%} | {percentile(lat, P50):.0f} "
+                  f"| {len(rs)}/{n} | {ok} | {ok / n:.0%} | {percentile(lat, P50):.0f} "
                   f"| {percentile(lat, P95):.0f} "
                   f"| {statistics.mean(r['tokens_in'] for r in rs.values()):.0f} "
                   f"| {statistics.mean(r['tokens_out'] for r in rs.values()):.0f} "
@@ -109,7 +112,7 @@ def report() -> str:
     lines += ["## Pass matrix", "", "| task | " + " | ".join(models) + " |",
               "|---|" + "---|" * len(models)]
     for t in tasks:
-        cells = [("✓" if passed[m][t["id"]] else "✗") if t["id"] in passed[m] else "-"
+        cells = [("✓" if passed[m][t["id"]] else "✗") if t["id"] in passed[m] else "–"
                  for m in models]
         lines.append(f"| {t['id']} | " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"

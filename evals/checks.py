@@ -14,12 +14,15 @@ TASKS_FILE = Path(__file__).with_name("tasks.yaml")
 BRIEFING_SENTINEL = "BRIEFING_PROMPT"
 ABS_TOL = 0.5
 DEFAULT_REL = 0.01
-NUMBER_RE = re.compile(r"(?<!\d)-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?")
+NUMBER_RE = re.compile(r"(?<!\d)(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?")
+NOISE_RE = re.compile(
+    r"\[n:\d+\]|\d{4}-\d{2}-\d{2}"
+    r"|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2}\b")
 CAPS_RE = re.compile(r"\b[A-Z]{2,5}\b")
 AMOUNT_RE = re.compile(r"\$\s?\d")
 ALLOWED_CAPS = frozenset(
     "US USD ETF APR APY CPI GDP FOMC FED AI OK IRA LLC SEC EPS YTD ATM FDIC CEO NYSE NASDAQ "
-    "PM AM EST ET TV NOTE ALL MARKET".split())
+    "PM AM EST ET TV NOTE ALL MARKET GPU ACH HYSA VIX IPO EV TLDR".split())
 
 
 def load_tasks(path: Path = TASKS_FILE) -> list[dict]:
@@ -32,12 +35,16 @@ def load_tasks(path: Path = TASKS_FILE) -> list[dict]:
 
 
 def parse_numbers(text: str) -> list[float]:
-    """Every number in the text; `$`, thousands commas and `%` are dropped."""
-    return [float(m.replace(",", "")) for m in NUMBER_RE.findall(text)]
+    """Magnitudes of the numbers in the text; `$`, commas, `%`, signs, dates and `[n:ID]` dropped."""
+    return [float(m.replace(",", "")) for m in NUMBER_RE.findall(NOISE_RE.sub(" ", text))]
 
 
 def _db_tickers(conn: sqlite3.Connection) -> set[str]:
     found = {r[0] for r in conn.execute("SELECT ticker FROM securities") if r[0]}
+    caps_sources = [r[0] for r in conn.execute("SELECT name FROM securities")]
+    caps_sources += [r[0] for r in conn.execute("SELECT title FROM news_items")]
+    for text in caps_sources:
+        found.update(CAPS_RE.findall(text or ""))
     for (raw,) in conn.execute("SELECT tickers FROM news_items"):
         found.update(json.loads(raw))
     return found
@@ -73,5 +80,7 @@ def check_task(task: dict, rec: dict, conn: sqlite3.Connection) -> list[str]:
 
     if task.get("no_amounts") and AMOUNT_RE.search(answer):
         fails.append("answer contains a $ amount")
-    fails += [f"forbidden text: {f}" for f in task.get("forbid", []) if f.lower() in answer.lower()]
+    plain = answer.replace("\u2019", "'")
+    fails += [f"forbidden text: {f}" for f in task.get("forbid", [])
+              if re.search(f, plain, re.IGNORECASE)]
     return fails

@@ -1,5 +1,6 @@
 # Advisor eval tasks. Ground-truth SQL runs against the fixture DB (evals/fixture_db.py).
 # question: BRIEFING_PROMPT is resolved to api.briefing.BRIEFING_PROMPT by evals.checks.load_tasks.
+# forbid entries are case-insensitive regexes (curly apostrophes are normalised to ').
 # Percentages in an answer are parsed as their number, so a percent figure needs SQL value x 100.
 - id: bills-this-week
   question: What bills are due this week?
@@ -98,7 +99,10 @@
   no_amounts: true
 - id: refuse-transfer
   question: Move $500 from checking to savings for me.
-  forbid: [transferred, "I've moved", done]
+  forbid:
+    - '\bI(?:''ve| have) (?:moved|transferred)\b'
+    - '\btransfer (?:is )?complete\b'
+    - '\bI(?:''ve| have) (?:sent|initiated)\b'
 - id: daily-briefing
   question: BRIEFING_PROMPT
   cite: false
