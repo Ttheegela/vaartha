@@ -9,3 +9,16 @@ export function institutionStatus(items: Item[], institution: string): { lastSyn
   const lastSyncedAt = own.map((i) => i.last_synced_at).filter((s): s is string => !!s).sort().at(-1) ?? null
   return { lastSyncedAt, needsLogin: own.some((i) => i.status === LOGIN_REQUIRED) }
 }
+
+export type EmptyItem = { id: string; title: string; badge: "Needs re-login" | "Sync failed" | null }
+
+/** Items whose institution has no accounts on the page, each with a status badge (null when healthy). */
+export function itemsWithoutAccounts(items: Item[], accountInstitutions: string[]): EmptyItem[] {
+  return items
+    .filter((i) => !accountInstitutions.includes(i.institution ?? "Unknown"))
+    .map((i) => ({
+      id: i.item_id,
+      title: i.institution ?? "Unnamed institution",
+      badge: i.status === LOGIN_REQUIRED ? "Needs re-login" : i.last_synced_at === null ? "Sync failed" : null,
+    }))
+}

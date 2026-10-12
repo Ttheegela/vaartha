@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toAccounts } from "@/lib/adapters"
 import type { components } from "@/lib/api-types"
 import { StatusBadge } from "@/components/status-badge"
-import { institutionStatus } from "@/lib/items"
+import { institutionStatus, itemsWithoutAccounts } from "@/lib/items"
 import { relativeTime } from "@/lib/relative-time"
 import { apiGet } from "@/lib/server-api"
 
@@ -17,14 +17,16 @@ export default async function AccountsPage() {
   const data = await apiGet<components["schemas"]["AccountsOut"]>("/api/accounts")
   const accounts = data ? toAccounts(data) : []
   const institutions = [...new Set(accounts.map((a) => a.institution))]
+  const emptyItems = data ? itemsWithoutAccounts(data.items, institutions) : []
+  const hasItems = !!data && data.items.length > 0
   return (
     <div>
       <PageHeading
         title="Accounts"
         description="Balances across linked financial institutions."
-        action={accounts.length ? <div className="flex items-start gap-2"><SyncButton /><LinkAccountButton /></div> : undefined}
+        action={accounts.length || hasItems ? <div className="flex items-start gap-2"><SyncButton /><LinkAccountButton /></div> : undefined}
       />
-      {accounts.length === 0 ? (
+      {accounts.length === 0 && !hasItems ? (
         <Card>
           <CardHeader>
             <CardTitle className="serif-display text-3xl">Link your <em>first</em> account</CardTitle>
@@ -41,6 +43,14 @@ export default async function AccountsPage() {
             <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Total liabilities</CardTitle></CardHeader><CardContent><p className="numeric text-3xl text-destructive">{usd(data!.liabilities)}</p></CardContent></Card>
           </div>
           <div className="flex flex-col gap-5">
+            {emptyItems.map((it) => (
+              <Card key={it.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">{it.title}{it.badge && <StatusBadge tone="warning">{it.badge}</StatusBadge>}</CardTitle>
+                  <CardDescription>Use Sync now to retry.</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
             {institutions.map((inst) => {
               const status = institutionStatus(data!.items, inst)
               return (
