@@ -31,6 +31,8 @@ def make_briefing(conn: sqlite3.Connection, client, model: str, toolbox: Toolbox
             answer = ev["text"]
         elif ev["type"] == "done":
             done = ev
+    if not answer.strip():
+        raise ValueError("empty briefing")
     row = {"date": toolbox.today().isoformat(),
            "items_json": json.dumps({"text": answer, "sources": done.get("sources", [])}),
            "model": model, "generated_at": datetime.now(UTC).isoformat()}

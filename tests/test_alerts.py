@@ -82,3 +82,10 @@ def test_sentiment_flip(env):
     conn.commit()
     generate_alerts(conn, box)
     assert _texts(conn, "sentiment") == [f"{ticker} news sentiment turned negative"]
+
+
+def test_empty_db(tmp_path):
+    conn = connect(tmp_path / "e.db")
+    init_db(conn)
+    box = build_toolbox(tmp_path / "e.db", lambda: TODAY, lambda: NORMAL, lambda t: None)
+    assert generate_alerts(conn, box) == 0

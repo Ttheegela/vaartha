@@ -1,9 +1,12 @@
 """Chat SSE, conversations, alerts and briefing endpoints with a fake LLM."""
 
+import asyncio
 import json
+import time
 from datetime import date
 from types import SimpleNamespace as NS
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -44,7 +47,7 @@ class FakeLLM:
 
 
 def _client(tmp_path, llm):
-    settings = Settings(db_path=tmp_path / "v.db", instance="demo")
+    settings = Settings(db_path=tmp_path / "v.db", instance="demo", llm_model="test-model")
     app = create_app(settings, regime_provider=lambda: NORMAL, today=lambda: TODAY, llm=llm)
     return TestClient(app), settings
 
@@ -147,3 +150,46 @@ def test_briefing(tmp_path):
     b = c.get("/api/briefing").json()
     assert (b["date"], b["headline"], b["bullets"], b["model"]) == (
         "2026-10-12", "Pay the bill.", ["Due Oct 14"], "test-model")
+
+
+def test_history_skips_error_row(tmp_path):
+    llm = FakeLLM(RuntimeError("x"), _text("fine"))
+    c, _ = _client(tmp_path, llm)
+    c.post("/api/chat", json={"message": "one", "conversation_id": "c-1"})
+    c.post("/api/chat", json={"message": "two", "conversation_id": "c-1"})
+    prior = [m["content"] for m in llm.calls[-1] if m["role"] in ("user", "assistant")]
+    assert prior == ["one", "two"]
+
+
+def test_briefing_empty_answer_raises(tmp_path):
+    c, settings = _client(tmp_path, None)
+    conn = connect(settings.db_path)
+    box = build_toolbox(settings.db_path, lambda: TODAY, lambda: NORMAL, lambda t: None)
+    with pytest.raises(ValueError):
+        make_briefing(conn, FakeLLM(_text("  \n")), "test-model", box)
+    assert c.get("/api/briefing").json() is None
+
+
+class SlowLLM(FakeLLM):
+    def _create(self, **kw):
+        time.sleep(0.05)
+        return _text("ok")
+
+
+def test_concurrent_chats_all_complete(tmp_path):
+    n = 8
+    settings = Settings(db_path=tmp_path / "v.db", instance="demo", llm_model="test-model")
+    app = create_app(settings, regime_provider=lambda: NORMAL, today=lambda: TODAY,
+                     llm=SlowLLM())
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                     base_url="http://t") as ac:
+            rs = await asyncio.gather(*(ac.post("/api/chat", json={"message": f"q{i}"})
+                                        for i in range(n)))
+        return [r.text for r in rs]
+
+    texts = asyncio.run(go())
+    assert all(_events(t)[-1][0] == "done" for t in texts)
+    count = connect(settings.db_path).execute("SELECT COUNT(*) FROM agent_messages").fetchone()[0]
+    assert count == 2 * n

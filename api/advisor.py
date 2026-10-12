@@ -90,41 +90,48 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
     """Routes for chat, conversations, alerts and briefing over one database."""
     router = APIRouter(prefix="/api")
 
-    def log_message(conn, conv: str, role: str, content: str | None, **cols) -> None:
-        conn.execute(
-            "INSERT INTO agent_messages (conversation_id, role, content, tool_calls, model, "
-            "latency_ms, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (conv, role, content, cols.get("tool_calls"), cols.get("model"),
-             cols.get("latency_ms"), cols.get("tokens_in"), cols.get("tokens_out")))
-        conn.commit()
+    def log_message(conv: str, role: str, content: str | None, **cols) -> None:
+        # one short-lived connection per write: the stream hops threads between yields
+        with closing(connect(db_path)) as conn:
+            conn.execute(
+                "INSERT INTO agent_messages (conversation_id, role, content, tool_calls, model, "
+                "latency_ms, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (conv, role, content, cols.get("tool_calls"), cols.get("model"),
+                 cols.get("latency_ms"), cols.get("tokens_in"), cols.get("tokens_out")))
+            conn.commit()
 
-    def stream(conv: str, message: str) -> Iterator[str]:
-        yield _sse("meta", {"conversation_id": conv})
+    def load_history(conv: str) -> list[dict]:
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
                 "SELECT role, content FROM agent_messages WHERE conversation_id = ? "
                 "AND role IN ('user', 'assistant') AND content IS NOT NULL "
                 "ORDER BY id DESC LIMIT ?", (conv, HISTORY_TURNS)).fetchall()
-            history = [dict(r) for r in reversed(rows)]
-            log_message(conn, conv, "user", message)
+        return [dict(r) for r in reversed(rows)]
+
+    def stream(conv: str, message: str) -> Iterator[str]:
+        yield _sse("meta", {"conversation_id": conv})
+        try:
+            history = load_history(conv)
+            log_message(conv, "user", message)
+            for ev in run_agent(llm, model, build_messages(toolbox, history, message), toolbox):
+                if ev["type"] == "answer":
+                    answer = ev["text"]
+                elif ev["type"] == "done":
+                    log_message(
+                        conv, "assistant", answer, model=ev["model"],
+                        tool_calls=json.dumps({"calls": ev["tool_calls"],
+                                               "sources": ev["sources"]}),
+                        latency_ms=ev["latency_ms"], tokens_in=ev["tokens_in"],
+                        tokens_out=ev["tokens_out"])
+                yield _sse(ev["type"], {k: v for k, v in ev.items() if k != "type"})
+        except Exception as exc:
+            log.warning("advisor failed: %s", type(exc).__name__)
             try:
-                for ev in run_agent(llm, model, build_messages(toolbox, history, message),
-                                    toolbox):
-                    if ev["type"] == "answer":
-                        answer = ev["text"]
-                    elif ev["type"] == "done":
-                        log_message(
-                            conn, conv, "assistant", answer, model=ev["model"],
-                            tool_calls=json.dumps({"calls": ev["tool_calls"],
-                                                   "sources": ev["sources"]}),
-                            latency_ms=ev["latency_ms"], tokens_in=ev["tokens_in"],
-                            tokens_out=ev["tokens_out"])
-                    yield _sse(ev["type"], {k: v for k, v in ev.items() if k != "type"})
-            except Exception as exc:
-                log.warning("advisor failed: %s", type(exc).__name__)
-                log_message(conn, conv, "assistant", None,
+                log_message(conv, "assistant", None,
                             tool_calls=json.dumps({"error": type(exc).__name__}))
-                yield _sse("error", {"message": "advisor unavailable"})
+            except Exception:  # the DB itself may be what failed
+                log.warning("could not log advisor error")
+            yield _sse("error", {"message": "advisor unavailable"})
 
     @router.post("/chat")
     def chat(body: ChatIn) -> StreamingResponse:
