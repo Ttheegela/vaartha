@@ -132,7 +132,7 @@ class FakePlaid:
         if code:
             raise PlaidError(code, "simulated", 400)
 
-    def link_token_create(self, user_id, products, days_requested=730):
+    def link_token_create(self, user_id, products, required_if_supported=None, days_requested=730):
         self._maybe_fail("link_token_create")
         return "link-fake-1"
 

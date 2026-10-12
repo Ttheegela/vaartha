@@ -28,6 +28,7 @@ class PlaidAPI(Protocol):
     """The Plaid calls Vārtā uses; implemented by PlaidClient and FakePlaid."""
 
     def link_token_create(self, user_id: str, products: list[str],
+                          required_if_supported: list[str] | None = None,
                           days_requested: int = MAX_HISTORY_DAYS) -> str: ...
     def exchange_public_token(self, public_token: str) -> tuple[str, str]: ...
     def accounts_get(self, access_token: str) -> dict: ...
@@ -66,23 +67,35 @@ class PlaidClient:
                              resp.status_code)
         return data
 
+    @staticmethod
+    def _field(data: dict, key: str) -> str:
+        """A required string field of a Plaid response, else PLAID_BAD_RESPONSE."""
+        try:
+            return data[key]
+        except (KeyError, TypeError) as exc:
+            raise PlaidError("PLAID_BAD_RESPONSE", f"missing {key}", 0) from exc
+
     def link_token_create(self, user_id: str, products: list[str],
+                          required_if_supported: list[str] | None = None,
                           days_requested: int = MAX_HISTORY_DAYS) -> str:
-        """Create a Link token for the single user of this instance."""
-        data = self._post("/link/token/create", {
+        """Create a Link token. `products` must all be supported by an institution;
+        `required_if_supported` are requested only where available."""
+        body = {
             "client_name": CLIENT_NAME,
             "language": LANGUAGE,
             "country_codes": COUNTRY_CODES,
             "user": {"client_user_id": user_id},
             "products": products,
             "transactions": {"days_requested": days_requested},
-        })
-        return data["link_token"]
+        }
+        if required_if_supported:
+            body["required_if_supported_products"] = required_if_supported
+        return self._field(self._post("/link/token/create", body), "link_token")
 
     def exchange_public_token(self, public_token: str) -> tuple[str, str]:
         """Exchange Link's public token for (access_token, item_id)."""
         data = self._post("/item/public_token/exchange", {"public_token": public_token})
-        return data["access_token"], data["item_id"]
+        return self._field(data, "access_token"), self._field(data, "item_id")
 
     def accounts_get(self, access_token: str) -> dict:
         """Cached account balances (free endpoint) plus the item."""
@@ -106,4 +119,4 @@ class PlaidClient:
             "initial_products": products,
             "options": {"transactions": {"days_requested": MAX_HISTORY_DAYS}},
         })
-        return data["public_token"]
+        return self._field(data, "public_token")

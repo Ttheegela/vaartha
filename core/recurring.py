@@ -27,6 +27,7 @@ MIN_WEEKLY = MIN_MONTHLY = 3
 MIN_ANNUAL = 2
 TOLERANCE = {"WEEKLY": WEEKLY_TOLERANCE_DAYS, "MONTHLY": MONTHLY_TOLERANCE_DAYS,
              "ANNUALLY": ANNUAL_TOLERANCE_DAYS}
+CADENCE_WINDOW = 6  # cadence and avg_amount use only the most recent distinct-day charges
 ANCHOR_WINDOW = 3  # day-of-month anchor = max day among the last 3 charges (month-end safe)
 BILL_PRIMARY = {"RENT_AND_UTILITIES", "LOAN_PAYMENTS"}
 BILL_DETAILED_PREFIX = "GENERAL_SERVICES_INSURANCE"
@@ -87,7 +88,10 @@ def detect_recurring(txns: pl.DataFrame, today: date) -> pl.DataFrame:
                  pl.col("pfc_primary").last(), pl.col("pfc_detailed").last())
         )
         for g in grouped.iter_rows(named=True):
-            dates, amounts = list(g["date"]), list(g["amount"])
+            # one charge per day (last wins); input is date-sorted
+            per_day = dict(zip(g["date"], g["amount"], strict=True))
+            dates = list(per_day)[-CADENCE_WINDOW:]
+            amounts = [per_day[d] for d in dates]
             frequency = _cadence(dates)
             if frequency is None:
                 continue

@@ -2,11 +2,13 @@
 
 from datetime import date
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from api.crypto import new_key
 from api.main import create_app
+from api.plaid_client import PlaidClient
 from api.plaid_fake import FAKE_ITEM_ID, FakePlaid
 from api.settings import Settings
 from core.regime import compute_regime
@@ -59,3 +61,33 @@ def test_exchange_plaid_error_is_502(tmp_path):
     c = _app(tmp_path, plaid=fake, token_key=new_key())
     r = c.post("/api/plaid/exchange", json={"public_token": "bad"})
     assert r.status_code == 502 and r.json() == {"detail": "INVALID_PUBLIC_TOKEN"}
+
+
+def test_exchange_ok_even_if_first_sync_fails(tmp_path):
+    fake = FakePlaid(TODAY)
+    fake.fail_next["accounts_get"] = "INTERNAL_SERVER_ERROR"
+    c = _app(tmp_path, plaid=fake, token_key=new_key())
+    r = c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+    assert r.status_code == 200 and r.json() == {"item_id": FAKE_ITEM_ID}
+    assert c.get("/api/accounts").json()["items"][0]["item_id"] == FAKE_ITEM_ID
+
+
+def test_exchange_malformed_plaid_body_is_502(tmp_path):
+    client = PlaidClient("sandbox", "c", "s",
+                         transport=httpx.MockTransport(lambda req: httpx.Response(200, json={})))
+    c = _app(tmp_path, plaid=client, token_key=new_key())
+    r = c.post("/api/plaid/exchange", json={"public_token": "p"})
+    assert r.status_code == 502 and r.json() == {"detail": "PLAID_BAD_RESPONSE"}
+
+
+def test_sync_survives_failing_recurring_refresh(tmp_path, monkeypatch):
+    fake = FakePlaid(TODAY)
+    c = _app(tmp_path, plaid=fake, token_key=new_key())
+    c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+
+    def boom(conn, today):
+        raise RuntimeError("x")
+
+    monkeypatch.setattr("api.sync.refresh_recurring", boom)
+    r = c.post("/api/sync")
+    assert r.status_code == 200 and r.json() == {"items": {FAKE_ITEM_ID: "ok"}}

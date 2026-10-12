@@ -25,7 +25,8 @@ from core.regime import Regime
 
 log = logging.getLogger("varta.api")
 REGIME_TTL_SECONDS = 300
-PLAID_PRODUCTS = ["transactions", "investments"]
+PLAID_PRODUCTS = ["transactions"]
+PLAID_IF_SUPPORTED = ["investments"]
 
 
 class RegimeOut(BaseModel):
@@ -118,7 +119,8 @@ def create_app(
         """Create a Plaid Link token for this instance's single user."""
         p = require_plaid()
         try:
-            return LinkTokenOut(link_token=p.link_token_create(settings.instance, PLAID_PRODUCTS))
+            return LinkTokenOut(link_token=p.link_token_create(
+                settings.instance, PLAID_PRODUCTS, PLAID_IF_SUPPORTED))
         except PlaidError as exc:
             raise HTTPException(status_code=502, detail=exc.code) from exc
 

@@ -19,7 +19,8 @@ ASSET_TYPES = ("depository", "investment")
 LIABILITY_TYPES = ("credit", "loan")
 RESTART_CODE = "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION"
 LOGIN_REQUIRED = "ITEM_LOGIN_REQUIRED"
-NO_INVESTMENTS = {"PRODUCTS_NOT_SUPPORTED", "NO_INVESTMENT_ACCOUNTS", "PRODUCT_NOT_ENABLED"}
+NO_INVESTMENTS = {"PRODUCTS_NOT_SUPPORTED", "NO_INVESTMENT_ACCOUNTS", "PRODUCT_NOT_ENABLED",
+                  "ADDITIONAL_CONSENT_REQUIRED", "PRODUCT_NOT_READY"}
 MAX_SYNC_RESTARTS = 3
 
 
@@ -29,7 +30,11 @@ def _now() -> str:
 
 def link_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
               public_token: str, today: date) -> str:
-    """Exchange a public token, store the encrypted access token, then sync everything."""
+    """Exchange a public token, store the encrypted token, then try the first sync.
+
+    Once the item is stored this always returns its id; a failed first sync is logged
+    and visible later via the item's status / last_synced_at.
+    """
     access_token, item_id = plaid.exchange_public_token(public_token)
     conn.execute(
         "INSERT INTO items (item_id, access_token_enc, status) VALUES (?, ?, 'active') "
@@ -38,9 +43,13 @@ def link_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
         (item_id, box.seal(access_token)),
     )
     conn.commit()
-    sync_item(conn, plaid, box, item_id)
-    refresh_recurring(conn, today)
-    snapshot_networth(conn, today)
+    try:
+        sync_item(conn, plaid, box, item_id)
+        refresh_recurring(conn, today)
+        snapshot_networth(conn, today)
+    except Exception as exc:  # noqa: BLE001 - the item is stored; never log the token
+        code = getattr(exc, "code", type(exc).__name__)
+        log.warning("first sync failed for %s: %s", item_id, code)
     return item_id
 
 
@@ -172,6 +181,9 @@ def sync_all(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
         except Exception as exc:  # noqa: BLE001 - isolate items; never log the token
             log.warning("sync failed for %s: %s", item_id, type(exc).__name__)
             results[item_id] = "ERROR"
-    refresh_recurring(conn, today)
-    snapshot_networth(conn, today)
+    try:
+        refresh_recurring(conn, today)
+        snapshot_networth(conn, today)
+    except Exception as exc:  # noqa: BLE001 - per-item results still matter
+        log.warning("post-sync refresh failed: %s", type(exc).__name__)
     return results

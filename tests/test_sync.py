@@ -6,7 +6,6 @@ import pytest
 
 from api.crypto import TokenBox, new_key
 from api.db import connect, init_db
-from api.plaid_client import PlaidError
 from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_INSTITUTION, FAKE_ITEM_ID, FakePlaid
 from api.sync import link_item, sync_all, sync_item
 
@@ -79,8 +78,7 @@ def test_mutation_during_pagination_restarts(env):
 def test_failure_mid_sync_saves_no_cursor(env):
     conn, plaid, box = env
     plaid.fail_next["transactions_sync"] = "INTERNAL_SERVER_ERROR"
-    with pytest.raises(PlaidError):
-        link_item(conn, plaid, box, "public-fake-1", TODAY)
+    link_item(conn, plaid, box, "public-fake-1", TODAY)  # item stored; first sync failure is logged
     row = conn.execute("SELECT txn_cursor FROM items").fetchone()
     assert row["txn_cursor"] is None
     assert _count(conn, "transactions") == 0
@@ -117,8 +115,7 @@ def test_failure_on_third_page_saves_nothing(tmp_path):
     init_db(conn)
     plaid = FakePlaid(TODAY, page_size=100)
     plaid.fail_on_page = 2
-    with pytest.raises(PlaidError):
-        link_item(conn, plaid, TokenBox(new_key()), "public-fake-1", TODAY)
+    link_item(conn, plaid, TokenBox(new_key()), "public-fake-1", TODAY)
     assert conn.execute("SELECT txn_cursor FROM items").fetchone()[0] is None
     assert _count(conn, "items") == 1
     assert _count(conn, "transactions") == 0
@@ -161,3 +158,30 @@ def test_recurring_streams_built_on_link(env):
     assert rows["Rent"]["kind"] == "bill" and rows["Netflix"]["kind"] == "subscription"
     assert rows["Netflix"]["last_amount"] == 22.99
     assert rows["Amazon Prime"]["frequency"] == "ANNUALLY"
+
+
+def test_additional_consent_on_holdings_still_stores_accounts_and_txns(env):
+    conn, plaid, box = env
+    plaid.fail_next["investments_holdings_get"] = "ADDITIONAL_CONSENT_REQUIRED"
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    assert _count(conn, "accounts") == 4
+    assert _count(conn, "transactions") > 0
+    assert _count(conn, "holdings") == 0
+
+
+def test_link_item_survives_first_sync_failure(env):
+    conn, plaid, box = env
+    plaid.fail_next["accounts_get"] = "INTERNAL_SERVER_ERROR"
+    assert link_item(conn, plaid, box, "public-fake-1", TODAY) == FAKE_ITEM_ID
+    assert _count(conn, "items") == 1
+
+
+def test_sync_all_survives_failing_tail(env, monkeypatch):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+
+    def boom(conn, today):
+        raise RuntimeError("x")
+
+    monkeypatch.setattr("api.sync.refresh_recurring", boom)
+    assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: "ok"}

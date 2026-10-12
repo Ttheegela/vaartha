@@ -23,14 +23,15 @@ def test_auth_in_headers_not_body():
         seen["body"] = json.loads(request.content)
         return httpx.Response(200, json={"link_token": "link-sandbox-1"})
 
-    token = _client(handler).link_token_create("owner", ["transactions", "investments"])
+    token = _client(handler).link_token_create("owner", ["transactions"], ["investments"])
     assert token == "link-sandbox-1"
     assert seen["url"] == PLAID_HOSTS["sandbox"] + "/link/token/create"
     assert seen["headers"]["PLAID-CLIENT-ID"] == "client-id-1"
     assert seen["headers"]["PLAID-SECRET"] == SECRET
     assert SECRET not in json.dumps(seen["body"])
     assert seen["body"]["user"] == {"client_user_id": "owner"}
-    assert seen["body"]["products"] == ["transactions", "investments"]
+    assert seen["body"]["products"] == ["transactions"]
+    assert seen["body"]["required_if_supported_products"] == ["investments"]
     assert seen["body"]["country_codes"] == ["US"]
     assert seen["body"]["transactions"] == {"days_requested": 730}
 
@@ -86,3 +87,10 @@ def test_network_error_becomes_plaid_error():
     with pytest.raises(PlaidError) as exc:
         _client(handler).accounts_get("access-1")
     assert exc.value.code == "NETWORK_ERROR"
+
+
+def test_malformed_body_is_plaid_bad_response():
+    client = _client(lambda request: httpx.Response(200, json={"unexpected": 1}))
+    with pytest.raises(PlaidError) as exc:
+        client.exchange_public_token("public-1")
+    assert exc.value.code == "PLAID_BAD_RESPONSE"

@@ -109,3 +109,15 @@ def test_price_change_tracked_and_inflows_ignored():
 def test_empty_input():
     out = detect_recurring(_df([]), TODAY)
     assert out.height == 0 and list(out.columns) == STREAM_COLUMNS
+
+
+def test_same_day_duplicate_does_not_hide_monthly():
+    days = [date(2026, m, 15) for m in (6, 7, 8, 9)] + [date(2026, 9, 15)]
+    s = _one(detect_recurring(_df(_monthly("Netflix", days)), TODAY), "Netflix")
+    assert s["frequency"] == "MONTHLY"
+
+
+def test_old_irregular_gap_ignored_when_recent_charges_regular():
+    days = [date(2025, 1, 3), date(2025, 2, 20)] + [date(2026, m, 15) for m in range(4, 10)]
+    s = _one(detect_recurring(_df(_monthly("Hulu", days)), TODAY), "Hulu")
+    assert s["frequency"] == "MONTHLY"
