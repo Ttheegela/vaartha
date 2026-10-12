@@ -26,9 +26,11 @@ Never paste secrets into chat or issues. Edit env files on the server with an ed
 adduser --disabled-password --gecos "" varta
 usermod -aG sudo varta
 mkdir -p /home/varta/.ssh && cp ~/.ssh/authorized_keys /home/varta/.ssh/ && chown -R varta: /home/varta/.ssh
-echo 'varta ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/varta
-sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && systemctl reload ssh
-ufw allow 22,80,443/tcp && ufw enable
+echo 'varta ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/varta && chmod 440 /etc/sudoers.d/varta
+printf 'PasswordAuthentication no\nPermitRootLogin no\n' > /etc/ssh/sshd_config.d/00-hardening.conf
+systemctl reload ssh
+sshd -T | grep -iE 'passwordauthentication|permitrootlogin'   # both "no"
+ufw allow 22,80,443/tcp && ufw --force enable
 ```
 
 Log in as `varta` from here on.
@@ -47,6 +49,8 @@ sudo usermod -aG docker varta   # re-login to apply
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up --ssh
 tailscale ip -4                 # -> OWNER_TS_IP
+sudo apt-get install -y jq
+tailscale status --json | jq -r .Self.DNSName | sed 's/\.$//'   # -> OWNER_HOST (after MagicDNS is on)
 ```
 
 In the Tailscale admin console enable **MagicDNS** and **HTTPS Certificates**. `OWNER_HOST` is `<vps-hostname>.<tailnet>.ts.net`.
@@ -63,6 +67,8 @@ CONF
 sudo systemctl daemon-reload
 ```
 
+If the owner site is down after a reboot (bind raced tailscaled), recover with `$dc up -d`.
+
 ## 3. Deploy
 
 ```bash
@@ -76,18 +82,22 @@ Edit each file with an editor (`nano deploy/demo.env`, ...):
 - `demo.env`: Sandbox Plaid keys, demo OpenRouter key.
 - `owner.env`: Production Plaid keys, owner OpenRouter key.
 
-Define the compose command once (every command below uses it; `--env-file` is needed for the IP interpolation):
+Define the compose command once (every command below uses it; `--env-file` is needed for the IP interpolation). It is per-shell, so persist it:
 
 ```bash
 dc="docker compose -f deploy/compose.yaml --env-file deploy/caddy.env --profile demo --profile owner"
+echo "alias dc='cd ~/varta && $dc'" >> ~/.bashrc   # then use `dc ...` in new shells
 ```
 
-Generate a different `TOKEN_ENCRYPTION_KEY` per instance. Delete the empty `TOKEN_ENCRYPTION_KEY=` line in each file first (last one wins, so duplicates hide mistakes), then append:
+(In this runbook `$dc` means the variable; in a new shell use the alias `dc` or re-run the first line.)
+
+Generate a different `TOKEN_ENCRYPTION_KEY` per instance. Remove the empty placeholder line first, then append (`-T` avoids a TTY, which would add a `\r` to the key):
 
 ```bash
+sed -i '/^TOKEN_ENCRYPTION_KEY=$/d' deploy/demo.env deploy/owner.env
 $dc build
-$dc run --rm --no-deps api-demo  python -m scripts.new_token_key >> deploy/demo.env
-$dc run --rm --no-deps api-owner python -m scripts.new_token_key >> deploy/owner.env
+$dc run --rm --no-deps -T api-demo  python -m scripts.new_token_key >> deploy/demo.env
+$dc run --rm --no-deps -T api-owner python -m scripts.new_token_key >> deploy/owner.env
 ```
 
 Back these keys up somewhere safe. Losing one makes stored Plaid tokens unreadable (re-link accounts).
@@ -110,7 +120,12 @@ curl -m 5 https://<OWNER_HOST>                   # from OFF the tailnet: must fa
 $dc logs -f worker-demo                          # JSON lines
 ```
 
-Rate limit: send 21 `POST https://<DEMO_DOMAIN>/api/chat` requests within an hour from one IP; the 21st returns 429 (`CHAT_RATE_PER_HOUR=20`).
+Rate limit (needs the demo OpenRouter key set, else 503). The 21st request from one IP within an hour returns 429 (`CHAT_RATE_PER_HOUR=20`):
+
+```bash
+for i in $(seq 21); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://<DEMO_DOMAIN>/api/chat \
+  -H 'content-type: application/json' -d '{"message":"hi"}'; done
+```
 
 Worker schedule (local `VARTA_TZ`): sync every 6h, news every 15m, alerts hourly, briefing 07:00, backup 02:30, demo reset 03:00 (demo only).
 
@@ -128,7 +143,7 @@ $dc restart api-demo worker-demo
 $dc logs --tail 100 api-owner
 ```
 
-**Backups** are written daily to `/data/backups` in the `demo-data` / `owner-data` volumes (7 kept). Copy one off-box:
+**Backups** are written daily to `/data/backups` in the `demo-data` / `owner-data` volumes (7 kept). They share the volume with the live DB, so they do not survive losing the VPS; off-box copy is manual (known gap):
 
 ```bash
 $dc exec worker-owner ls /data/backups
@@ -140,10 +155,12 @@ $dc cp worker-owner:/data/backups/varta-YYYYMMDD-HHMM.db ./owner-backup.db
 ```bash
 $dc stop api-owner worker-owner
 $dc cp ./owner-backup.db worker-owner:/data/varta.db   # works on stopped containers
+# mandatory, before start: cp makes a root-owned file, and stale WAL/SHM must go
+$dc run --rm --no-deps --user root api-owner sh -c 'rm -f /data/varta.db-wal /data/varta.db-shm && chown varta /data/varta.db'
 $dc start api-owner worker-owner
 ```
 
-If the copied file's owner is wrong, run `$dc run --rm --no-deps --user root api-owner chown varta /data/varta.db`. Stale `varta.db-wal`/`-shm` files left from the old DB should be removed the same way before starting.
+Demo variant: replace `owner` with `demo` in all four commands.
 
 **Monitoring:** UptimeRobot HTTP monitor on `https://<DEMO_DOMAIN>/healthz`.
 
@@ -153,4 +170,4 @@ If the copied file's owner is wrong, run `$dc run --rm --no-deps --user root api
 - The owner instance has no public route; it is bound to the Tailscale IP only.
 - Demo and owner sit on separate Docker networks; Caddy is the only bridge.
 - Each OpenRouter key has its own spend cap.
-- Follow-up (not a step): Plaid Production Link for OAuth banks may need an HTTPS redirect URI on the owner host; see `docs/superpowers/STATUS.md` open items.
+- Follow-up (not a step): Plaid Production Link for OAuth banks may need an HTTPS redirect URI registered in the Plaid dashboard (e.g. `https://<OWNER_HOST>/...`); not yet configured or verified.
