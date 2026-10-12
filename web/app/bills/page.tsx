@@ -1,14 +1,32 @@
-"use client"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { bills } from "@/lib/mock-data"
-import { splitRecurring, monthlyCost } from "@/lib/recurring"
+import Link from "next/link"
+import { BillsView } from "@/components/bills-view"
 import { PageHeading } from "@/components/page-heading"
-import { StatusBadge } from "@/components/status-badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { avatarColor, avatarInitial } from "@/lib/avatar"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { toBills } from "@/lib/adapters"
+import type { components } from "@/lib/api-types"
+import { apiGet } from "@/lib/server-api"
 
-const days=["SUN","MON","TUE","WED","THU","FRI","SAT"]
-export default function BillsPage(){const blanks=1; const {subscriptions,bills:fixedBills,subscriptionsMonthly,billsMonthly}=splitRecurring(bills);return <div><PageHeading title="Your bills" description="See what is coming, what changed, and where you can save."/><div className="grid gap-6 xl:grid-cols-[2fr_1fr]"><Card className="min-w-0"><CardHeader><div className="flex items-center justify-between"><div><p className="eyebrow mb-2">UPCOMING</p><CardTitle className="text-3xl">November 2026</CardTitle><CardDescription>12 scheduled charges</CardDescription></div><div className="flex gap-2"><Button variant="outline" size="icon-sm"><ChevronLeft/><span className="sr-only">Previous month</span></Button><Button variant="outline" size="icon-sm"><ChevronRight/><span className="sr-only">Next month</span></Button></div></div></CardHeader><CardContent><div className="grid grid-cols-7 gap-1.5">{days.map(d=><div key={d} className="py-2 text-center font-mono text-[9px] tracking-[.12em] text-muted-foreground">{d}</div>)}{Array.from({length:35},(_,i)=>{const day=i-blanks+1; const dayBills=bills.filter(b=>b.day===day); const valid=day>0&&day<=30; const total=dayBills.reduce((s,b)=>s+b.amount,0); const cell=<div className={cn("flex min-h-24 flex-col rounded-xl border border-transparent bg-secondary/30 p-2 text-left sm:min-h-28",day===10&&"border-[#4f8cff]/50 bg-[#4f8cff]/5",!valid&&"opacity-20")}><span className={cn("numeric text-[10px] text-muted-foreground",day===10&&"text-[#4f8cff]")}>{valid?day:""}</span><div className="mt-2 flex flex-wrap gap-1">{dayBills.map((b,index)=><div key={b.id} title={`${b.merchant} $${b.amount}`} style={{backgroundColor:avatarColor(b.merchant)}} className={cn("flex size-8 items-center justify-center rounded-full text-xs font-semibold text-white",b.paid&&"opacity-35")}>{avatarInitial(b.merchant)}</div>)}</div>{total>0&&<span className="numeric mt-auto text-[9px] text-muted-foreground">${total.toFixed(2)}</span>}</div>;return dayBills.length?<Popover key={i}><PopoverTrigger render={<button className="rounded-xl">{cell}</button>}/><PopoverContent className="w-64"><p className="eyebrow mb-3">NOVEMBER {day}</p>{dayBills.map(b=><div key={b.id} className="flex justify-between border-b py-2 last:border-0"><span className="text-sm">{b.merchant}</span><span className="numeric text-sm">${b.amount.toFixed(2)}</span></div>)}</PopoverContent></Popover>:<div key={i}>{cell}</div>})}</div></CardContent></Card><div className="flex flex-col gap-6"><Card><CardHeader><p className="eyebrow">SUBSCRIPTIONS</p><CardTitle className="mt-2 text-4xl numeric">${subscriptionsMonthly.toFixed(2)}<span className="text-base text-muted-foreground">/mo</span></CardTitle><CardDescription>Monthly normalized</CardDescription></CardHeader><CardContent className="flex flex-col">{subscriptions.map((b,index)=><div key={b.id} className="flex items-center gap-3 border-b py-4 last:border-0"><div style={{backgroundColor:avatarColor(b.merchant)}} className="flex size-10 items-center justify-center rounded-full text-sm font-semibold text-white">{avatarInitial(b.merchant)}</div><div className="min-w-0 flex-1"><p className="truncate text-sm">{b.merchant}</p><p className="numeric text-[10px] text-muted-foreground">{b.frequency} · next {b.date}</p><div className="mt-1 flex gap-1">{b.priceUp&&<StatusBadge tone="warning">Price up +${b.priceUp.toFixed(2)}</StatusBadge>}{b.inactive&&<StatusBadge tone="neutral">Possibly cancelled</StatusBadge>}</div></div><p className="numeric text-sm">${monthlyCost(b.amount,b.frequency).toFixed(2)}</p></div>)}</CardContent></Card><Card><CardHeader><p className="eyebrow">BILLS</p><CardTitle className="mt-2 text-4xl numeric">${billsMonthly.toFixed(2)}<span className="text-base text-muted-foreground">/mo</span></CardTitle><CardDescription>Monthly normalized</CardDescription></CardHeader><CardContent className="flex flex-col">{fixedBills.map((b,index)=><div key={b.id} className="flex items-center gap-3 border-b py-4 last:border-0"><div style={{backgroundColor:avatarColor(b.merchant)}} className="flex size-10 items-center justify-center rounded-full text-sm font-semibold text-white">{avatarInitial(b.merchant)}</div><div className="min-w-0 flex-1"><p className="truncate text-sm">{b.merchant}</p><p className="numeric text-[10px] text-muted-foreground">{b.frequency} · next {b.date}</p><div className="mt-1 flex gap-1">{b.priceUp&&<StatusBadge tone="warning">Price up +${b.priceUp.toFixed(2)}</StatusBadge>}{b.inactive&&<StatusBadge tone="neutral">Possibly cancelled</StatusBadge>}</div></div><p className="numeric text-sm">${monthlyCost(b.amount,b.frequency).toFixed(2)}</p></div>)}</CardContent></Card></div></div></div>}
+export const dynamic = "force-dynamic"
+
+export default async function BillsPage() {
+  const data = await apiGet<components["schemas"]["RecurringListOut"]>("/api/recurring")
+  const now = new Date()
+  const bills = data ? toBills(data, now) : []
+  return (
+    <div>
+      <PageHeading title="Your bills" description="See what is coming, what changed, and where you can save." />
+      {bills.length ? (
+        <BillsView bills={bills} month={now} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="serif-display text-3xl">No <em>bills</em> yet</CardTitle>
+            <CardDescription>
+              {data ? <>Link an account and Vārtā will find your subscriptions and bills. <Link href="/accounts" className="underline underline-offset-4">Go to accounts</Link></> : "The API isn't reachable right now."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+    </div>
+  )
+}

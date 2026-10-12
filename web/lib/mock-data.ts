@@ -1,63 +1,9 @@
-import type { Account, Bill, Budget, DataSource, Goal, Holding, MerchantSpend, NewsItem } from "./types"
-
-export const accounts: Account[] = [
-  { id: "ch-1", institution: "Chase", name: "Total Checking", type: "Checking", mask: "••4821", balance: 8420.36 },
-  { id: "ch-2", institution: "Chase", name: "High Yield Savings", type: "Savings", mask: "••9014", balance: 21680.12 },
-  { id: "am-1", institution: "Amex", name: "Blue Cash Preferred", type: "Credit card", mask: "••1008", balance: 2384.72, liability: true },
-  { id: "fi-1", institution: "Fidelity", name: "Individual Brokerage", type: "Brokerage", mask: "••7762", balance: 56301.89 },
-]
-
-export const netWorth = [
-  { month: "Nov", value: 68400 }, { month: "Dec", value: 70100 }, { month: "Jan", value: 72200 }, { month: "Feb", value: 71500 },
-  { month: "Mar", value: 74800 }, { month: "Apr", value: 77100 }, { month: "May", value: 75600 }, { month: "Jun", value: 78900 },
-  { month: "Jul", value: 80300 }, { month: "Aug", value: 82100 }, { month: "Sep", value: 81600 }, { month: "Oct", value: 84017 },
-]
-
-export const kpis = [
-  { label: "Net worth", value: "$84,017", delta: "+2.9%", up: true },
-  { label: "This month income", value: "$8,240", delta: "+4.1%", up: true },
-  { label: "This month spend", value: "$5,126", delta: "+8.4%", up: false },
-  { label: "Cash available", value: "$30,100", delta: "+1.7%", up: true },
-]
-
-export const bills: Bill[] = [
-  { id: "b1", merchant: "Rent", kind: "bill", amount: 2450, day: 1, date: "Nov 1", frequency: "Monthly", paid: true },
-  { id: "b2", merchant: "Spotify", kind: "subscription", amount: 11.99, day: 3, date: "Nov 3", frequency: "Monthly", paid: true },
-  { id: "b3", merchant: "iCloud", kind: "subscription", amount: 2.99, day: 5, date: "Nov 5", frequency: "Monthly", paid: true },
-  { id: "b4", merchant: "Gym", kind: "subscription", amount: 64, day: 7, date: "Nov 7", frequency: "Monthly", paid: true },
-  { id: "b5", merchant: "ChatGPT", kind: "subscription", amount: 20, day: 12, date: "Nov 12", frequency: "Monthly", priceUp: 2 },
-  { id: "b6", merchant: "Con Edison", kind: "bill", amount: 96.43, day: 14, date: "Nov 14", frequency: "Monthly" },
-  { id: "b7", merchant: "Netflix", kind: "subscription", amount: 22.99, day: 15, date: "Nov 15", frequency: "Monthly", priceUp: 2 },
-  { id: "b8", merchant: "Verizon", kind: "bill", amount: 88, day: 18, date: "Nov 18", frequency: "Monthly" },
-  { id: "b9", merchant: "Car insurance", kind: "bill", amount: 142.50, day: 21, date: "Nov 21", frequency: "Monthly" },
-  { id: "b10", merchant: "Amazon Prime", kind: "subscription", amount: 139, day: 24, date: "Nov 24", frequency: "Annual" },
-  { id: "b11", merchant: "The Atlantic", kind: "subscription", amount: 7.99, day: 26, date: "Nov 26", frequency: "Monthly", inactive: true },
-  { id: "b12", merchant: "Dropbox", kind: "subscription", amount: 19.99, day: 29, date: "Nov 29", frequency: "Monthly" },
-]
+import type { Budget, DataSource, Holding, NewsItem } from "./types"
 
 export const budgets: Budget[] = [
   { category: "Dining", spent: 492, limit: 600 }, { category: "Groceries", spent: 418, limit: 650 },
   { category: "Shopping", spent: 610, limit: 500 }, { category: "Transport", spent: 184, limit: 350 },
   { category: "Entertainment", spent: 238, limit: 300 },
-]
-
-export const categorySpend = [
-  { name: "Housing", value: 2450, fill: "var(--color-housing)" }, { name: "Dining", value: 492, fill: "var(--color-dining)" },
-  { name: "Groceries", value: 418, fill: "var(--color-groceries)" }, { name: "Shopping", value: 610, fill: "var(--color-shopping)" },
-  { name: "Other", value: 1156, fill: "var(--color-other)" },
-]
-
-export const merchantSpend: MerchantSpend[] = [
-  { merchant: "Whole Foods", category: "Groceries", amount: 286.42, transactions: 6 },
-  { merchant: "Sweetgreen", category: "Dining", amount: 174.65, transactions: 8 },
-  { merchant: "Amazon", category: "Shopping", amount: 423.18, transactions: 5 },
-  { merchant: "Uber", category: "Transport", amount: 132.80, transactions: 9 },
-  { merchant: "Trader Joe’s", category: "Groceries", amount: 131.58, transactions: 4 },
-]
-
-export const cashFlow = [
-  { month: "May", income: 7900, spend: 4880 }, { month: "Jun", income: 8050, spend: 5210 }, { month: "Jul", income: 8050, spend: 4950 },
-  { month: "Aug", income: 8120, spend: 5640 }, { month: "Sep", income: 7920, spend: 4720 }, { month: "Oct", income: 8240, spend: 5126 },
 ]
 
 export const holdings: Holding[] = [
@@ -94,12 +40,6 @@ export const news: NewsItem[] = [
   { id:"n13", source:"Reddit", time:"10h", title:"Semiconductor sentiment cools across high-volume forums", tickers:["NVDA","AMD"], sentiment:"negative", stress:"localized", event:"macro", material:false },
   { id:"n14", source:"Reuters", time:"11h", title:"Major miner explores lithium asset combination", tickers:["LIT"], sentiment:"positive", stress:"none", event:"m&a", material:true },
   { id:"n15", source:"Alpaca", time:"12h", title:"Treasury yields ease from session highs", tickers:["SPY","GLD"], sentiment:"neutral", stress:"none", event:"macro", material:false },
-]
-
-export const goals: Goal[] = [
-  { name:"Emergency fund", current:21680, target:30000, targetDate:"Mar 2027", projectedDate:"Feb 18, 2027", status:"On track" },
-  { name:"Japan trip", current:4200, target:8500, targetDate:"Sep 2027", projectedDate:"Aug 4, 2027", status:"On track" },
-  { name:"Roth IRA max", current:4100, target:7000, targetDate:"Apr 2027", projectedDate:"May 21, 2027", status:"Behind" },
 ]
 
 export const dataSources: DataSource[] = [

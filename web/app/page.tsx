@@ -1,16 +1,36 @@
 import Link from "next/link"
 import { ArrowRight, BellRing, CreditCard, ShieldCheck, Sparkles, TrendingDown, WalletCards } from "lucide-react"
-import { advisorAlerts, bills, healthScore, highestImpact } from "@/lib/mock-data"
+import { advisorAlerts, healthScore, highestImpact } from "@/lib/mock-data"
+import { toBills, toNetWorth } from "@/lib/adapters"
+import { upcomingBills } from "@/lib/calendar"
+import type { components } from "@/lib/api-types"
+import { apiGet } from "@/lib/server-api"
 import { avatarColor, avatarInitial } from "@/lib/avatar"
 import { NetWorthChart } from "@/components/net-worth-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const alertIcons = { bill: CreditCard, price: TrendingDown, market: BellRing, risk: ShieldCheck }
-export default function HomePage() { const upcoming = bills.filter((bill) => bill.day >= 10 && bill.day <= 16); return <div className="flex flex-col gap-10">
+export const dynamic = "force-dynamic"
+
+const usd = (n: number) => `${n < 0 ? "−" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`
+
+export default async function HomePage() {
+  const [recurring, points, accounts] = await Promise.all([
+    apiGet<components["schemas"]["RecurringListOut"]>("/api/recurring"),
+    apiGet<components["schemas"]["NetWorthPoint"][]>("/api/networth?days=365"),
+    apiGet<components["schemas"]["AccountsOut"]>("/api/accounts"),
+  ])
+  const now = new Date()
+  const upcoming = recurring ? upcomingBills(toBills(recurring, now), now) : []
+  const hasAccounts = (accounts?.accounts.length ?? 0) > 0
+  const netWorth = accounts ? accounts.assets - accounts.liabilities : 0
+  const series = points ? toNetWorth(points) : []
+  return <div className="flex flex-col gap-10">
   <section className="relative overflow-hidden rounded-[28px] border bg-card p-6 sm:p-8"><div className="home-grid pointer-events-none absolute inset-0"/><div className="relative max-w-3xl"><p className="eyebrow mb-5">FRIDAY, NOVEMBER 10</p><h1 className="serif-display text-balance text-4xl sm:text-5xl">Good morning, <em>Tarun</em></h1><p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">Your cash flow is healthy. Vārtā found one action that could save you more than $600 this year.</p></div></section>
   <div className="grid gap-6 xl:grid-cols-[1fr_340px]"><div className="flex flex-col gap-6"><Card className="min-h-72 justify-between p-2"><CardHeader><p className="eyebrow">{highestImpact.eyebrow}</p><Sparkles className="mt-8 size-6 text-[#4f8cff]"/></CardHeader><CardContent><h2 className="serif-display max-w-3xl text-balance text-4xl leading-[1.08] sm:text-5xl">{highestImpact.prefix} <em className="text-[#4f8cff]">{highestImpact.figure}</em> {highestImpact.suffix}</h2><p className="mt-4 text-sm text-muted-foreground">{highestImpact.detail}</p><Link href="/advisor" className="action-label mt-8 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-primary-foreground">SEE ADVICE <ArrowRight className="size-3.5"/></Link></CardContent></Card>
   <section><div className="mb-4 flex items-center justify-between"><p className="eyebrow">PROACTIVE ADVICE</p><span className="numeric text-[10px] text-muted-foreground">4 NEW</span></div><div className="flex flex-col gap-2">{advisorAlerts.map((alert) => { const Icon = alertIcons[alert.kind]; return <Card key={alert.id} size="sm"><CardContent className="flex items-center gap-4"><div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary"><Icon className="size-4 text-muted-foreground"/></div><p className="min-w-0 flex-1 text-sm leading-6">{alert.text} <Link href="/advisor" className="font-semibold underline decoration-white/30 underline-offset-4">{alert.action}</Link></p><span className="numeric shrink-0 text-[10px] text-muted-foreground">{alert.time}</span></CardContent></Card> })}</div></section></div>
   <Card><CardHeader><p className="eyebrow">FINANCIAL HEALTH</p></CardHeader><CardContent><div className="relative mx-auto flex size-48 items-center justify-center rounded-full" style={{ background: `conic-gradient(#4f8cff ${healthScore.score * 3.6}deg, #242424 0)` }}><div className="flex size-40 flex-col items-center justify-center rounded-full bg-card"><span className="numeric text-5xl">{healthScore.score}</span><span className="mt-2 text-xs text-muted-foreground">of 100</span></div></div><p className="mt-6 text-center font-medium">{healthScore.status}</p><div className="mt-7 flex flex-col gap-4">{healthScore.actions.map((action, index) => <div key={action} className="flex gap-3 text-sm leading-5"><span className="numeric text-[#4f8cff]">0{index + 1}</span><span>{action}</span></div>)}</div></CardContent></Card></div>
   <section><p className="eyebrow mb-4">ADVICE BY CATEGORY</p><div className="grid gap-4 md:grid-cols-3">{[{label:"CASH FLOW",title:"You are trending +$3,114 this month"},{label:"SPENDING",title:"Dining is nearing its monthly limit"},{label:"RESERVES",title:"You have 3.2 months of expenses"}].map((item) => <Card key={item.label}><CardHeader><p className="eyebrow">{item.label}</p><CardTitle className="mt-6 text-2xl">{item.title}</CardTitle></CardHeader><CardContent><Link href="/advisor" className="action-label inline-flex items-center gap-2">SEE ADVICE <ArrowRight className="size-3.5"/></Link></CardContent></Card>)}</div></section>
-  <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]"><Card><CardHeader><p className="eyebrow">NET WORTH</p><CardTitle className="mt-3 text-4xl numeric">$84,017</CardTitle></CardHeader><CardContent><NetWorthChart/></CardContent></Card><Card><CardHeader><p className="eyebrow">UPCOMING</p><CardTitle>Your next seven days</CardTitle></CardHeader><CardContent className="flex flex-col gap-1">{upcoming.map((bill) => <div key={bill.id} className="flex items-center gap-3 border-b py-3 last:border-0"><div style={{backgroundColor:avatarColor(bill.merchant)}} className="flex size-9 items-center justify-center rounded-full text-sm font-semibold text-white">{avatarInitial(bill.merchant)}</div><div className="min-w-0 flex-1"><p className="text-sm">{bill.merchant}</p><p className="numeric text-[10px] text-muted-foreground">{bill.date}</p></div><p className="numeric text-sm">${bill.amount.toFixed(2)}</p></div>)}</CardContent></Card></div>
-</div> }
+  <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]"><Card><CardHeader><p className="eyebrow">NET WORTH</p><CardTitle className="mt-3 text-4xl numeric">{usd(netWorth)}</CardTitle>{!hasAccounts && <p className="mt-2 text-sm text-muted-foreground">{accounts ? "Link an account to see your net worth." : "The API isn't reachable right now."}</p>}</CardHeader><CardContent>{series.length > 0 && <NetWorthChart data={series}/>}</CardContent></Card><Card><CardHeader><p className="eyebrow">UPCOMING</p><CardTitle>Your next seven days</CardTitle></CardHeader><CardContent className="flex flex-col gap-1">{upcoming.length === 0 && <p className="text-sm text-muted-foreground">{recurring ? "Nothing due in the next seven days." : "The API isn't reachable right now."}</p>}{upcoming.map((bill) => <div key={bill.id} className="flex items-center gap-3 border-b py-3 last:border-0"><div style={{backgroundColor:avatarColor(bill.merchant)}} className="flex size-9 items-center justify-center rounded-full text-sm font-semibold text-white">{avatarInitial(bill.merchant)}</div><div className="min-w-0 flex-1"><p className="text-sm">{bill.merchant}</p><p className="numeric text-[10px] text-muted-foreground">{bill.date}</p></div><p className="numeric text-sm">${bill.amount.toFixed(2)}</p></div>)}</CardContent></Card></div>
+</div>
+}
