@@ -265,3 +265,4 @@ Each sub-project gets its own implementation plan and is verified before the nex
 | Mac asleep, so owner agent offline | dashboards, calendar and sync keep working; chat shows "advisor offline"; briefing retries |
 | Demo LLM abuse or cost | rate limit plus OpenRouter spend cap |
 | Real financial data exposure | Tailscale-only owner, encrypted tokens, no tokens to LLM, owner and demo DBs separate |
+| Plaid Trial ends or 11th Item needed | Trial length is not published; Pay-as-you-go rates appear only in the Production request form. Unverified community figure is ~$0.30/account/product/month, roughly $2–3/month for 4 institutions. Link only accounts that will be kept; check the rate card in the Dashboard. |
