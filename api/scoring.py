@@ -83,6 +83,8 @@ HEURISTIC_NOISE = 0.1
 MATERIAL_NAMED, MATERIAL_OTHER, MATERIAL_MARKET = 0.8, 0.4, 0.5
 SENTIMENT_MID_LEVEL = 2
 SENTIMENT_CLAMP = 2
+MAX_STRESS = 3.0
+NEUTRAL_PHRASES = ("rate cut",)  # macro easing, not a negative "cut"
 
 
 @dataclass(frozen=True)
@@ -205,10 +207,11 @@ class TypeSafeScorer:
         """Map a Jev response to a ScoreResult; KeyError if an answer is missing."""
         a = data["answers"]
         return ScoreResult(
-            sentiment=(a["sentiment"]["score"] - SENTIMENT_MID_LEVEL) / SENTIMENT_CLAMP,
+            sentiment=max(-1.0, min(1.0, (a["sentiment"]["score"] - SENTIMENT_MID_LEVEL)
+                                    / SENTIMENT_CLAMP)),
             sentiment_conf=a["sentiment"]["confidence"],
             material=a["material"]["noul"],
-            stress=a["stress"]["score"],
+            stress=max(0.0, min(MAX_STRESS, a["stress"]["score"])),
             event=a["event"]["choice"],
             noise=a["noise"]["noul"],
             raw=a,
@@ -227,8 +230,11 @@ class HeuristicScorer:
     def score(self, title: str, text: str, source: str, ticker: str, company: str) -> ScoreResult:
         """Score by keyword rules over title and text."""
         t = f"{title} {text}".lower()
-        pos = sum(_has(t, (w,)) for w in POSITIVE_WORDS)
-        neg = sum(_has(t, (w,)) for w in NEGATIVE_WORDS)
+        sentiment_text = t
+        for phrase in NEUTRAL_PHRASES:
+            sentiment_text = re.sub(rf"\b{phrase}(?:e?s)?\b", " ", sentiment_text)
+        pos = sum(_has(sentiment_text, (w,)) for w in POSITIVE_WORDS)
+        neg = sum(_has(sentiment_text, (w,)) for w in NEGATIVE_WORDS)
         level = SENTIMENT_MID_LEVEL + max(-SENTIMENT_CLAMP, min(SENTIMENT_CLAMP, pos - neg))
         if ticker == MARKET_TICKER:
             material = MATERIAL_MARKET

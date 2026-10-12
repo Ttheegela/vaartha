@@ -1,6 +1,6 @@
 """Deterministic offline news and prediction-market data. Demo/test data only, not real news."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from api.news_pipeline import Sources
 from api.news_sources import Market
@@ -13,7 +13,7 @@ def fixture_sources(now: datetime) -> Sources:
     """Fixture items relative to `now`: one duplicate, MARKET items, one stale item."""
 
     def at(**delta) -> str:
-        return (now - timedelta(**delta)).isoformat()
+        return (now - timedelta(**delta)).astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     export = "US tightens chip export controls on Nvidia sales to China"
     alpaca = [

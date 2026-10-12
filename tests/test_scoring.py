@@ -188,3 +188,21 @@ def test_heuristic_whole_word_and_no_double_count():
     h = HeuristicScorer()
     assert h.score("Bank of X", "", "s", "BAN", "").material == 0.4
     assert h.score("Firm beats", "", "s", "NVDA", "").sentiment == 0.5
+
+
+def test_heuristic_rate_cut_is_not_negative():
+    r = HeuristicScorer().score("Federal Reserve signals rate cut", "", "s", "SPY", "")
+    assert r.sentiment >= 0
+    assert HeuristicScorer().score("Firm announces job cuts", "", "s", "X", "").sentiment < 0
+
+
+def test_jev_scores_clamped_to_scale():
+    data = json.loads(json.dumps(JEV_OK))
+    data["answers"]["sentiment"]["score"] = 9.0
+    data["answers"]["stress"]["score"] = -2.0
+    r = TypeSafeScorer._map(data)
+    assert r.sentiment == 1.0 and r.stress == 0.0
+    data["answers"]["sentiment"]["score"] = -7.0
+    data["answers"]["stress"]["score"] = 8.0
+    r = TypeSafeScorer._map(data)
+    assert r.sentiment == -1.0 and r.stress == 3.0
