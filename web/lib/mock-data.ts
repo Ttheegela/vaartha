@@ -21,18 +21,18 @@ export const kpis = [
 ]
 
 export const bills: Bill[] = [
-  { id: "b1", merchant: "Rent", amount: 2450, day: 1, date: "Nov 1", frequency: "Monthly", paid: true },
-  { id: "b2", merchant: "Spotify", amount: 11.99, day: 3, date: "Nov 3", frequency: "Monthly", paid: true },
-  { id: "b3", merchant: "iCloud", amount: 2.99, day: 5, date: "Nov 5", frequency: "Monthly", paid: true },
-  { id: "b4", merchant: "Gym", amount: 64, day: 7, date: "Nov 7", frequency: "Monthly", paid: true },
-  { id: "b5", merchant: "ChatGPT", amount: 20, day: 12, date: "Nov 12", frequency: "Monthly", priceUp: 2 },
-  { id: "b6", merchant: "Con Edison", amount: 96.43, day: 14, date: "Nov 14", frequency: "Monthly" },
-  { id: "b7", merchant: "Netflix", amount: 22.99, day: 15, date: "Nov 15", frequency: "Monthly", priceUp: 2 },
-  { id: "b8", merchant: "Verizon", amount: 88, day: 18, date: "Nov 18", frequency: "Monthly" },
-  { id: "b9", merchant: "Car insurance", amount: 142.50, day: 21, date: "Nov 21", frequency: "Monthly" },
-  { id: "b10", merchant: "Amazon Prime", amount: 139, day: 24, date: "Nov 24", frequency: "Annual" },
-  { id: "b11", merchant: "The Atlantic", amount: 7.99, day: 26, date: "Nov 26", frequency: "Monthly", inactive: true },
-  { id: "b12", merchant: "Dropbox", amount: 19.99, day: 29, date: "Nov 29", frequency: "Monthly" },
+  { id: "b1", merchant: "Rent", kind: "bill", amount: 2450, day: 1, date: "Nov 1", frequency: "Monthly", paid: true },
+  { id: "b2", merchant: "Spotify", kind: "subscription", amount: 11.99, day: 3, date: "Nov 3", frequency: "Monthly", paid: true },
+  { id: "b3", merchant: "iCloud", kind: "subscription", amount: 2.99, day: 5, date: "Nov 5", frequency: "Monthly", paid: true },
+  { id: "b4", merchant: "Gym", kind: "subscription", amount: 64, day: 7, date: "Nov 7", frequency: "Monthly", paid: true },
+  { id: "b5", merchant: "ChatGPT", kind: "subscription", amount: 20, day: 12, date: "Nov 12", frequency: "Monthly", priceUp: 2 },
+  { id: "b6", merchant: "Con Edison", kind: "bill", amount: 96.43, day: 14, date: "Nov 14", frequency: "Monthly" },
+  { id: "b7", merchant: "Netflix", kind: "subscription", amount: 22.99, day: 15, date: "Nov 15", frequency: "Monthly", priceUp: 2 },
+  { id: "b8", merchant: "Verizon", kind: "bill", amount: 88, day: 18, date: "Nov 18", frequency: "Monthly" },
+  { id: "b9", merchant: "Car insurance", kind: "bill", amount: 142.50, day: 21, date: "Nov 21", frequency: "Monthly" },
+  { id: "b10", merchant: "Amazon Prime", kind: "subscription", amount: 139, day: 24, date: "Nov 24", frequency: "Annual" },
+  { id: "b11", merchant: "The Atlantic", kind: "subscription", amount: 7.99, day: 26, date: "Nov 26", frequency: "Monthly", inactive: true },
+  { id: "b12", merchant: "Dropbox", kind: "subscription", amount: 19.99, day: 29, date: "Nov 29", frequency: "Monthly" },
 ]
 
 export const budgets: Budget[] = [
