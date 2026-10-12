@@ -8,7 +8,7 @@ Reads VARTA_DB_PATH and TOKEN_ENCRYPTION_KEY from the environment.
 import argparse
 import json
 from contextlib import closing
-from datetime import date
+from datetime import UTC, date, datetime
 
 from api.crypto import TokenBox
 from api.db import connect, init_db
@@ -16,6 +16,7 @@ from api.plaid_client import PlaidAPI, PlaidClient
 from api.plaid_fake import FakePlaid
 from api.settings import Settings
 from api.sync import link_item
+from scripts.refresh_news import run
 
 SANDBOX_INSTITUTION = "ins_109508"  # verify in Plaid docs/dashboard before relying on it
 SANDBOX_PRODUCTS = ["transactions", "investments"]
@@ -60,6 +61,7 @@ def seed(settings: Settings, source: str, today: date, plaid: PlaidAPI | None = 
             [(name, target, when, json.dumps([a for s in subs for a in by_subtype.get(s, [])]))
              for name, target, when, subs in DEMO_GOALS])
         conn.commit()
+    run(settings, offline=(source == "fake"), now=datetime.now(UTC))
     return item_id
 
 

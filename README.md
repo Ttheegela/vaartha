@@ -13,6 +13,7 @@ v1 (course project, Streamlit) is frozen in [`legacy/`](legacy/).
 uv sync && uv run pytest  # API + core
 cp .env.example .env && uv run python -m scripts.new_token_key >> .env
 set -a && . ./.env && set +a && uv run python -m scripts.seed_demo --source fake  # offline demo data
+uv run python -m scripts.refresh_news --offline  # demo news (live: drop --offline; keys read from .env)
 uv run uvicorn --factory api.main:create_app --reload  # API on :8000
 cd web && pnpm install && pnpm dev  # UI on :3000, /api proxied to :8000
 ```
