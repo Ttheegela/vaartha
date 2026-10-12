@@ -123,6 +123,8 @@ class FakePlaid:
         self.investments = investments
         self.fail_next: dict[str, str] = {}
         self.mutate_once = False
+        self.fail_on_page: int | None = None  # 0-based sync page to fail once
+        self.login_required_tokens: set[str] = set()
         self._pending: dict = {"modified": [], "removed": []}
 
     def _maybe_fail(self, method: str) -> None:
@@ -140,6 +142,8 @@ class FakePlaid:
 
     def accounts_get(self, access_token):
         self._maybe_fail("accounts_get")
+        if access_token in self.login_required_tokens:
+            raise PlaidError("ITEM_LOGIN_REQUIRED", "simulated", 400)
         return {"accounts": self.data["accounts"],
                 "item": {"item_id": FAKE_ITEM_ID, "institution_name": FAKE_INSTITUTION}}
 
@@ -154,6 +158,9 @@ class FakePlaid:
         if page == 1 and self.mutate_once:
             self.mutate_once = False
             raise PlaidError("TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION", "simulated", 400)
+        if page == self.fail_on_page:
+            self.fail_on_page = None
+            raise PlaidError("INTERNAL_SERVER_ERROR", "simulated", 500)
         chunk = txns[page * self.page_size:(page + 1) * self.page_size]
         has_more = (page + 1) * self.page_size < len(txns)
         return {"added": chunk, "modified": [], "removed": [],

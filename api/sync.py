@@ -151,6 +151,9 @@ def sync_all(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
         except PlaidError as exc:
             log.warning("sync failed for %s: %s", item_id, exc.code)
             results[item_id] = exc.code
+        except Exception as exc:  # noqa: BLE001 - isolate items; never log the token
+            log.warning("sync failed for %s: %s", item_id, type(exc).__name__)
+            results[item_id] = "ERROR"
     refresh_recurring(conn, today)
     snapshot_networth(conn, today)
     return results

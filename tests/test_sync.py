@@ -52,6 +52,7 @@ def test_resync_is_idempotent(env):
 def test_modified_and_removed_applied(env):
     conn, plaid, box = env
     link_item(conn, plaid, box, "public-fake-1", TODAY)
+    before = _count(conn, "transactions")
     first, second = plaid.data["transactions"][0], plaid.data["transactions"][1]
     plaid.modify_and_remove(first["transaction_id"], 999.0, second["transaction_id"])
     assert sync_item(conn, plaid, box, FAKE_ITEM_ID) == {"added": 0, "modified": 1, "removed": 1}
@@ -61,12 +62,17 @@ def test_modified_and_removed_applied(env):
     gone = conn.execute("SELECT COUNT(*) FROM transactions WHERE txn_id=?",
                         (second["transaction_id"],)).fetchone()[0]
     assert gone == 0
+    assert _count(conn, "transactions") == before - 1
+    assert sync_item(conn, plaid, box, FAKE_ITEM_ID) == {"added": 0, "modified": 0, "removed": 0}
+    assert _count(conn, "transactions") == before - 1
+    assert conn.execute("SELECT txn_cursor FROM items").fetchone()[0] == "done"
 
 
 def test_mutation_during_pagination_restarts(env):
     conn, plaid, box = env
     plaid.mutate_once = True
     link_item(conn, plaid, box, "public-fake-1", TODAY)
+    assert conn.execute("SELECT txn_cursor FROM items").fetchone()[0] == "done"
     assert _count(conn, "transactions") == len(plaid.data["transactions"])
 
 
@@ -104,3 +110,42 @@ def test_networth_snapshot_values(env):
     assert row["date"] == TODAY.isoformat()
     assert row["assets"] == pytest.approx(6420.12 + 18000.00 + 56302.00)
     assert row["liabilities"] == pytest.approx(1240.55)
+
+
+def test_failure_on_third_page_saves_nothing(tmp_path):
+    conn = connect(tmp_path / "v.db")
+    init_db(conn)
+    plaid = FakePlaid(TODAY, page_size=100)
+    plaid.fail_on_page = 2
+    with pytest.raises(PlaidError):
+        link_item(conn, plaid, TokenBox(new_key()), "public-fake-1", TODAY)
+    assert conn.execute("SELECT txn_cursor FROM items").fetchone()[0] is None
+    assert _count(conn, "items") == 1
+    assert _count(conn, "transactions") == 0
+
+
+def _add_item(conn, box, item_id, token):
+    conn.execute("INSERT INTO items (item_id, access_token_enc) VALUES (?, ?)",
+                 (item_id, box.seal(token)))
+    conn.commit()
+
+
+def test_sync_all_isolates_login_required_item(env):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    _add_item(conn, box, "item-2", "access-bad")
+    plaid.login_required_tokens.add("access-bad")
+    result = sync_all(conn, plaid, box, TODAY)
+    assert result == {FAKE_ITEM_ID: "ok", "item-2": "ITEM_LOGIN_REQUIRED"}
+    assert _count(conn, "transactions") == len(plaid.data["transactions"])
+    status = conn.execute("SELECT status FROM items WHERE item_id='item-2'").fetchone()[0]
+    assert status == "login_required"
+    assert _count(conn, "networth_snapshots") == 1
+
+
+def test_sync_all_survives_non_plaid_error(env):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    _add_item(conn, TokenBox(new_key()), "item-2", "access-x")  # sealed with another key
+    assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: "ok", "item-2": "ERROR"}
+    assert _count(conn, "networth_snapshots") == 1
