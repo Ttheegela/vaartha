@@ -38,3 +38,20 @@ def test_weights_renormalize_over_covered_tickers():
 def test_no_covered_tickers_raises():
     with pytest.raises(ValueError):
         portfolio_risk(_closes({"SPY": [1, 2, 3.0]}), {"ZZZ": 1.0})
+
+
+def test_two_closes_give_no_beta_instead_of_raising():
+    r = portfolio_risk(_closes({"SPY": [100, 110.0], "AAA": [10, 11.0]}), {"AAA": 1.0})
+    assert r["beta"] is None and r["days"] == 1
+
+
+def test_unheld_sparse_ticker_does_not_change_result():
+    base = _closes({"AAA": [10, 11, 12.1, 11, 13.0], "SPY": [100, 101, 99, 102, 104.0]})
+    sparse = pl.concat([base, pl.DataFrame({"date": [date(2026, 1, 1)], "ticker": ["ZZZ"],
+                                            "close": [5.0]})])
+    assert portfolio_risk(sparse, {"AAA": 1.0}) == portfolio_risk(base, {"AAA": 1.0})
+
+
+def test_absent_benchmark_gives_no_beta():
+    r = portfolio_risk(_closes({"AAA": [1, 2, 3, 4.0]}), {"AAA": 1.0})
+    assert r["beta"] is None and r["volatility"] > 0
