@@ -125,6 +125,9 @@ def _merge_tickers(conn, row, new: list[str]) -> None:
     merged = sorted((set(have) | set(new)) - {MARKET}) if new else have
     if merged and merged != have:
         conn.execute("UPDATE news_items SET tickers=? WHERE id=?", (json.dumps(merged), row["id"]))
+        if MARKET in have:
+            conn.execute("DELETE FROM news_scores WHERE news_id=? AND ticker=?",
+                         (row["id"], MARKET))
 
 
 def _store(conn, items: list[RawItem], securities, cutoff: str) -> tuple[int, int]:

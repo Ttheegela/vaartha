@@ -7,6 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 TRACKING_PREFIXES = ("utm_", "fbclid", "gclid")
 MIN_TEXT_TICKER_LEN = 3
+TOPIC_NEUTRAL_PHRASES = ("blue-chip", "blue chip")
 _PUNCT = re.compile(r"[^\w\s]")
 _SPACES = re.compile(r"\s+")
 GEO_TOPICS: dict[str, tuple[str, ...]] = {
@@ -77,5 +78,7 @@ def tag_tickers(item: RawItem, securities: dict[str, tuple[str, ...]]) -> list[s
 def tag_topics(text: str) -> list[str]:
     """Geopolitical/macro topics in the text; keywords match at a word start, optional plural."""
     lower = text.lower()
+    for phrase in TOPIC_NEUTRAL_PHRASES:
+        lower = lower.replace(phrase, " ")
     return sorted(t for t, kws in GEO_TOPICS.items()
-                  if any(re.search(rf"(?<!-)\b{re.escape(k)}s?\b", lower) for k in kws))
+                  if any(re.search(rf"\b{re.escape(k)}s?\b", lower) for k in kws))

@@ -156,3 +156,19 @@ def test_fixture_timestamps_use_z_format():
     srcs = fixture_sources(NOW)
     stamps = [i.published_at for _, f in srcs.news for i in f([])]
     assert stamps and all(re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", s) for s in stamps)
+
+
+def test_market_placeholder_dropped_when_real_ticker_merges(conn):
+    a = RawItem("A", "https://a.example/1", "Stocks drift higher", "", "2026-10-12T10:00:00Z")
+    b = RawItem("B", "https://b.example/9", "Stocks drift higher", "",
+                "2026-10-12T12:00:00Z", ("NVDA",))
+    refresh_news(conn, _src(a), HeuristicScorer(), NOW)
+    news_id = conn.execute("SELECT id FROM news_items").fetchone()[0]
+    assert _count(conn, f"SELECT COUNT(*) FROM news_scores WHERE news_id={news_id} "
+                        f"AND ticker='{MARKET}'") == 1
+    out = refresh_news(conn, _src(b), HeuristicScorer(), NOW)
+    assert out["duplicates"] == 1
+    tickers = json.loads(conn.execute("SELECT tickers FROM news_items").fetchone()[0])
+    assert tickers == ["NVDA"]
+    assert _count(conn, f"SELECT COUNT(*) FROM news_scores WHERE news_id={news_id} "
+                        f"AND ticker='{MARKET}'") == 0

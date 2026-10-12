@@ -100,3 +100,15 @@ def test_chipmaker_and_inflationary_keywords():
 def test_hyphen_blocks_topic_keyword():
     assert tag_topics("Blue-chip stocks rally") == []
     assert tag_topics("Chip stocks rally") == ["semiconductors"]
+
+
+def test_hyphenated_geo_names_still_tag_geopolitics():
+    assert tag_topics("US-Iran tensions rise") == ["geopolitics"]
+    assert tag_topics("Israel-Iran strikes") == ["geopolitics"]
+    assert tag_topics("US-Taiwan deal") == ["geopolitics"]
+
+
+def test_blue_chip_phrase_is_neutral():
+    assert tag_topics("blue-chip stocks rally") == []
+    assert tag_topics("blue chip stocks rally") == []
+    assert tag_topics("blue-chip chipmaker gains") == ["semiconductors"]
