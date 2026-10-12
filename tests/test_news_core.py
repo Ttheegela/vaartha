@@ -95,3 +95,8 @@ def test_dot_blocks_only_before_alphanumeric():
 def test_chipmaker_and_inflationary_keywords():
     assert tag_topics("Chipmaker shares jump") == ["semiconductors"]
     assert tag_topics("Inflationary pressure builds") == ["macro"]
+
+
+def test_hyphen_blocks_topic_keyword():
+    assert tag_topics("Blue-chip stocks rally") == []
+    assert tag_topics("Chip stocks rally") == ["semiconductors"]

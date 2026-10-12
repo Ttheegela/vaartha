@@ -5,6 +5,7 @@ from datetime import date
 import httpx
 
 from api.news_sources import (
+    MAX_RESPONSE_BYTES,
     fetch_alpaca,
     fetch_edgar,
     fetch_finnhub,
@@ -188,3 +189,26 @@ def test_polymarket_filters_and_ranks():
     assert [m.market_id for m in got] == ["1", "3"]
     assert got[0].yes_prob == 0.07 and got[0].category == "China / Taiwan"
     assert got[1].category == "US Macro"
+
+
+def test_edgar_one_malformed_ticker_entry_skipped():
+    def h(req):
+        if req.url.path.endswith("company_tickers.json"):
+            return httpx.Response(200, json={
+                "0": {"ticker": "BAD"},
+                "1": {"cik_str": 1045810, "ticker": "NVDA", "title": "NVIDIA CORP"}})
+        return httpx.Response(200, json={"filings": {"recent": {
+            "form": ["8-K"], "filingDate": ["2026-10-10"],
+            "accessionNumber": ["0001045810-26-000123"], "primaryDocument": ["d.htm"]}}})
+
+    items = fetch_edgar("Varta dev@example.com", ["NVDA"], date(2026, 10, 12), transport=_t(h))
+    assert len(items) == 1
+    assert items[0].title == "NVIDIA CORP files 8-K (2026-10-10)"
+
+
+def test_oversized_response_treated_as_failure(caplog):
+    big = httpx.Response(200, content=b"x" * (MAX_RESPONSE_BYTES + 1))
+    with caplog.at_level("WARNING"):
+        assert fetch_rss((("L", "https://f.example/rss"),), transport=_t(lambda r: big)) == []
+        assert fetch_gdelt(transport=_t(lambda r: big)) == []
+    assert "response too large" in caplog.text

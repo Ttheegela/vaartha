@@ -78,4 +78,4 @@ def tag_topics(text: str) -> list[str]:
     """Geopolitical/macro topics in the text; keywords match at a word start, optional plural."""
     lower = text.lower()
     return sorted(t for t, kws in GEO_TOPICS.items()
-                  if any(re.search(rf"\b{re.escape(k)}s?\b", lower) for k in kws))
+                  if any(re.search(rf"(?<!-)\b{re.escape(k)}s?\b", lower) for k in kws))

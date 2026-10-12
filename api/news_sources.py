@@ -19,6 +19,7 @@ FINNHUB_NEWS_URL = "https://finnhub.io/api/v1/company-news"
 RSS_FEEDS = (("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
              ("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"))
 TIMEOUT_SECONDS = 10.0
+MAX_RESPONSE_BYTES = 5_000_000
 FINNHUB_MAX_SYMBOLS = 8
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 GDELT_QUERY = (
@@ -70,6 +71,14 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _check(r: httpx.Response, source: str) -> None:
+    """Raise on an HTTP error status or a body over MAX_RESPONSE_BYTES (logged by source)."""
+    r.raise_for_status()
+    if len(r.content) > MAX_RESPONSE_BYTES:
+        log.warning("%s response too large", source)
+        raise ValueError("response too large")
+
+
 def fetch_alpaca(key: str | None, secret: str | None, symbols: list[str], *, limit: int = 50,
                  transport: httpx.BaseTransport | None = None) -> list[RawItem]:
     """Latest Alpaca news for the symbols; [] without credentials or on any failure."""
@@ -82,7 +91,7 @@ def fetch_alpaca(key: str | None, secret: str | None, symbols: list[str], *, lim
                 headers={"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret},
                 params={"symbols": ",".join(symbols), "limit": limit, "sort": "desc"},
             )
-            r.raise_for_status()
+            _check(r, "alpaca")
             rows = r.json()["news"]
         items = []
         for n in rows:
@@ -118,7 +127,7 @@ def fetch_finnhub(key: str | None, symbols: list[str], today: date, *, days: int
                         params={"symbol": sym, "from": (today - timedelta(days=days)).isoformat(),
                                 "to": today.isoformat()},
                     )
-                    r.raise_for_status()
+                    _check(r, "finnhub")
                     articles = r.json()
                     for n in articles:
                         try:
@@ -146,7 +155,7 @@ def fetch_rss(feeds=RSS_FEEDS, *, transport: httpx.BaseTransport | None = None) 
             for label, url in feeds:
                 try:
                     r = c.get(url)
-                    r.raise_for_status()
+                    _check(r, "rss")
                     for it in ET.fromstring(r.text).iter("item"):
                         try:
                             title = (it.findtext("title") or "").strip()
@@ -172,7 +181,7 @@ def fetch_gdelt(*, transport: httpx.BaseTransport | None = None) -> list[RawItem
             r = c.get(GDELT_URL, params={
                 "query": GDELT_QUERY, "mode": "artlist", "format": "json",
                 "maxrecords": GDELT_MAX_RECORDS, "timespan": "1d", "sort": "datedesc"})
-            r.raise_for_status()
+            _check(r, "gdelt")
             try:
                 articles = r.json()["articles"]
             except (ValueError, KeyError):  # rate-limit text is not JSON
@@ -204,15 +213,20 @@ def fetch_edgar(user_agent: str | None, tickers: list[str], today: date, *,
         with _client(transport) as c:
             headers = {"User-Agent": user_agent}
             r = c.get(SEC_TICKERS_URL, headers=headers)
-            r.raise_for_status()
-            ciks = {v["ticker"]: (int(v["cik_str"]), v["title"]) for v in r.json().values()}
+            _check(r, "edgar")
+            ciks = {}
+            for v in r.json().values():
+                try:
+                    ciks[v["ticker"]] = (int(v["cik_str"]), v["title"])
+                except Exception as exc:
+                    log.warning("edgar ticker entry skipped: %s", type(exc).__name__)
             for sym in tickers:
                 if sym not in ciks:
                     continue
                 try:
                     cik, company = ciks[sym]
                     r = c.get(SEC_SUBMISSIONS_URL.format(cik=f"{cik:010d}"), headers=headers)
-                    r.raise_for_status()
+                    _check(r, "edgar")
                     recent = r.json()["filings"]["recent"]
                     for form, filed, acc, doc in zip(recent["form"], recent["filingDate"],
                                                      recent["accessionNumber"],
@@ -224,7 +238,7 @@ def fetch_edgar(user_agent: str | None, tickers: list[str], today: date, *,
                                    f"{acc.replace('-', '')}/{doc}")
                             items.append(RawItem(
                                 "SEC EDGAR", url,
-                                f"{company} files 8-K", "", f"{filed}T00:00:00Z", (sym,)))
+                                f"{company} files 8-K ({filed})", "", f"{filed}T00:00:00Z", (sym,)))
                         except Exception as exc:
                             log.warning("edgar item skipped: %s", type(exc).__name__)
                 except Exception as exc:
@@ -254,7 +268,7 @@ def fetch_polymarket(*, transport: httpx.BaseTransport | None = None) -> list[Ma
         with _client(transport) as c:
             for offset in POLY_PAGES:
                 r = c.get(POLYMARKET_URL, params={"active": "true", "limit": 500, "offset": offset})
-                r.raise_for_status()
+                _check(r, "polymarket")
                 batch = r.json()
                 if not batch:
                     break

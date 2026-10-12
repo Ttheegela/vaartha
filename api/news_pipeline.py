@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from api.news_sources import (
     Market,
@@ -29,6 +29,11 @@ DEFAULT_WATCHLIST: dict[str, tuple[str, ...]] = {
     "SPY": ("s&p 500",), "NVDA": ("nvidia",), "TSM": ("tsmc", "taiwan semiconductor"),
     "XOM": ("exxon",), "GLD": ("gold",),
 }
+TITLE_DEDUPE_WINDOW_HOURS = 48
+COMMON_WORDS = frozenset({
+    "target", "block", "visa", "gap", "ford", "apple", "oracle", "shell", "carnival", "match",
+    "snap", "square", "coin", "meta", "alphabet", "amazon", "general", "american", "first",
+    "united"})
 NAME_SUFFIXES = (" corp", " inc", " ltd", " plc", " co", " corporation", " incorporated",
                  " etf", " shares")
 
@@ -51,12 +56,15 @@ def tracked_securities(conn) -> dict[str, tuple[str, ...]]:
     for ticker, name in rows:
         aliases = []
         if name:
-            full = name.lower().strip()
+            full = name.lower().strip().rstrip(" .,;")
             short = full
             for suffix in NAME_SUFFIXES:
                 if short.endswith(suffix):
                     short = short[: -len(suffix)].strip()
-            aliases = list(dict.fromkeys([full, short]))
+            aliases = [full]
+            if len(short.split()) >= 2 or short not in COMMON_WORDS:
+                aliases.append(short)
+            aliases = list(dict.fromkeys(aliases))
         out[ticker] = tuple(aliases)
     return out or dict(DEFAULT_WATCHLIST)
 
@@ -90,16 +98,46 @@ def _fetch_all(sources: Sources, tickers: list[str]) -> tuple[dict[str, int], li
     return counts, items
 
 
+def _parse_ts(ts: str) -> datetime:
+    """ISO timestamp (Z or offset; naive treated as UTC) as an aware datetime."""
+    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+def _find_duplicate(conn, uh: str, th: str, published_at: str):
+    """Existing row with the same URL, or the same title within the dedupe window."""
+    window = timedelta(hours=TITLE_DEDUPE_WINDOW_HOURS)
+    for row in conn.execute("SELECT id, published_at, tickers, url_hash FROM news_items "
+                            "WHERE url_hash=? OR title_hash=?", (uh, th)):
+        if row["url_hash"] == uh:
+            return row
+        try:
+            if abs(_parse_ts(row["published_at"]) - _parse_ts(published_at)) <= window:
+                return row
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _merge_tickers(conn, row, new: list[str]) -> None:
+    """Add newly seen source tickers to a stored row (dropping the MARKET placeholder)."""
+    have = json.loads(row["tickers"])
+    merged = sorted((set(have) | set(new)) - {MARKET}) if new else have
+    if merged and merged != have:
+        conn.execute("UPDATE news_items SET tickers=? WHERE id=?", (json.dumps(merged), row["id"]))
+
+
 def _store(conn, items: list[RawItem], securities, cutoff: str) -> tuple[int, int]:
     """Insert unseen items; returns (stored fresh, duplicates)."""
     stored = dups = 0
     for it in items:
         uh, th = url_hash(it.url), title_hash(it.title)
-        if conn.execute("SELECT 1 FROM news_items WHERE url_hash=? OR title_hash=?",
-                        (uh, th)).fetchone():
+        found = tag_tickers(it, securities)
+        if dup := _find_duplicate(conn, uh, th, it.published_at):
+            _merge_tickers(conn, dup, found)
             dups += 1
             continue
-        tickers = tag_tickers(it, securities) or [MARKET]
+        tickers = found or [MARKET]
         topics = tag_topics(f"{it.title} {it.text}")
         conn.execute(
             "INSERT INTO news_items (published_at, source, url, title, text, tickers, topics, "
@@ -108,6 +146,15 @@ def _store(conn, items: list[RawItem], securities, cutoff: str) -> tuple[int, in
              json.dumps(topics), uh, th))
         stored += it.published_at >= cutoff
     return stored, dups
+
+
+def _safe_score(scorer: Scorer, args: tuple):
+    """Score, treating any scorer exception as a failed score (logs the type only)."""
+    try:
+        return scorer.score(*args)
+    except Exception as exc:
+        log.warning("scorer raised %s", type(exc).__name__)
+        return None
 
 
 def _score_pending(conn, scorer: Scorer, fallback: Scorer | None, securities, now: datetime,
@@ -122,7 +169,7 @@ def _score_pending(conn, scorer: Scorer, fallback: Scorer | None, securities, no
     for news_id, ticker, title, text, source in pairs:
         company = securities[ticker][0] if securities.get(ticker) else ""
         args = (title, text or "", source, ticker, company)
-        result = scorer.score(*args) or (fallback.score(*args) if fallback else None)
+        result = _safe_score(scorer, args) or (_safe_score(fallback, args) if fallback else None)
         if result is None:
             unscored += 1
             continue
