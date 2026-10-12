@@ -23,6 +23,9 @@ class Settings:
     finnhub_key: str | None = field(default=None, repr=False)
     typesafe_key: str | None = field(default=None, repr=False)
     sec_user_agent: str | None = field(default=None, repr=False)
+    llm_base_url: str | None = None
+    llm_model: str | None = None
+    llm_api_key: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.plaid_env not in PLAID_ENVS:
@@ -34,6 +37,11 @@ class Settings:
     def plaid_configured(self) -> bool:
         """True when both Plaid credentials are present."""
         return bool(self.plaid_client_id and self.plaid_secret)
+
+    @property
+    def llm_configured(self) -> bool:
+        """True when both the LLM base URL and model are set."""
+        return bool(self.llm_base_url and self.llm_model)
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -53,4 +61,7 @@ class Settings:
             finnhub_key=os.environ.get("FINNHUB_API_KEY") or None,
             typesafe_key=os.environ.get("TYPESAFE_API_KEY") or None,
             sec_user_agent=os.environ.get("SEC_USER_AGENT") or None,
+            llm_base_url=os.environ.get("LLM_BASE_URL") or None,
+            llm_model=os.environ.get("LLM_MODEL") or None,
+            llm_api_key=os.environ.get("OPENROUTER_API_KEY") or None,
         )

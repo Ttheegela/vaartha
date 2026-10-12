@@ -64,3 +64,18 @@ def test_news_keys_from_env_hidden(monkeypatch, tmp_path):
     assert (s.alpaca_key, s.alpaca_secret, s.finnhub_key, s.typesafe_key, s.sec_user_agent) == (
         "ak", "as", "fk", "tk", "Varta dev@example.com")
     assert "ak" not in repr(s) and "tk" not in repr(s)
+
+
+def test_llm_settings_from_env(monkeypatch, tmp_path):
+    for k in ("LLM_BASE_URL", "LLM_MODEL", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
+    assert not Settings.from_env().llm_configured
+    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434/v1")
+    assert not Settings.from_env().llm_configured
+    monkeypatch.setenv("LLM_MODEL", "qwen3")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-secret-xyz")
+    s = Settings.from_env()
+    assert (s.llm_base_url, s.llm_model, s.llm_api_key) == (
+        "http://localhost:11434/v1", "qwen3", "sk-secret-xyz")
+    assert s.llm_configured
+    assert "sk-secret-xyz" not in repr(s)
