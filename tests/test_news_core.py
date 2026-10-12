@@ -85,3 +85,13 @@ def test_url_query_order_ignored():
 
 def test_title_unicode_punctuation_dropped():
     assert normalize_title("Fed… holds") == normalize_title("Fed holds")
+
+
+def test_dot_blocks_only_before_alphanumeric():
+    assert tag_tickers(_item("Investors bought AMD."), SHORT) == ["AMD"]
+    assert tag_tickers(_item("AMD.X listing"), SHORT) == []
+
+
+def test_chipmaker_and_inflationary_keywords():
+    assert tag_topics("Chipmaker shares jump") == ["semiconductors"]
+    assert tag_topics("Inflationary pressure builds") == ["macro"]

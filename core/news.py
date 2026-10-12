@@ -13,9 +13,9 @@ GEO_TOPICS: dict[str, tuple[str, ...]] = {
     "geopolitics": ("sanction", "invasion", "missile", "ceasefire", "tariff", "embargo", "nato",
                     "taiwan", "iran", "ukraine", "russia", "strait of hormuz", "red sea"),
     "energy": ("opec", "brent", "crude", "oil supply", "natural gas"),
-    "semiconductors": ("chip", "semiconductor", "export control", "foundry"),
-    "macro": ("federal reserve", "rate cut", "rate hike", "inflation", "recession",
-              "treasury yield"),
+    "semiconductors": ("chip", "chipmaker", "semiconductor", "export control", "foundry"),
+    "macro": ("federal reserve", "rate cut", "rate hike", "inflation", "inflationary",
+              "recession", "treasury yield"),
 }
 
 
@@ -66,7 +66,8 @@ def tag_tickers(item: RawItem, securities: dict[str, tuple[str, ...]]) -> list[s
     found = set()
     for ticker, aliases in securities.items():
         if len(ticker) >= MIN_TEXT_TICKER_LEN and re.search(
-                rf"(?<![\w&./-]){re.escape(ticker)}(?![\w&./-])", text):
+                rf"(?<![\w&/-])(?<![A-Za-z0-9]\.){re.escape(ticker)}"
+                rf"(?![\w&/-]|\.[A-Za-z0-9])", text):
             found.add(ticker)
         elif any(re.search(rf"\b{re.escape(a.lower())}\b", lower) for a in aliases):
             found.add(ticker)
