@@ -1,0 +1,4 @@
+import { budgets } from "@/lib/mock-data"
+import { cn } from "@/lib/utils"
+
+export function BudgetList(){ return <div className="flex flex-col gap-5">{budgets.map((budget)=>{const percent=Math.round(budget.spent/budget.limit*100); return <div key={budget.category} className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-sm font-medium">{budget.category}</span><span className="numeric text-xs text-muted-foreground">${budget.spent} / ${budget.limit}</span></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className={cn("h-full rounded-full bg-primary",percent>80&&"bg-warning",percent>100&&"bg-destructive")} style={{width:`${Math.min(percent,100)}%`}}/></div><span className={cn("numeric text-right text-[11px] text-muted-foreground",percent>80&&"text-warning",percent>100&&"text-destructive")}>{percent}%</span></div>})}</div> }

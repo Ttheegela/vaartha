@@ -1,0 +1,8 @@
+"use client"
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts"
+import { cashFlow, categorySpend } from "@/lib/mock-data"
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+
+const spendConfig = { housing:{label:"Housing",color:"var(--chart-1)"}, dining:{label:"Dining",color:"var(--chart-2)"}, groceries:{label:"Groceries",color:"var(--chart-5)"}, shopping:{label:"Shopping",color:"var(--chart-3)"}, other:{label:"Other",color:"var(--chart-4)"} }
+export function SpendingDonut(){ return <ChartContainer config={spendConfig} className="mx-auto h-[280px] w-full aspect-auto"><PieChart><ChartTooltip content={<ChartTooltipContent nameKey="name" />} /><Pie data={categorySpend} dataKey="value" nameKey="name" innerRadius={64} outerRadius={96} paddingAngle={2} strokeWidth={0}>{categorySpend.map((entry)=><Cell key={entry.name} fill={entry.fill}/>)}</Pie><ChartLegend content={<ChartLegendContent nameKey="name" />} /></PieChart></ChartContainer> }
+export function CashFlowChart(){ return <ChartContainer config={{ income:{label:"Income",color:"var(--chart-1)"}, spend:{label:"Spend",color:"var(--chart-4)"} }} className="h-[280px] w-full aspect-auto"><BarChart data={cashFlow}><CartesianGrid vertical={false}/><XAxis dataKey="month" axisLine={false} tickLine={false}/><YAxis hide/><ChartTooltip content={<ChartTooltipContent/>}/><ChartLegend content={<ChartLegendContent/>}/><Bar dataKey="income" fill="var(--color-income)" radius={[4,4,0,0]}/><Bar dataKey="spend" fill="var(--color-spend)" radius={[4,4,0,0]}/></BarChart></ChartContainer> }
