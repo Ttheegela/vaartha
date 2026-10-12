@@ -12,19 +12,12 @@ x-web: &web
   image: varta-web
   restart: unless-stopped
 
-x-api-health: &api-health
-  healthcheck:
-    test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"]
-    interval: 30s
-    timeout: 5s
-    start_period: 20s
-    retries: 3
-
 services:
   api-demo:
-    <<: [*api, *api-health]
+    <<: *api
     profiles: [demo]
     env_file: demo.env
+    networks: [demo]
     environment: {VARTA_INSTANCE: demo, TRUST_PROXY: "1"}
     volumes: [demo-data:/data]
   worker-demo:
@@ -33,17 +26,20 @@ services:
     command: ["python", "-m", "worker.main"]
     healthcheck: {disable: true}  # image HEALTHCHECK targets the api port
     env_file: demo.env
+    networks: [demo]
     environment: {VARTA_INSTANCE: demo}
     volumes: [demo-data:/data]
   web-demo:
     <<: *web
     profiles: [demo]
+    networks: [demo]
     environment: {API_URL: "http://api-demo:8000", VARTA_INSTANCE: demo}
 
   api-owner:
-    <<: [*api, *api-health]
+    <<: *api
     profiles: [owner]
     env_file: owner.env
+    networks: [owner]
     environment: {VARTA_INSTANCE: owner, TRUST_PROXY: "1"}
     volumes: [owner-data:/data]
   worker-owner:
@@ -52,28 +48,35 @@ services:
     command: ["python", "-m", "worker.main"]
     healthcheck: {disable: true}  # image HEALTHCHECK targets the api port
     env_file: owner.env
+    networks: [owner]
     environment: {VARTA_INSTANCE: owner}
     volumes: [owner-data:/data]
   web-owner:
     <<: *web
     profiles: [owner]
+    networks: [owner]
     environment: {API_URL: "http://api-owner:8000", VARTA_INSTANCE: owner}
 
   caddy:
-    image: caddy:2
+    image: caddy:2.10
     profiles: [demo, owner]
     restart: unless-stopped
     env_file: caddy.env
+    networks: [demo, owner]
     ports:
-      - "${PUBLIC_IP}:80:80"
-      - "${PUBLIC_IP}:443:443"
+      - "${PUBLIC_IP:?set PUBLIC_IP in deploy/caddy.env}:80:80"
+      - "${PUBLIC_IP:?set PUBLIC_IP in deploy/caddy.env}:443:443"
       # Owner site listens on container 8443; published only on the Tailscale IP.
-      - "${OWNER_TS_IP}:443:8443"
+      - "${OWNER_TS_IP:?set OWNER_TS_IP in deploy/caddy.env}:443:8443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
       - caddy-data:/data
       - caddy-config:/config
+
+networks:
+  demo:
+  owner:
 
 volumes:
   demo-data:

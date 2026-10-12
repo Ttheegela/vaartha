@@ -41,6 +41,9 @@ jobs:
       - name: Compose config from examples
         run: |
           for f in demo owner caddy; do cp deploy/$f.env.example deploy/$f.env; done
-          docker compose -f deploy/compose.yaml --env-file deploy/caddy.env --profile demo --profile owner config -q
+          C="docker compose -f deploy/compose.yaml --env-file deploy/caddy.env --profile demo --profile owner config -q"
+          if $C; then echo "unfilled IPs must fail closed"; exit 1; fi
+          sed -i 's/^PUBLIC_IP=.*/PUBLIC_IP=203.0.113.10/;s/^OWNER_TS_IP=.*/OWNER_TS_IP=100.64.0.10/' deploy/caddy.env
+          $C
       - run: docker build -t varta-api .
       - run: docker build -t varta-web web
