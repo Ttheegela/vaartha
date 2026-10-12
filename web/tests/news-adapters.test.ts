@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { toCrowdOdds, toNewsItems } from "../lib/news-adapters.ts"
+import { toCrowdOdds, toHoldings, toNewsItems, toSentimentSeries } from "../lib/news-adapters.ts"
 
 const NOW = new Date("2026-10-12T12:00:00Z")
 const score = (o: Record<string, unknown>) => ({
@@ -67,4 +67,38 @@ test("only http(s) urls are kept", () => {
   assert.equal(u("javascript:alert(1)"), null)
   assert.equal(u("ftp://x"), null)
   assert.equal(u("https://ok"), "https://ok")
+})
+
+const hold = (o: Record<string, unknown>) => ({ ticker: "NVDA", name: "NVIDIA", quantity: 86, value: 1000, cost_basis: 900, weight: 0.2191, ...o }) as never
+const pt = (date: string, sentiment: number, channel = "news") => ({ date, channel, sentiment, items: 1 })
+
+test("holdings: weight -> percent 1dp, qty/dayChange mapped", () => {
+  const [h] = toHoldings([hold({})], {})
+  assert.equal(h.weight, 21.9)
+  assert.equal(h.qty, 86)
+  assert.equal(h.dayChange, 0)
+  assert.equal(h.name, "NVIDIA")
+})
+
+test("holdings: sentiment is last 7 news values, oldest first; none -> []", () => {
+  const pts = Array.from({ length: 9 }, (_, i) => pt(`2026-10-0${i + 1}`, i / 10)).reverse()
+  const mixed = [...pts, pt("2026-10-09", 0.99, "crowd")]
+  assert.deepEqual(toHoldings([hold({})], { NVDA: mixed })[0].sentiment, [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
+  assert.deepEqual(toHoldings([hold({ ticker: "AMD" })], { NVDA: mixed })[0].sentiment, [])
+  assert.deepEqual(toHoldings([], {}), [])
+})
+
+test("sentiment series: news only, sorted by date, reddit null, regime normal", () => {
+  const s = toSentimentSeries([pt("2026-10-02", 0.4), pt("2026-10-01", -0.2), pt("2026-10-01", 0.9, "crowd")])
+  assert.deepEqual(s, [
+    { day: "10-01", news: -0.2, reddit: null, regime: "normal" },
+    { day: "10-02", news: 0.4, reddit: null, regime: "normal" },
+  ])
+  assert.deepEqual(toSentimentSeries([]), [])
+})
+
+test("holdings: null ticker dropped, null name/qty/value defaulted", () => {
+  const out = toHoldings([hold({ ticker: null }), hold({ name: null, quantity: null, value: null })], {})
+  assert.equal(out.length, 1)
+  assert.deepEqual([out[0].name, out[0].qty, out[0].value], ["NVDA", 0, 0])
 })

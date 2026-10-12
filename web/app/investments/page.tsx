@@ -1,10 +1,96 @@
-import { AllocationDonut, SentimentChart } from "@/components/investment-charts"
-import { KpiCard } from "@/components/kpi-card"
+import { AllocationDonut } from "@/components/investment-charts"
 import { PageHeading } from "@/components/page-heading"
+import { SentimentPanel } from "@/components/sentiment-panel"
 import { Sparkline } from "@/components/sparkline"
-import { holdings } from "@/lib/mock-data"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import type { components } from "@/lib/api-types"
+import { toHoldings, toSentimentSeries } from "@/lib/news-adapters"
+import { apiGet } from "@/lib/server-api"
 
-export default function InvestmentsPage(){const stats=[{label:"Portfolio value",value:"$56,302",delta:"+1.7%",up:true},{label:"Day P&L",value:"−$286",delta:"−0.51%",up:false},{label:"Total return",value:"+$9,418",delta:"+20.1%",up:true},{label:"Beta vs SPY",value:"1.18",delta:"+0.06",up:false}];return <div><PageHeading title="Investments" description="Portfolio performance, exposure, and market intelligence."/><div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats.map(s=><KpiCard key={s.label} {...s}/>)}</div><Card className="mb-6"><CardHeader><CardTitle>Holdings</CardTitle><CardDescription>Fidelity individual brokerage</CardDescription></CardHeader><CardContent className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Ticker</TableHead><TableHead>Name</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Value</TableHead><TableHead className="text-right">Weight</TableHead><TableHead className="text-right">Day</TableHead><TableHead>Sentiment</TableHead></TableRow></TableHeader><TableBody>{holdings.map(h=><TableRow key={h.ticker}><TableCell className="font-mono font-medium text-primary">{h.ticker}</TableCell><TableCell>{h.name}</TableCell><TableCell className="numeric text-right">{h.qty}</TableCell><TableCell className="numeric text-right">${h.value.toLocaleString()}</TableCell><TableCell className="numeric text-right">{h.weight}%</TableCell><TableCell className={h.dayChange>=0?"numeric text-right text-primary":"numeric text-right text-destructive"}>{h.dayChange>=0?"+":""}{h.dayChange}%</TableCell><TableCell><Sparkline values={h.sentiment}/></TableCell></TableRow>)}</TableBody></Table></CardContent></Card><div className="mb-6 grid gap-6 xl:grid-cols-2"><Card><CardHeader><CardTitle>Allocation</CardTitle><CardDescription>Portfolio weight by ticker</CardDescription></CardHeader><CardContent><AllocationDonut/></CardContent></Card><Card><CardHeader><CardTitle>Risk profile</CardTitle><CardDescription>Trailing 12-month portfolio statistics</CardDescription></CardHeader><CardContent className="grid grid-cols-2 gap-4"><div className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">Volatility</p><p className="numeric mt-2 text-xl">21.4%</p><p className="mt-1 text-xs text-warning">Above moderate</p></div><div className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">Max drawdown</p><p className="numeric mt-2 text-xl">−14.8%</p><p className="mt-1 text-xs text-muted-foreground">Apr 8–19</p></div><div className="col-span-2 rounded-xl border p-4"><p className="text-xs text-muted-foreground">Top-weight concentration</p><p className="numeric mt-2 text-xl">58.2%</p><p className="mt-1 text-xs text-warning">NVDA + SPY + TSM</p></div></CardContent></Card></div><Card><CardHeader><div className="flex items-start justify-between gap-4"><div><CardTitle>Sentiment</CardTitle><CardDescription>News vs Reddit · regime shading in amber</CardDescription></div><Select defaultValue="NVDA"><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectGroup>{holdings.map(h=><SelectItem key={h.ticker} value={h.ticker}>{h.ticker}</SelectItem>)}</SelectGroup></SelectContent></Select></div></CardHeader><CardContent><SentimentChart/></CardContent></Card></div>}
+export const dynamic = "force-dynamic"
+
+const MAX_SENTIMENT_TICKERS = 10
+const SOON = "Coming with the advisor"
+
+function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm font-normal text-muted-foreground">{label}</CardTitle></CardHeader>
+      <CardContent>
+        <p className="numeric text-2xl font-medium tracking-tight">{value}</p>
+        {note && <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
+export default async function InvestmentsPage() {
+  const raw = await apiGet<components["schemas"]["HoldingOut"][]>("/api/holdings")
+  const base = raw ? toHoldings(raw, {}) : []
+  if (!raw || !base.length) {
+    return (
+      <div>
+        <PageHeading title="Investments" description="Portfolio performance, exposure, and market intelligence." />
+        <Card>
+          <CardHeader>
+            <CardTitle className="serif-display text-3xl">No <em>investments</em> linked</CardTitle>
+            <CardDescription>{raw ? "Link a brokerage account to see your holdings." : "The API isn't reachable right now."}</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+  const tickers = base.slice(0, MAX_SENTIMENT_TICKERS).map((h) => h.ticker)
+  const fetched = await Promise.all(
+    tickers.map((t) => apiGet<components["schemas"]["SentimentPoint"][]>(`/api/sentiment?ticker=${encodeURIComponent(t)}&days=30`)),
+  )
+  const sentiment = Object.fromEntries(tickers.map((t, i) => [t, fetched[i] ?? []]))
+  const holdings = toHoldings(raw, sentiment)
+  const series = Object.fromEntries(tickers.map((t) => [t, toSentimentSeries(sentiment[t])]))
+  const total = holdings.reduce((sum, h) => sum + h.value, 0)
+
+  return (
+    <div>
+      <PageHeading title="Investments" description="Portfolio performance, exposure, and market intelligence." />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Tile label="Portfolio value" value={`$${Math.round(total).toLocaleString()}`} />
+        <Tile label="Day P&L" value="—" note={SOON} />
+        <Tile label="Total return" value="—" note={SOON} />
+        <Tile label="Beta vs SPY" value="—" note={SOON} />
+      </div>
+      <Card className="mb-6">
+        <CardHeader><CardTitle>Holdings</CardTitle><CardDescription>Linked brokerage accounts</CardDescription></CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow><TableHead>Ticker</TableHead><TableHead>Name</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Value</TableHead><TableHead className="text-right">Weight</TableHead><TableHead className="text-right">Day</TableHead><TableHead>Sentiment</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {holdings.map((h) => (
+                <TableRow key={h.ticker}>
+                  <TableCell className="font-mono font-medium text-primary">{h.ticker}</TableCell>
+                  <TableCell>{h.name}</TableCell>
+                  <TableCell className="numeric text-right">{h.qty}</TableCell>
+                  <TableCell className="numeric text-right">${Math.round(h.value).toLocaleString()}</TableCell>
+                  <TableCell className="numeric text-right">{h.weight}%</TableCell>
+                  <TableCell className="numeric text-right text-muted-foreground">—</TableCell>
+                  <TableCell>{h.sentiment.length ? <Sparkline values={h.sentiment} /> : <span className="text-muted-foreground">—</span>}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Allocation</CardTitle><CardDescription>Portfolio weight by ticker</CardDescription></CardHeader>
+          <CardContent><AllocationDonut data={holdings.map((h) => ({ name: h.ticker, value: h.weight }))} /></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Risk profile</CardTitle><CardDescription>Volatility, drawdown and concentration</CardDescription></CardHeader>
+          <CardContent><p className="py-16 text-center text-sm text-muted-foreground">{SOON}</p></CardContent>
+        </Card>
+      </div>
+      <SentimentPanel series={series} />
+    </div>
+  )
+}
