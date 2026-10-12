@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from api.crypto import TokenBox
 from api.db import connect, init_db
 from api.finance import build_finance_router
+from api.news_read import build_news_router
 from api.plaid_client import PlaidAPI, PlaidClient, PlaidError
 from api.settings import Settings
 from api.sync import link_item, sync_all
@@ -113,6 +114,7 @@ def create_app(
         return asdict(result)
 
     app.include_router(build_finance_router(settings.db_path, today))
+    app.include_router(build_news_router(settings.db_path, today))
 
     @app.post("/api/plaid/link_token", response_model=LinkTokenOut)
     def plaid_link_token() -> LinkTokenOut:

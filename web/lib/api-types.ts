@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/crowd_odds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Crowd Odds
+         * @description Prediction-market odds, most liquid first.
+         */
+        get: operations["crowd_odds_api_crowd_odds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/goals": {
         parameters: {
             query?: never;
@@ -64,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/holdings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Holdings
+         * @description Holdings by value descending, with weight = value / total value.
+         */
+        get: operations["holdings_api_holdings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/networth": {
         parameters: {
             query?: never;
@@ -76,6 +116,26 @@ export interface paths {
          * @description Daily net-worth snapshots for the last `days` days, oldest first.
          */
         get: operations["networth_api_networth_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News
+         * @description Newest-first news; by default only items with a material, non-noise score.
+         */
+        get: operations["news_api_news_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -156,6 +216,26 @@ export interface paths {
          * @description Current market regime, cached for REGIME_TTL_SECONDS.
          */
         get: operations["regime_api_regime_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sentiment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sentiment
+         * @description Daily confidence-weighted mean sentiment per channel for one ticker, oldest first.
+         */
+        get: operations["sentiment_api_sentiment_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -301,6 +381,26 @@ export interface components {
             category: string;
         };
         /**
+         * CrowdOddsOut
+         * @description A prediction-market question with its yes probability.
+         */
+        CrowdOddsOut: {
+            /** Category */
+            category: string | null;
+            /** End Date */
+            end_date: string | null;
+            /** Liquidity */
+            liquidity: number | null;
+            /** Market Id */
+            market_id: string;
+            /** Question */
+            question: string;
+            /** Url */
+            url: string | null;
+            /** Yes Prob */
+            yes_prob: number;
+        };
+        /**
          * ExchangeIn
          * @description Public token returned by Plaid Link.
          */
@@ -340,6 +440,24 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HoldingOut
+         * @description A held security with its share of total portfolio value.
+         */
+        HoldingOut: {
+            /** Cost Basis */
+            cost_basis: number | null;
+            /** Name */
+            name: string | null;
+            /** Quantity */
+            quantity: number | null;
+            /** Ticker */
+            ticker: string | null;
+            /** Value */
+            value: number | null;
+            /** Weight */
+            weight: number;
         };
         /**
          * ItemOut
@@ -390,6 +508,28 @@ export interface components {
             liabilities: number;
             /** Net */
             net: number;
+        };
+        /**
+         * NewsItemOut
+         * @description A stored news item with its per-ticker scores.
+         */
+        NewsItemOut: {
+            /** Id */
+            id: number;
+            /** Published At */
+            published_at: string;
+            /** Scores */
+            scores: components["schemas"]["TickerScore"][];
+            /** Source */
+            source: string;
+            /** Tickers */
+            tickers: string[];
+            /** Title */
+            title: string;
+            /** Topics */
+            topics: string[];
+            /** Url */
+            url: string | null;
         };
         /**
          * RecurringListOut
@@ -461,6 +601,23 @@ export interface components {
             spy_dd: number;
         };
         /**
+         * SentimentPoint
+         * @description Confidence-weighted mean sentiment for one day and channel.
+         */
+        SentimentPoint: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "news" | "crowd";
+            /** Date */
+            date: string;
+            /** Items */
+            items: number;
+            /** Sentiment */
+            sentiment: number;
+        };
+        /**
          * SpendingOut
          * @description Month spending breakdown plus six months of cash flow.
          */
@@ -483,6 +640,31 @@ export interface components {
             items: {
                 [key: string]: string;
             };
+        };
+        /**
+         * TickerScore
+         * @description One ticker's score for a news item.
+         */
+        TickerScore: {
+            /** Event */
+            event: string;
+            /** Material */
+            material: number;
+            /** Noise */
+            noise: number;
+            /** Scored By */
+            scored_by: string;
+            /** Sentiment */
+            sentiment: number;
+            /** Sentiment Conf */
+            sentiment_conf: number;
+            /**
+             * Stress
+             * @enum {string}
+             */
+            stress: "none" | "localized" | "sector" | "systemic";
+            /** Ticker */
+            ticker: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -546,6 +728,26 @@ export interface operations {
             };
         };
     };
+    crowd_odds_api_crowd_odds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrowdOddsOut"][];
+                };
+            };
+        };
+    };
     goals_api_goals_get: {
         parameters: {
             query?: never;
@@ -562,6 +764,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GoalOut"][];
+                };
+            };
+        };
+    };
+    holdings_api_holdings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HoldingOut"][];
                 };
             };
         };
@@ -584,6 +806,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NetWorthPoint"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    news_api_news_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+                source?: string | null;
+                days?: number;
+                material_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsItemOut"][];
                 };
             };
             /** @description Validation Error */
@@ -686,6 +942,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegimeOut"];
+                };
+            };
+        };
+    };
+    sentiment_api_sentiment_get: {
+        parameters: {
+            query: {
+                ticker: string;
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentimentPoint"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

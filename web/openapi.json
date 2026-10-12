@@ -192,6 +192,78 @@
         "title": "CategorySpend",
         "type": "object"
       },
+      "CrowdOddsOut": {
+        "description": "A prediction-market question with its yes probability.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "liquidity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidity"
+          },
+          "market_id": {
+            "title": "Market Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "yes_prob": {
+            "title": "Yes Prob",
+            "type": "number"
+          }
+        },
+        "required": [
+          "market_id",
+          "question",
+          "yes_prob",
+          "liquidity",
+          "end_date",
+          "url",
+          "category"
+        ],
+        "title": "CrowdOddsOut",
+        "type": "object"
+      },
       "ExchangeIn": {
         "description": "Public token returned by Plaid Link.",
         "properties": {
@@ -289,6 +361,80 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HoldingOut": {
+        "description": "A held security with its share of total portfolio value.",
+        "properties": {
+          "cost_basis": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Basis"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ticker",
+          "name",
+          "quantity",
+          "value",
+          "cost_basis",
+          "weight"
+        ],
+        "title": "HoldingOut",
         "type": "object"
       },
       "ItemOut": {
@@ -411,6 +557,71 @@
           "net"
         ],
         "title": "NetWorthPoint",
+        "type": "object"
+      },
+      "NewsItemOut": {
+        "description": "A stored news item with its per-ticker scores.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "published_at": {
+            "title": "Published At",
+            "type": "string"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/TickerScore"
+            },
+            "title": "Scores",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "tickers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tickers",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "published_at",
+          "source",
+          "url",
+          "title",
+          "tickers",
+          "topics",
+          "scores"
+        ],
+        "title": "NewsItemOut",
         "type": "object"
       },
       "RecurringListOut": {
@@ -564,6 +775,39 @@
         "title": "RegimeOut",
         "type": "object"
       },
+      "SentimentPoint": {
+        "description": "Confidence-weighted mean sentiment for one day and channel.",
+        "properties": {
+          "channel": {
+            "enum": [
+              "news",
+              "crowd"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "sentiment": {
+            "title": "Sentiment",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "channel",
+          "sentiment",
+          "items"
+        ],
+        "title": "SentimentPoint",
+        "type": "object"
+      },
       "SpendingOut": {
         "description": "Month spending breakdown plus six months of cash flow.",
         "properties": {
@@ -617,6 +861,61 @@
           "items"
         ],
         "title": "SyncOut",
+        "type": "object"
+      },
+      "TickerScore": {
+        "description": "One ticker's score for a news item.",
+        "properties": {
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "material": {
+            "title": "Material",
+            "type": "number"
+          },
+          "noise": {
+            "title": "Noise",
+            "type": "number"
+          },
+          "scored_by": {
+            "title": "Scored By",
+            "type": "string"
+          },
+          "sentiment": {
+            "title": "Sentiment",
+            "type": "number"
+          },
+          "sentiment_conf": {
+            "title": "Sentiment Conf",
+            "type": "number"
+          },
+          "stress": {
+            "enum": [
+              "none",
+              "localized",
+              "sector",
+              "systemic"
+            ],
+            "title": "Stress",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "sentiment",
+          "sentiment_conf",
+          "material",
+          "stress",
+          "event",
+          "noise",
+          "scored_by"
+        ],
+        "title": "TickerScore",
         "type": "object"
       },
       "ValidationError": {
@@ -709,6 +1008,29 @@
         "summary": "Budgets"
       }
     },
+    "/api/crowd_odds": {
+      "get": {
+        "description": "Prediction-market odds, most liquid first.",
+        "operationId": "crowd_odds_api_crowd_odds_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CrowdOddsOut"
+                  },
+                  "title": "Response Crowd Odds Api Crowd Odds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Crowd Odds"
+      }
+    },
     "/api/goals": {
       "get": {
         "description": "Goals with current balance of linked accounts and months remaining.",
@@ -730,6 +1052,29 @@
           }
         },
         "summary": "Goals"
+      }
+    },
+    "/api/holdings": {
+      "get": {
+        "description": "Holdings by value descending, with weight = value / total value.",
+        "operationId": "holdings_api_holdings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HoldingOut"
+                  },
+                  "title": "Response Holdings Api Holdings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Holdings"
       }
     },
     "/api/networth": {
@@ -777,6 +1122,95 @@
           }
         },
         "summary": "Networth"
+      }
+    },
+    "/api/news": {
+      "get": {
+        "description": "Newest-first news; by default only items with a material, non-noise score.",
+        "operationId": "news_api_news_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "material_only",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Material Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NewsItemOut"
+                  },
+                  "title": "Response News Api News Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "News"
       }
     },
     "/api/plaid/exchange": {
@@ -873,6 +1307,62 @@
           }
         },
         "summary": "Regime"
+      }
+    },
+    "/api/sentiment": {
+      "get": {
+        "description": "Daily confidence-weighted mean sentiment per channel for one ticker, oldest first.",
+        "operationId": "sentiment_api_sentiment_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SentimentPoint"
+                  },
+                  "title": "Response Sentiment Api Sentiment Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sentiment"
       }
     },
     "/api/spending": {
