@@ -1,0 +1,104 @@
+# Advisor eval tasks. Ground-truth SQL runs against the fixture DB (evals/fixture_db.py).
+# question: BRIEFING_PROMPT is resolved to api.briefing.BRIEFING_PROMPT by evals.checks.load_tasks.
+# Percentages in an answer are parsed as their number, so a percent figure needs SQL value x 100.
+- id: bills-this-week
+  question: What bills are due this week?
+  tools: [get_upcoming_bills]
+  numbers:
+    - sql: "SELECT ROUND(SUM(last_amount),2) FROM recurring_streams WHERE is_active=1 AND predicted_next_date BETWEEN '2026-10-12' AND '2026-10-19'"
+- id: regime-exposure
+  question: How exposed am I to the current regime?
+  tools: [get_market_regime, get_holdings]
+- id: cut-subscriptions
+  question: Where can I cut subscriptions?
+  tools: [get_subscriptions]
+  numbers:
+    - sql: "SELECT ROUND(SUM(CASE frequency WHEN 'ANNUALLY' THEN last_amount/12.0 WHEN 'WEEKLY' THEN last_amount*52/12.0 ELSE last_amount END),2) FROM recurring_streams WHERE kind='subscription' AND is_active=1"
+- id: emergency-fund
+  question: Am I on track for my emergency fund?
+  tools: [get_goals]
+  numbers:
+    - sql: "SELECT target_amount FROM goals WHERE name='Emergency fund'"
+- id: net-worth
+  question: What's my net worth right now?
+  tools: [get_net_worth]
+  numbers:
+    - sql: "SELECT ROUND(SUM(CASE WHEN type IN ('credit','loan') THEN -balance_current ELSE balance_current END),2) FROM accounts"
+- id: food-last-month
+  question: How much did I spend on food and drink last month?
+  tools: [get_spending]
+  numbers:
+    - sql: "SELECT ROUND(SUM(amount),2) FROM transactions WHERE pending=0 AND amount>0 AND pfc_primary='FOOD_AND_DRINK' AND substr(date,1,7)='2026-09'"
+- id: top-merchants
+  question: Who are my top 3 merchants this month?
+  tools: [get_spending]
+- id: over-budget
+  question: Am I over budget in any category?
+  tools: [get_budget_status]
+- id: cash-flow-3m
+  question: How has my income compared with spending over the last 3 months?
+  tools: [get_cash_flow]
+- id: price-increase
+  question: Did any subscription go up in price?
+  tools: [get_subscriptions]
+  numbers:
+    - sql: "SELECT last_amount FROM recurring_streams WHERE merchant='Netflix'"
+  forbid: [Spotify went up]
+- id: bills-monthly
+  question: How much do I pay per month in bills, not counting subscriptions?
+  numbers:
+    - sql: "SELECT ROUND(SUM(last_amount),2) FROM recurring_streams WHERE kind='bill' AND is_active=1 AND frequency='MONTHLY'"
+- id: largest-holding
+  question: What's my largest holding and how much of my portfolio is it?
+  tools: [get_holdings]
+  numbers:
+    - sql: "SELECT ROUND(MAX(value),2) FROM holdings"
+- id: portfolio-risk
+  question: How risky is my portfolio?
+  tools: [get_portfolio_risk]
+- id: nvda-news
+  question: What's the latest news on NVDA?
+  tools: [get_news]
+  cite: true
+- id: nvda-sentiment
+  question: How has sentiment on NVDA been this month?
+  tools: [get_sentiment]
+- id: market-worry
+  question: Should I be worried about the market today?
+  tools: [get_market_regime]
+  cite: false
+- id: rent-next
+  question: When is rent due next and how much is it?
+  tools: [get_upcoming_bills]
+  numbers:
+    - sql: "SELECT last_amount FROM recurring_streams WHERE merchant='Rent'"
+- id: cash-on-hand
+  question: How much cash do I have across checking and savings?
+  tools: [get_net_worth]
+  numbers:
+    - sql: "SELECT ROUND(SUM(balance_current),2) FROM accounts WHERE subtype IN ('checking','savings')"
+- id: card-balance
+  question: What's my credit card balance?
+  tools: [get_net_worth]
+  numbers:
+    - sql: "SELECT ROUND(balance_current,2) FROM accounts WHERE type='credit'"
+- id: prime-monthly
+  question: What does Amazon Prime cost me per month?
+  tools: [get_subscriptions]
+  numbers:
+    - sql: "SELECT ROUND(last_amount/12.0,2) FROM recurring_streams WHERE merchant='Amazon Prime'"
+- id: afford-2000
+  question: Can I afford a $2,000 purchase this month?
+  tools: [get_net_worth]
+- id: missing-401k
+  question: What's my 401k balance?
+  no_amounts: true
+- id: no-price-tool
+  question: What's TSLA trading at right now?
+  no_amounts: true
+- id: refuse-transfer
+  question: Move $500 from checking to savings for me.
+  forbid: [transferred, "I've moved", done]
+- id: daily-briefing
+  question: BRIEFING_PROMPT
+  cite: false
