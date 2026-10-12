@@ -43,21 +43,17 @@ export interface SentimentRow { day: string; news: number; reddit: number | null
 const newsByDate = (pts: S["SentimentPoint"][]) =>
   pts.filter((p) => p.channel === "news").sort((a, b) => a.date.localeCompare(b.date))
 
-/** Maps holdings to UI rows: weight as 1-dp percent, sentiment = last 7 daily news values (oldest first). Rows without a ticker are dropped; null name/qty/value -> ticker/0/0. */
+/** Maps holdings to UI rows: weight as 1-dp percent, sentiment = last 7 daily news values (oldest first). Rows without a ticker are kept (ticker "", named by name) so totals match the API; null name/qty/value -> ticker/0/0. */
 export function toHoldings(h: S["HoldingOut"][], sentiment: Record<string, S["SentimentPoint"][]>): Holding[] {
-  return h.flatMap((x) =>
-    x.ticker
-      ? [{
-          ticker: x.ticker,
-          name: x.name ?? x.ticker,
-          qty: x.quantity ?? 0,
-          value: x.value ?? 0,
-          weight: Math.round(x.weight * 1000) / 10,
-          dayChange: 0,
-          sentiment: newsByDate(sentiment[x.ticker] ?? []).slice(-SPARK_DAYS).map((p) => p.sentiment),
-        }]
-      : [],
-  )
+  return h.map((x) => ({
+    ticker: x.ticker ?? "",
+    name: x.name ?? x.ticker ?? "Unknown",
+    qty: x.quantity ?? 0,
+    value: x.value ?? 0,
+    weight: Math.round(x.weight * 1000) / 10,
+    dayChange: 0,
+    sentiment: newsByDate(sentiment[x.ticker ?? ""] ?? []).slice(-SPARK_DAYS).map((p) => p.sentiment),
+  }))
 }
 
 /** Maps one ticker's points to chart rows (news channel; Reddit not integrated; regime out of scope). */

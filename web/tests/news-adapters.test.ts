@@ -97,8 +97,9 @@ test("sentiment series: news only, sorted by date, reddit null, regime normal", 
   assert.deepEqual(toSentimentSeries([]), [])
 })
 
-test("holdings: null ticker dropped, null name/qty/value defaulted", () => {
-  const out = toHoldings([hold({ ticker: null }), hold({ name: null, quantity: null, value: null })], {})
-  assert.equal(out.length, 1)
-  assert.deepEqual([out[0].name, out[0].qty, out[0].value], ["NVDA", 0, 0])
+test("holdings: null ticker kept (empty ticker, named), null name/qty/value defaulted", () => {
+  const out = toHoldings([hold({ ticker: null, name: "Cash" }), hold({ name: null, quantity: null, value: null })], {})
+  assert.equal(out.length, 2)
+  assert.deepEqual([out[0].ticker, out[0].name], ["", "Cash"])
+  assert.deepEqual([out[1].name, out[1].qty, out[1].value], ["NVDA", 0, 0])
 })

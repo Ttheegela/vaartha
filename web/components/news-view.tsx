@@ -6,6 +6,24 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Switch } from "@/components/ui/switch"
 import type { LiveNewsItem } from "@/lib/news-adapters"
 
+export function CrowdOdds({ odds }: { odds: { question: string; probability: number }[] }) {
+  return (
+    <Card className="sticky top-24">
+      <CardHeader><CardTitle>Crowd odds</CardTitle><CardDescription>Polymarket implied probability</CardDescription></CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        {odds.map((m) => (
+          <div key={m.question} className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-3"><p className="text-sm leading-5">{m.question}</p><span className="numeric text-primary">{m.probability}%</span></div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{ width: `${m.probability}%` }} /></div>
+          </div>
+        ))}
+        {!odds.length && <p className="text-sm text-muted-foreground">No markets available.</p>}
+        <p className="text-[11px] leading-5 text-muted-foreground">Prediction markets reflect crowd pricing, not Vārtā forecasts.</p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function NewsView({ items, odds }: { items: LiveNewsItem[]; odds: { question: string; probability: number }[] }) {
   const [source, setSource] = useState("all")
   const [ticker, setTicker] = useState("all")
@@ -55,21 +73,7 @@ export function NewsView({ items, odds }: { items: LiveNewsItem[]; odds: { quest
           ))}
           {!shown.length && <p className="text-sm text-muted-foreground">No headlines match these filters.</p>}
         </div>
-        <aside>
-          <Card className="sticky top-24">
-            <CardHeader><CardTitle>Crowd odds</CardTitle><CardDescription>Polymarket implied probability</CardDescription></CardHeader>
-            <CardContent className="flex flex-col gap-5">
-              {odds.map((m) => (
-                <div key={m.question} className="flex flex-col gap-2">
-                  <div className="flex items-start justify-between gap-3"><p className="text-sm leading-5">{m.question}</p><span className="numeric text-primary">{m.probability}%</span></div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{ width: `${m.probability}%` }} /></div>
-                </div>
-              ))}
-              {!odds.length && <p className="text-sm text-muted-foreground">No markets available.</p>}
-              <p className="text-[11px] leading-5 text-muted-foreground">Prediction markets reflect crowd pricing, not Vārtā forecasts.</p>
-            </CardContent>
-          </Card>
-        </aside>
+        <aside><CrowdOdds odds={odds} /></aside>
       </div>
     </>
   )

@@ -41,7 +41,7 @@ export default async function InvestmentsPage() {
       </div>
     )
   }
-  const tickers = base.slice(0, MAX_SENTIMENT_TICKERS).map((h) => h.ticker)
+  const tickers = base.filter((h) => h.ticker).slice(0, MAX_SENTIMENT_TICKERS).map((h) => h.ticker)
   const fetched = await Promise.all(
     tickers.map((t) => apiGet<components["schemas"]["SentimentPoint"][]>(`/api/sentiment?ticker=${encodeURIComponent(t)}&days=30`)),
   )
@@ -65,9 +65,9 @@ export default async function InvestmentsPage() {
           <Table>
             <TableHeader><TableRow><TableHead>Ticker</TableHead><TableHead>Name</TableHead><TableHead className="text-right">Qty</TableHead><TableHead className="text-right">Value</TableHead><TableHead className="text-right">Weight</TableHead><TableHead className="text-right">Day</TableHead><TableHead>Sentiment</TableHead></TableRow></TableHeader>
             <TableBody>
-              {holdings.map((h) => (
-                <TableRow key={h.ticker}>
-                  <TableCell className="font-mono font-medium text-primary">{h.ticker}</TableCell>
+              {holdings.map((h, i) => (
+                <TableRow key={`${h.ticker}-${i}`}>
+                  <TableCell className="font-mono font-medium text-primary">{h.ticker || "—"}</TableCell>
                   <TableCell>{h.name}</TableCell>
                   <TableCell className="numeric text-right">{h.qty}</TableCell>
                   <TableCell className="numeric text-right">${Math.round(h.value).toLocaleString()}</TableCell>
@@ -83,7 +83,7 @@ export default async function InvestmentsPage() {
       <div className="mb-6 grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Allocation</CardTitle><CardDescription>Portfolio weight by ticker</CardDescription></CardHeader>
-          <CardContent><AllocationDonut data={holdings.map((h) => ({ name: h.ticker, value: h.weight }))} /></CardContent>
+          <CardContent><AllocationDonut data={holdings.map((h) => ({ name: h.ticker || h.name, value: h.weight }))} /></CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Risk profile</CardTitle><CardDescription>Volatility, drawdown and concentration</CardDescription></CardHeader>

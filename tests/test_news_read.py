@@ -127,3 +127,20 @@ def test_holdings_aggregate_same_security_across_accounts(tmp_path):
 def test_empty_db_returns_empty_lists(empty):
     for url in ("/api/news", "/api/sentiment?ticker=NVDA", "/api/crowd_odds", "/api/holdings"):
         assert empty.get(url).json() == []
+
+
+def test_holdings_weights_sum_to_one_with_tickerless_holding(tmp_path):
+    path = tmp_path / "v.db"
+    conn = connect(path)
+    init_db(conn)
+    link_item(conn, FakePlaid(date(2026, 10, 12)), TokenBox(new_key()), "public-fake-1", TODAY)
+    h = conn.execute("SELECT * FROM holdings LIMIT 1").fetchone()
+    conn.execute("INSERT INTO securities (security_id, ticker, name) "
+                 "VALUES ('cash1', NULL, 'Cash')")
+    conn.execute("INSERT INTO holdings (account_id, security_id, quantity, value, as_of) "
+                 "VALUES (?, 'cash1', 1, 500, ?)", (h["account_id"], h["as_of"]))
+    conn.commit()
+    conn.close()
+    rows = _client(path).get("/api/holdings").json()
+    assert any(r["ticker"] is None and r["weight"] > 0 for r in rows)
+    assert sum(r["weight"] for r in rows) == pytest.approx(1.0, abs=1e-6)
