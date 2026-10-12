@@ -1,10 +1,31 @@
-"use client"
-import { useMemo, useState } from "react"
-import { crowdOdds, news } from "@/lib/mock-data"
+import { NewsView } from "@/components/news-view"
 import { PageHeading } from "@/components/page-heading"
-import { StatusBadge } from "@/components/status-badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import type { components } from "@/lib/api-types"
+import { toCrowdOdds, toNewsItems } from "@/lib/news-adapters"
+import { apiGet } from "@/lib/server-api"
 
-export default function NewsPage(){const[source,setSource]=useState("all");const[material,setMaterial]=useState(false);const items=useMemo(()=>news.filter(n=>(source==="all"||n.source===source)&&(!material||n.material)),[source,material]);return <div><PageHeading title="News intelligence" description="Signals ranked by relevance to your holdings."/><div className="mb-5 flex flex-wrap items-center gap-3"><Select value={source} onValueChange={(v)=>setSource(v??"all")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem value="all">All sources</SelectItem>{["Alpaca","Finnhub","RSS","GDELT","EDGAR","Reddit","Polymarket","Reuters"].map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectGroup></SelectContent></Select><Select defaultValue="all"><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectGroup><SelectItem value="all">All tickers</SelectItem><SelectItem value="NVDA">NVDA</SelectItem><SelectItem value="SPY">SPY</SelectItem><SelectItem value="TSM">TSM</SelectItem></SelectGroup></SelectContent></Select><label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground"><Switch checked={material} onCheckedChange={setMaterial}/>Only material</label></div><div className="grid gap-6 xl:grid-cols-[1fr_340px]"><div className="flex flex-col gap-3">{items.map(item=><Card key={item.id} size="sm"><CardHeader><CardDescription className="numeric">{item.source} · {item.time} ago</CardDescription><CardTitle className="text-base leading-6">{item.title}</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{item.tickers.map(t=><StatusBadge key={t}>{t}</StatusBadge>)}<StatusBadge tone={item.sentiment==="positive"?"positive":item.sentiment==="negative"?"negative":"neutral"}>{item.sentiment==="positive"?"+":item.sentiment==="negative"?"−":"0"} sentiment</StatusBadge><StatusBadge tone={item.stress==="systemic"||item.stress==="sector"?"warning":"neutral"}>{item.stress}</StatusBadge><StatusBadge>{item.event}</StatusBadge></CardContent></Card>)}</div><aside><Card className="sticky top-24"><CardHeader><CardTitle>Crowd odds</CardTitle><CardDescription>Polymarket implied probability</CardDescription></CardHeader><CardContent className="flex flex-col gap-5">{crowdOdds.map(m=><div key={m.question} className="flex flex-col gap-2"><div className="flex items-start justify-between gap-3"><p className="text-sm leading-5">{m.question}</p><span className="numeric text-primary">{m.probability}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{width:`${m.probability}%`}}/></div></div>)}<p className="text-[11px] leading-5 text-muted-foreground">Prediction markets reflect crowd pricing, not Vārtā forecasts.</p></CardContent></Card></aside></div></div>}
+export const dynamic = "force-dynamic"
+
+export default async function NewsPage() {
+  const [news, odds] = await Promise.all([
+    apiGet<components["schemas"]["NewsItemOut"][]>("/api/news?material_only=false&days=7"),
+    apiGet<components["schemas"]["CrowdOddsOut"][]>("/api/crowd_odds"),
+  ])
+  const items = news ? toNewsItems(news, new Date()) : []
+  return (
+    <div>
+      <PageHeading title="News intelligence" description="Signals ranked by relevance to your holdings." />
+      {items.length ? (
+        <NewsView items={items} odds={odds ? toCrowdOdds(odds) : []} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="serif-display text-3xl">No <em>news</em> yet</CardTitle>
+            <CardDescription>{news ? "Run a news refresh to pull headlines." : "The API isn't reachable right now."}</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+    </div>
+  )
+}

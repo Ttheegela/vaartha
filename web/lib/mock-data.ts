@@ -1,4 +1,4 @@
-import type { Budget, DataSource, Holding, NewsItem } from "./types"
+import type { Budget, DataSource, Holding } from "./types"
 
 export const budgets: Budget[] = [
   { category: "Dining", spent: 492, limit: 600 }, { category: "Groceries", spent: 418, limit: 650 },
@@ -24,24 +24,6 @@ export const sentimentSeries = [
   { day: "Sun", news: -.55, reddit: -.36, regime: "elevated" },
 ]
 
-export const news: NewsItem[] = [
-  { id:"n1", source:"Reuters", time:"18m", title:"U.S. weighs expanded AI chip export controls, sources say", tickers:["NVDA","AMD"], sentiment:"negative", stress:"sector", event:"regulation", material:true },
-  { id:"n2", source:"EDGAR", time:"42m", title:"NVIDIA files 8-K following updated China revenue guidance", tickers:["NVDA"], sentiment:"negative", stress:"localized", event:"earnings", material:true },
-  { id:"n3", source:"Finnhub", time:"1h", title:"Oil advances as Gulf shipping risks tighten near-term supply", tickers:["XOM"], sentiment:"positive", stress:"sector", event:"geopolitical", material:true },
-  { id:"n4", source:"Alpaca", time:"2h", title:"Gold holds gains as investors reassess rate path", tickers:["GLD"], sentiment:"positive", stress:"none", event:"macro", material:false },
-  { id:"n5", source:"GDELT", time:"2h", title:"Taiwan chip supply chain faces renewed logistics delays", tickers:["TSM"], sentiment:"negative", stress:"sector", event:"supply chain", material:true },
-  { id:"n6", source:"Reddit", time:"3h", title:"Retail discussion shifts defensive ahead of CPI release", tickers:["SPY","GLD"], sentiment:"neutral", stress:"none", event:"macro", material:false },
-  { id:"n7", source:"Reuters", time:"4h", title:"AMD launches new accelerator aimed at inference workloads", tickers:["AMD"], sentiment:"positive", stress:"none", event:"earnings", material:true },
-  { id:"n8", source:"RSS", time:"5h", title:"Lithium spot prices stabilize after month-long decline", tickers:["LIT"], sentiment:"positive", stress:"localized", event:"supply chain", material:false },
-  { id:"n9", source:"Polymarket", time:"6h", title:"Market odds of December rate cut rise to 61%", tickers:["SPY","GLD"], sentiment:"positive", stress:"none", event:"macro", material:true },
-  { id:"n10", source:"Finnhub", time:"7h", title:"S&P futures little changed before inflation print", tickers:["SPY"], sentiment:"neutral", stress:"none", event:"macro", material:false },
-  { id:"n11", source:"EDGAR", time:"8h", title:"Exxon updates capital spending outlook", tickers:["XOM"], sentiment:"neutral", stress:"none", event:"earnings", material:false },
-  { id:"n12", source:"GDELT", time:"9h", title:"European regulators outline advanced chip subsidy package", tickers:["TSM","AMD"], sentiment:"positive", stress:"localized", event:"regulation", material:true },
-  { id:"n13", source:"Reddit", time:"10h", title:"Semiconductor sentiment cools across high-volume forums", tickers:["NVDA","AMD"], sentiment:"negative", stress:"localized", event:"macro", material:false },
-  { id:"n14", source:"Reuters", time:"11h", title:"Major miner explores lithium asset combination", tickers:["LIT"], sentiment:"positive", stress:"none", event:"m&a", material:true },
-  { id:"n15", source:"Alpaca", time:"12h", title:"Treasury yields ease from session highs", tickers:["SPY","GLD"], sentiment:"neutral", stress:"none", event:"macro", material:false },
-]
-
 export const dataSources: DataSource[] = [
   { name:"Plaid", status:"Connected", detail:"4 accounts · synced 2h ago" }, { name:"Alpaca", status:"Connected", detail:"Market data live" },
   { name:"Finnhub", status:"Connected", detail:"News and sentiment" }, { name:"Reddit", status:"Pending approval", detail:"Read-only API access" },
@@ -52,9 +34,6 @@ export const briefings = [
   "Dining spend is at 82% of budget with 11 days left", "NVDA news sentiment turned negative on export controls",
 ]
 
-export const crowdOdds = [
-  { question:"Fed cuts rates in December?", probability:61 }, { question:"Brent above $90 by year-end?", probability:34 }, { question:"U.S. recession before July?", probability:22 },
-]
 
 export const advisorConversations = [
   { id: "c1", title: "Upcoming bills", preview: "You have 3 bills due this week", time: "Today" },
