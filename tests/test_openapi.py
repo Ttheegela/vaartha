@@ -16,5 +16,5 @@ def test_regime_schema_is_typed():
 
 def test_snapshot_is_current():
     assert json.loads(SNAPSHOT.read_text()) == build_openapi(), (
-        "API changed: run `uv run python scripts/dump_openapi.py` and `cd web && pnpm gen:api`"
+        "API changed: run `uv run python -m scripts.dump_openapi` and `cd web && pnpm gen:api`"
     )

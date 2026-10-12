@@ -1,6 +1,6 @@
 """Write the API's OpenAPI schema to web/openapi.json (input for openapi-typescript).
 
-Run: uv run python scripts/dump_openapi.py
+Run: uv run python -m scripts.dump_openapi
 """
 
 import json
