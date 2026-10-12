@@ -55,3 +55,33 @@ def test_unknown_source_symbols_ignored():
 def test_topics():
     assert tag_topics("New sanctions on Iran lift Brent crude") == ["energy", "geopolitics"]
     assert tag_topics("Quiet day") == []
+
+
+SHORT = {"F": ("ford",), "T": ("at&t",), "A": ("agilent",), "AMD": ("advanced micro devices",)}
+
+
+def test_short_tickers_not_text_matched():
+    assert tag_tickers(_item("A new chip ships"), SHORT) == []
+    assert tag_tickers(_item("F-35 deal"), SHORT) == []
+    assert tag_tickers(_item("Ford beats estimates"), SHORT) == ["F"]
+    assert tag_tickers(_item("AT&T results"), SHORT) == ["T"]
+
+
+def test_ticker_possessive_matches_but_joiners_block():
+    assert tag_tickers(_item("AMD's new GPU"), SHORT) == ["AMD"]
+    assert tag_tickers(_item("AMD-based servers"), SHORT) == []
+    assert tag_tickers(_item("AMD&Intel deal"), SHORT) == []
+
+
+def test_topic_keywords_match_at_word_start():
+    assert tag_topics("Senator visits Chipotle in Miranda") == []
+    assert tag_topics("Chipmakers rally on new chips") == ["semiconductors"]
+    assert tag_topics("US widens sanctions") == ["geopolitics"]
+
+
+def test_url_query_order_ignored():
+    assert normalize_url("https://x.com/a?b=1&a=2") == normalize_url("https://x.com/a?a=2&b=1")
+
+
+def test_title_unicode_punctuation_dropped():
+    assert normalize_title("Fed… holds") == normalize_title("Fed holds")
