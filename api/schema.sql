@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS briefings (
 CREATE TABLE IF NOT EXISTS agent_messages (
   id INTEGER PRIMARY KEY, conversation_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT,
   tool_calls TEXT, model TEXT, latency_ms INTEGER, tokens_in INTEGER, tokens_out INTEGER,
+  visitor_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_agent_messages_conv ON agent_messages(conversation_id);

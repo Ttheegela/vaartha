@@ -6,6 +6,8 @@ from pathlib import Path
 
 INSTANCES = ("owner", "demo")
 PLAID_ENVS = ("sandbox", "production")
+DEMO_CHAT_RATE = 20
+DEFAULT_TZ = "America/New_York"
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,9 @@ class Settings:
     llm_base_url: str | None = None
     llm_model: str | None = None
     llm_api_key: str | None = field(default=None, repr=False)
+    chat_rate_per_hour: int = 0  # 0 = off
+    trust_proxy: bool = False
+    tz: str = DEFAULT_TZ
 
     def __post_init__(self) -> None:
         if self.plaid_env not in PLAID_ENVS:
@@ -64,4 +69,8 @@ class Settings:
             llm_base_url=os.environ.get("LLM_BASE_URL") or None,
             llm_model=os.environ.get("LLM_MODEL") or None,
             llm_api_key=os.environ.get("OPENROUTER_API_KEY") or None,
+            chat_rate_per_hour=int(os.environ.get(
+                "CHAT_RATE_PER_HOUR", DEMO_CHAT_RATE if instance == "demo" else 0)),
+            trust_proxy=os.environ.get("TRUST_PROXY") == "1",
+            tz=os.environ.get("VARTA_TZ") or DEFAULT_TZ,
         )

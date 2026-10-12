@@ -79,3 +79,18 @@ def test_llm_settings_from_env(monkeypatch, tmp_path):
         "http://localhost:11434/v1", "qwen3", "sk-secret-xyz")
     assert s.llm_configured
     assert "sk-secret-xyz" not in repr(s)
+
+
+def test_chat_rate_proxy_tz_from_env(monkeypatch):
+    for k in ("CHAT_RATE_PER_HOUR", "TRUST_PROXY", "VARTA_TZ"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("VARTA_INSTANCE", "demo")
+    s = Settings.from_env()
+    assert (s.chat_rate_per_hour, s.trust_proxy, s.tz) == (20, False, "America/New_York")
+    monkeypatch.setenv("VARTA_INSTANCE", "owner")
+    assert Settings.from_env().chat_rate_per_hour == 0
+    monkeypatch.setenv("CHAT_RATE_PER_HOUR", "5")
+    monkeypatch.setenv("TRUST_PROXY", "1")
+    monkeypatch.setenv("VARTA_TZ", "UTC")
+    s = Settings.from_env()
+    assert (s.chat_rate_per_hour, s.trust_proxy, s.tz) == (5, True, "UTC")

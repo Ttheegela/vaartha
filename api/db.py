@@ -12,6 +12,7 @@ TABLES = (
 MIGRATIONS = [
     ("news_scores", "channel", "TEXT NOT NULL DEFAULT 'news'"),
     ("news_scores", "scored_by", "TEXT"),
+    ("agent_messages", "visitor_id", "TEXT"),
 ]
 BUSY_TIMEOUT_MS = 5000
 

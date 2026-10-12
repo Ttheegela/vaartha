@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from contextlib import closing
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,15 @@ from api.agent import build_messages, run_agent
 from api.agent_tools import Toolbox
 from api.briefing import parse_briefing
 from api.db import connect
+from api.settings import Settings
+from api.visitor import (
+    COOKIE_MAX_AGE,
+    VISITOR_COOKIE,
+    RateLimiter,
+    client_ip,
+    new_visitor_id,
+    visitor_id,
+)
 
 log = logging.getLogger("varta.advisor")
 HISTORY_MESSAGES = 10
@@ -86,18 +95,20 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
-def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> APIRouter:
+def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
+                         settings: Settings) -> APIRouter:
     """Routes for chat, conversations, alerts and briefing over one database."""
     router = APIRouter(prefix="/api")
+    limiter = RateLimiter(settings.chat_rate_per_hour)
 
-    def log_message(conv: str, role: str, content: str | None, **cols) -> None:
+    def log_message(conv: str, vid: str, role: str, content: str | None, **cols) -> None:
         # one short-lived connection per write: the stream hops threads between yields
         with closing(connect(db_path)) as conn:
             conn.execute(
                 "INSERT INTO agent_messages (conversation_id, role, content, tool_calls, model, "
-                "latency_ms, tokens_in, tokens_out) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "latency_ms, tokens_in, tokens_out, visitor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (conv, role, content, cols.get("tool_calls"), cols.get("model"),
-                 cols.get("latency_ms"), cols.get("tokens_in"), cols.get("tokens_out")))
+                 cols.get("latency_ms"), cols.get("tokens_in"), cols.get("tokens_out"), vid))
             conn.commit()
 
     def load_history(conv: str) -> list[dict]:
@@ -108,17 +119,17 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
                 "ORDER BY id DESC LIMIT ?", (conv, HISTORY_MESSAGES)).fetchall()
         return [dict(r) for r in reversed(rows)]
 
-    def stream(conv: str, message: str) -> Iterator[str]:
+    def stream(conv: str, vid: str, message: str) -> Iterator[str]:
         yield _sse("meta", {"conversation_id": conv})
         try:
-            log_message(conv, "user", message)
+            log_message(conv, vid, "user", message)
             history = load_history(conv)[:-1]  # drop the message just logged
             for ev in run_agent(llm, model, build_messages(toolbox, history, message), toolbox):
                 if ev["type"] == "answer":
                     answer = ev["text"]
                 elif ev["type"] == "done":
                     log_message(
-                        conv, "assistant", answer, model=ev["model"],
+                        conv, vid, "assistant", answer, model=ev["model"],
                         tool_calls=json.dumps({"calls": ev["tool_calls"],
                                                "sources": ev["sources"]}),
                         latency_ms=ev["latency_ms"], tokens_in=ev["tokens_in"],
@@ -127,24 +138,44 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
         except Exception as exc:
             log.warning("advisor failed: %s", type(exc).__name__)
             try:
-                log_message(conv, "assistant", None,
+                log_message(conv, vid, "assistant", None,
                             tool_calls=json.dumps({"error": type(exc).__name__}))
             except Exception:  # the DB itself may be what failed
                 log.warning("could not log advisor error")
             yield _sse("error", {"message": "advisor unavailable"})
 
     @router.post("/chat")
-    def chat(body: ChatIn) -> StreamingResponse:
+    def chat(body: ChatIn, request: Request) -> StreamingResponse:
         """Stream the advisor's answer as server-sent events."""
         if llm is None:
             raise HTTPException(status_code=503, detail="advisor not configured")
-        conv = body.conversation_id or uuid.uuid4().hex
-        return StreamingResponse(stream(conv, body.message), media_type="text/event-stream",
-                                 headers=SSE_HEADERS)
+        if not limiter.allow(client_ip(request, settings.trust_proxy)):
+            raise HTTPException(
+                status_code=429,
+                detail=f"rate limit: {settings.chat_rate_per_hour} messages per hour")
+        vid = visitor_id(request)
+        minted = vid is None
+        vid = vid or new_visitor_id()
+        conv = body.conversation_id
+        if conv:
+            with closing(connect(db_path)) as conn:
+                owner = conn.execute("SELECT visitor_id FROM agent_messages "
+                                     "WHERE conversation_id = ? LIMIT 1", (conv,)).fetchone()
+            if owner is not None and owner["visitor_id"] != vid:
+                conv = None  # someone else's (or pre-migration) conversation: start fresh
+        resp = StreamingResponse(stream(conv or uuid.uuid4().hex, vid, body.message),
+                                 media_type="text/event-stream", headers=SSE_HEADERS)
+        if minted:
+            resp.set_cookie(VISITOR_COOKIE, vid, max_age=COOKIE_MAX_AGE, path="/", httponly=True,
+                            samesite="lax", secure=settings.trust_proxy)
+        return resp
 
     @router.get("/conversations", response_model=list[ConversationOut])
-    def conversations() -> list[dict]:
-        """Newest conversations first; the title is the first user message."""
+    def conversations(request: Request) -> list[dict]:
+        """This visitor's conversations, newest first; the title is the first user message."""
+        vid = visitor_id(request)
+        if vid is None:
+            return []
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
                 # created_at is SQLite datetime('now'): UTC, no zone marker; emit ISO-8601 Z
@@ -152,20 +183,22 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
                 "AS updated_at, MAX(id) AS last, "
                 "(SELECT content FROM agent_messages f WHERE f.conversation_id = m.conversation_id "
                 "AND f.role = 'user' ORDER BY f.id LIMIT 1) AS title "
-                "FROM agent_messages m GROUP BY conversation_id ORDER BY last DESC LIMIT ?",
-                (MAX_CONVERSATIONS,)).fetchall()
+                "FROM agent_messages m WHERE visitor_id = ? GROUP BY conversation_id "
+                "ORDER BY last DESC LIMIT ?", (vid, MAX_CONVERSATIONS)).fetchall()
         return [{"id": r["id"], "title": (r["title"] or "")[:TITLE_CHARS],
                  "updated_at": r["updated_at"]} for r in rows]
 
     @router.get("/conversations/{conversation_id}", response_model=list[MessageOut])
-    def conversation(conversation_id: str) -> list[dict]:
+    def conversation(conversation_id: str, request: Request) -> list[dict]:
         """User and assistant messages of one conversation, oldest first."""
+        vid = visitor_id(request)
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
                 "SELECT role, content, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) AS created_at, "
                 "tool_calls FROM agent_messages "
-                "WHERE conversation_id = ? ORDER BY id", (conversation_id,)).fetchall()
-        if not rows:
+                "WHERE conversation_id = ? AND visitor_id = ? ORDER BY id",
+                (conversation_id, vid)).fetchall()
+        if vid is None or not rows:
             raise HTTPException(status_code=404, detail="conversation not found")
         out = []
         for r in rows:

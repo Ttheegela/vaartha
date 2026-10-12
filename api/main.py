@@ -130,7 +130,7 @@ def create_app(
         llm = llm_client(settings)
     toolbox = build_toolbox(settings.db_path, today, current_regime, closes_provider)
     app.include_router(build_advisor_router(
-        settings.db_path, toolbox, llm, settings.llm_model))
+        settings.db_path, toolbox, llm, settings.llm_model, settings))
 
     @app.post("/api/plaid/link_token", response_model=LinkTokenOut)
     def plaid_link_token() -> LinkTokenOut:

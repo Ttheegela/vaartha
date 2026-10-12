@@ -133,7 +133,7 @@ export interface paths {
         };
         /**
          * Conversations
-         * @description Newest conversations first; the title is the first user message.
+         * @description This visitor's conversations, newest first; the title is the first user message.
          */
         get: operations["conversations_api_conversations_get"];
         put?: never;

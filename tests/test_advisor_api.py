@@ -205,3 +205,35 @@ def test_user_message_logged_when_history_fails(tmp_path, monkeypatch):
     rows = connect(settings.db_path).execute(
         "SELECT role, content FROM agent_messages ORDER BY id").fetchall()
     assert [(x["role"], x["content"]) for x in rows][0] == ("user", "hi")
+
+
+def test_visitor_scoping(tmp_path):
+    c, settings = _client(tmp_path, FakeLLM(_text("one"), _text("two")))
+    r = c.post("/api/chat", json={"message": "mine", "conversation_id": "c-1"})
+    assert "varta_vid" in r.headers["set-cookie"]
+    assert [x["id"] for x in c.get("/api/conversations").json()] == ["c-1"]
+    b = TestClient(c.app)
+    assert b.get("/api/conversations").json() == []
+    assert b.get("/api/conversations/c-1").status_code == 404
+    r = b.post("/api/chat", json={"message": "steal", "conversation_id": "c-1"})
+    assert _events(r.text)[0][1]["conversation_id"] != "c-1"
+    assert len(c.get("/api/conversations/c-1").json()) == 2
+
+
+def test_chat_rate_limit(tmp_path):
+    settings = Settings(db_path=tmp_path / "v.db", instance="demo", llm_model="test-model",
+                        chat_rate_per_hour=2)
+    llm = FakeLLM(_text("a"), _text("b"))
+    c = TestClient(create_app(settings, regime_provider=lambda: NORMAL, today=lambda: TODAY,
+                              llm=llm))
+    assert c.post("/api/chat", json={"message": "1"}).status_code == 200
+    assert c.post("/api/chat", json={"message": "2"}).status_code == 200
+    r = c.post("/api/chat", json={"message": "3"})
+    assert r.status_code == 429 and r.json() == {"detail": "rate limit: 2 messages per hour"}
+    assert connect(settings.db_path).execute(
+        "SELECT COUNT(*) FROM agent_messages").fetchone()[0] == 4
+
+
+def test_conversations_without_cookie(tmp_path):
+    c, _ = _client(tmp_path, FakeLLM())
+    assert c.get("/api/conversations").json() == []
