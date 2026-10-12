@@ -8,8 +8,10 @@ import time
 from collections.abc import Callable
 from contextlib import closing
 from dataclasses import asdict
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from api.db import connect, init_db
 from api.settings import Settings
@@ -18,6 +20,17 @@ from core.regime import Regime
 
 log = logging.getLogger("varta.api")
 REGIME_TTL_SECONDS = 300
+
+
+class RegimeOut(BaseModel):
+    """Regime as served to clients."""
+
+    label: Literal["Normal", "Elevated", "Crisis"]
+    prob: float
+    brent_vol: float
+    spy_dd: float
+    gold_oil: float
+    signals: dict[str, float]
 
 
 def create_app(
@@ -41,7 +54,7 @@ def create_app(
             conn.execute("SELECT 1")
         return {"status": "ok", "instance": settings.instance}
 
-    @app.get("/api/regime")
+    @app.get("/api/regime", response_model=RegimeOut)
     def regime() -> dict:
         """Current market regime, cached for REGIME_TTL_SECONDS."""
         hit = cache.get("regime")

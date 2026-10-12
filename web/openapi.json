@@ -1,0 +1,100 @@
+{
+  "components": {
+    "schemas": {
+      "RegimeOut": {
+        "description": "Regime as served to clients.",
+        "properties": {
+          "brent_vol": {
+            "title": "Brent Vol",
+            "type": "number"
+          },
+          "gold_oil": {
+            "title": "Gold Oil",
+            "type": "number"
+          },
+          "label": {
+            "enum": [
+              "Normal",
+              "Elevated",
+              "Crisis"
+            ],
+            "title": "Label",
+            "type": "string"
+          },
+          "prob": {
+            "title": "Prob",
+            "type": "number"
+          },
+          "signals": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Signals",
+            "type": "object"
+          },
+          "spy_dd": {
+            "title": "Spy Dd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "prob",
+          "brent_vol",
+          "spy_dd",
+          "gold_oil",
+          "signals"
+        ],
+        "title": "RegimeOut",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "V\u0101rt\u0101 API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/regime": {
+      "get": {
+        "description": "Current market regime, cached for REGIME_TTL_SECONDS.",
+        "operationId": "regime_api_regime_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Regime"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "description": "Liveness plus a trivial DB query.",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Healthz Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz"
+      }
+    }
+  }
+}
