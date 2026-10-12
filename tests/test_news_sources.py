@@ -82,3 +82,50 @@ def test_network_error_soft():
         raise httpx.ConnectError("down")
 
     assert fetch_rss((("X", "https://feed"),), transport=_t(h)) == []
+
+
+def test_rss_item_without_pubdate_skipped_rest_kept():
+    xml = ("<rss><channel><item><title>A</title><link>https://x/a</link></item>"
+           "<item><title>B</title><link>https://x/b</link>"
+           "<pubDate>Sun, 11 Oct 2026 14:30:00 GMT</pubDate></item></channel></rss>")
+    ok = _t(lambda r: httpx.Response(200, text=xml))
+    items = fetch_rss((("X", "https://feed"),), transport=ok)
+    assert [i.title for i in items] == ["B"]
+
+
+def test_alpaca_bad_item_skipped_and_all_headers_params():
+    seen = {}
+
+    def h(req):
+        seen.update(headers=req.headers, params=dict(req.url.params))
+        return httpx.Response(200, json={"news": [
+            {"headline": "bad", "url": "u", "source": "s"},
+            {"headline": "ok", "url": "u2", "source": "s", "created_at": "2026-10-11T14:30:05Z"}]})
+
+    items = fetch_alpaca("k", "sec", ["NVDA"], transport=_t(h))
+    assert [i.title for i in items] == ["ok"]
+    assert seen["headers"]["APCA-API-SECRET-KEY"] == "sec"
+    assert seen["params"]["limit"] == "50" and seen["params"]["sort"] == "desc"
+
+
+def test_finnhub_header_auth_bad_article_skipped_and_symbol_failure_isolated():
+    seen = []
+
+    def h(req):
+        seen.append((req.headers.get("X-Finnhub-Token"), dict(req.url.params)))
+        if req.url.params["symbol"] == "AAA":
+            return httpx.Response(500, text="err")
+        return httpx.Response(200, json=[
+            {"headline": "bad", "url": "u", "source": "s"},
+            {"headline": "ok", "url": "u2", "source": "s", "datetime": 1791772200}])
+
+    items = fetch_finnhub("k", ["AAA", "BBB"], date(2026, 10, 12), transport=_t(h))
+    assert [i.title for i in items] == ["ok"]
+    assert all(tok == "k" and "token" not in p for tok, p in seen)
+
+
+def test_finnhub_missing_key_no_request():
+    def h(req):
+        raise AssertionError("should not be called")
+
+    assert fetch_finnhub(None, ["NVDA"], date(2026, 10, 12), transport=_t(h)) == []

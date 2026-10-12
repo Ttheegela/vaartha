@@ -47,14 +47,19 @@ def fetch_alpaca(key: str | None, secret: str | None, symbols: list[str], *, lim
             )
             r.raise_for_status()
             rows = r.json()["news"]
-        return [
-            RawItem(
-                f"Alpaca/{n['source']}", n["url"], n["headline"], n.get("summary") or "",
-                _iso(datetime.fromisoformat(n["created_at"].replace("Z", "+00:00"))),
-                tuple(n.get("symbols") or ()),
-            )
-            for n in rows if n.get("headline")
-        ]
+        items = []
+        for n in rows:
+            try:
+                if not n.get("headline"):
+                    continue
+                items.append(RawItem(
+                    f"Alpaca/{n['source']}", n["url"], n["headline"], n.get("summary") or "",
+                    _iso(datetime.fromisoformat(n["created_at"].replace("Z", "+00:00"))),
+                    tuple(n.get("symbols") or ()),
+                ))
+            except Exception as exc:
+                log.warning("alpaca item skipped: %s", type(exc).__name__)
+        return items
     except Exception as exc:
         log.warning("alpaca fetch failed: %s", type(exc).__name__)
         return []
@@ -70,18 +75,25 @@ def fetch_finnhub(key: str | None, symbols: list[str], today: date, *, days: int
         with _client(transport) as c:
             for sym in symbols[:FINNHUB_MAX_SYMBOLS]:
                 try:
-                    r = c.get(FINNHUB_NEWS_URL, params={
-                        "symbol": sym, "from": (today - timedelta(days=days)).isoformat(),
-                        "to": today.isoformat(), "token": key})
+                    r = c.get(
+                        FINNHUB_NEWS_URL,
+                        headers={"X-Finnhub-Token": key},
+                        params={"symbol": sym, "from": (today - timedelta(days=days)).isoformat(),
+                                "to": today.isoformat()},
+                    )
                     r.raise_for_status()
-                    items += [
-                        RawItem(
-                            f"Finnhub/{n['source']}", n["url"], n["headline"],
-                            n.get("summary") or "",
-                            _iso(datetime.fromtimestamp(n["datetime"], tz=UTC)), (sym,),
-                        )
-                        for n in r.json() if n.get("headline")
-                    ]
+                    articles = r.json()
+                    for n in articles:
+                        try:
+                            if not n.get("headline"):
+                                continue
+                            items.append(RawItem(
+                                f"Finnhub/{n['source']}", n["url"], n["headline"],
+                                n.get("summary") or "",
+                                _iso(datetime.fromtimestamp(n["datetime"], tz=UTC)), (sym,),
+                            ))
+                        except Exception as exc:
+                            log.warning("finnhub item skipped: %s", type(exc).__name__)
                 except Exception as exc:
                     log.warning("finnhub fetch failed: %s", type(exc).__name__)
     except Exception as exc:
@@ -99,13 +111,16 @@ def fetch_rss(feeds=RSS_FEEDS, *, transport: httpx.BaseTransport | None = None) 
                     r = c.get(url)
                     r.raise_for_status()
                     for it in ET.fromstring(r.text).iter("item"):
-                        title = (it.findtext("title") or "").strip()
-                        link = (it.findtext("link") or "").strip()
-                        if not title or not link:
-                            continue
-                        text = _TAG.sub("", it.findtext("description") or "").strip()
-                        when = _iso(parsedate_to_datetime(it.findtext("pubDate") or ""))
-                        items.append(RawItem(label, link, title, text, when))
+                        try:
+                            title = (it.findtext("title") or "").strip()
+                            link = (it.findtext("link") or "").strip()
+                            if not title or not link:
+                                continue
+                            text = _TAG.sub("", it.findtext("description") or "").strip()
+                            when = _iso(parsedate_to_datetime(it.findtext("pubDate") or ""))
+                            items.append(RawItem(label, link, title, text, when))
+                        except Exception as exc:
+                            log.warning("rss item skipped: %s", type(exc).__name__)
                 except Exception as exc:
                     log.warning("rss fetch failed: %s", type(exc).__name__)
     except Exception as exc:
