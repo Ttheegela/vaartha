@@ -31,6 +31,10 @@ CADENCE_WINDOW = 6  # cadence and avg_amount use only the most recent distinct-d
 ANCHOR_WINDOW = 3  # day-of-month anchor = max day among the last 3 charges (month-end safe)
 BILL_PRIMARY = {"RENT_AND_UTILITIES", "LOAN_PAYMENTS"}
 BILL_DETAILED_PREFIX = "GENERAL_SERVICES_INSURANCE"
+# Mirrors the spending exclusions in api/finance.py (EXCLUDED_PRIMARY / EXCLUDED_DETAILED),
+# plus INCOME. Kept local because core must not import from api.
+RECURRING_EXCLUDED_PRIMARY = ("TRANSFER_IN", "TRANSFER_OUT", "INCOME")
+RECURRING_EXCLUDED_DETAILED = "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT"
 STREAM_ID_LENGTH = 16
 AMOUNT_DECIMALS = 2
 
@@ -78,7 +82,10 @@ def _kind(primary: str | None, detailed: str | None) -> str:
 def detect_recurring(txns: pl.DataFrame, today: date) -> pl.DataFrame:
     """Return one row per detected outflow stream (columns: STREAM_COLUMNS)."""
     rows = []
-    outflows = txns.filter((pl.col("amount") > 0) & pl.col("merchant").is_not_null())
+    # Null categories are not excluded (fill_null keeps them in the stream).
+    excluded = (pl.col("pfc_primary").is_in(RECURRING_EXCLUDED_PRIMARY).fill_null(False)
+                | (pl.col("pfc_detailed") == RECURRING_EXCLUDED_DETAILED).fill_null(False))
+    outflows = txns.filter((pl.col("amount") > 0) & pl.col("merchant").is_not_null() & ~excluded)
     if outflows.height:
         grouped = (
             outflows.with_columns(pl.col("merchant").str.strip_chars().str.to_lowercase().alias("key"))

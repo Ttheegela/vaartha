@@ -121,3 +121,31 @@ def test_old_irregular_gap_ignored_when_recent_charges_regular():
     days = [date(2025, 1, 3), date(2025, 2, 20)] + [date(2026, m, 15) for m in range(4, 10)]
     s = _one(detect_recurring(_df(_monthly("Hulu", days)), TODAY), "Hulu")
     assert s["frequency"] == "MONTHLY"
+
+
+MONTHLY_DAYS = [date(2026, m, 15) for m in (6, 7, 8, 9)]
+
+
+def test_own_account_transfer_not_recurring():
+    rows = _monthly("ACH Electronic CreditGUSTO PAY", MONTHLY_DAYS, 500.0,
+                    "TRANSFER_OUT", "TRANSFER_OUT_ACCOUNT_TRANSFER")
+    assert detect_recurring(_df(rows), TODAY).height == 0
+
+
+def test_credit_card_payment_not_recurring():
+    rows = _monthly("CREDIT CARD 3333 PAYMENT", MONTHLY_DAYS, 800.0,
+                    "LOAN_PAYMENTS", "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT")
+    assert detect_recurring(_df(rows), TODAY).height == 0
+
+
+def test_auto_loan_payment_is_bill():
+    rows = _monthly("Auto Loan", MONTHLY_DAYS, 350.0, "LOAN_PAYMENTS",
+                    "LOAN_PAYMENTS_OTHER_PAYMENT")
+    assert _one(detect_recurring(_df(rows), TODAY), "Auto Loan")["kind"] == "bill"
+
+
+def test_null_categories_still_detected():
+    rows = _monthly("Mystery Sub", MONTHLY_DAYS, 9.99, None, None)
+    s = _one(detect_recurring(_df(rows), TODAY), "Mystery Sub")
+    assert s["frequency"] == "MONTHLY"
+    assert s["kind"] == "subscription"
