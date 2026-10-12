@@ -47,3 +47,22 @@ def test_settings_rejects_unknown_instance(monkeypatch):
     monkeypatch.setenv("VARTA_INSTANCE", "prod")
     with pytest.raises(ValueError, match="VARTA_INSTANCE"):
         Settings.from_env()
+
+
+def test_news_columns_and_crowd_odds(tmp_path):
+    conn = connect(tmp_path / "v.db")
+    init_db(conn)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(news_scores)")}
+    assert {"channel", "scored_by"} <= cols
+    assert conn.execute("SELECT COUNT(*) FROM crowd_odds").fetchone()[0] == 0
+
+
+def test_migration_adds_columns_to_old_db(tmp_path):
+    conn = connect(tmp_path / "v.db")
+    conn.execute(
+        "CREATE TABLE news_scores (news_id INTEGER, ticker TEXT, PRIMARY KEY (news_id, ticker))"
+    )
+    conn.commit()
+    init_db(conn)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(news_scores)")}
+    assert {"channel", "scored_by"} <= cols

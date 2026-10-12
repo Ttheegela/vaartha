@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS news_scores (
   ticker TEXT NOT NULL,
   sentiment REAL, sentiment_conf REAL, material REAL, stress REAL, event TEXT, noise REAL,
   raw_json TEXT, scored_at TEXT,
+  channel TEXT NOT NULL DEFAULT 'news', scored_by TEXT,
   PRIMARY KEY (news_id, ticker)
 );
 CREATE TABLE IF NOT EXISTS alerts (
@@ -72,3 +73,7 @@ CREATE TABLE IF NOT EXISTS agent_messages (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_agent_messages_conv ON agent_messages(conversation_id);
+CREATE TABLE IF NOT EXISTS crowd_odds (
+  market_id TEXT PRIMARY KEY, question TEXT NOT NULL, yes_prob REAL NOT NULL, liquidity REAL,
+  end_date TEXT, url TEXT, category TEXT, fetched_at TEXT NOT NULL
+);

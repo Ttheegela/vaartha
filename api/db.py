@@ -7,8 +7,12 @@ SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 TABLES = (
     "items", "accounts", "transactions", "securities", "holdings", "recurring_streams",
     "budgets", "goals", "networth_snapshots", "news_items", "news_scores", "alerts",
-    "briefings", "agent_messages",
+    "briefings", "agent_messages", "crowd_odds",
 )
+MIGRATIONS = [
+    ("news_scores", "channel", "TEXT NOT NULL DEFAULT 'news'"),
+    ("news_scores", "scored_by", "TEXT"),
+]
 BUSY_TIMEOUT_MS = 5000
 
 
@@ -26,4 +30,13 @@ def connect(path: Path) -> sqlite3.Connection:
 def init_db(conn: sqlite3.Connection) -> None:
     """Create all tables and indexes if missing. Safe to run repeatedly."""
     conn.executescript(SCHEMA_PATH.read_text())
+    _apply_migrations(conn)
     conn.commit()
+
+
+def _apply_migrations(conn: sqlite3.Connection) -> None:
+    """Add columns introduced after a DB was created."""
+    for table, column, ddl in MIGRATIONS:
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")

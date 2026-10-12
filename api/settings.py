@@ -18,6 +18,11 @@ class Settings:
     plaid_client_id: str | None = field(default=None, repr=False)
     plaid_secret: str | None = field(default=None, repr=False)
     token_key: str | None = field(default=None, repr=False)
+    alpaca_key: str | None = field(default=None, repr=False)
+    alpaca_secret: str | None = field(default=None, repr=False)
+    finnhub_key: str | None = field(default=None, repr=False)
+    typesafe_key: str | None = field(default=None, repr=False)
+    sec_user_agent: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.plaid_env not in PLAID_ENVS:
@@ -32,7 +37,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        """Read VARTA_*, PLAID_* and TOKEN_ENCRYPTION_KEY; reject invalid combinations."""
+        """Read VARTA_*, PLAID_*, TOKEN_ENCRYPTION_KEY and news keys; reject bad combinations."""
         instance = os.environ.get("VARTA_INSTANCE", "demo")
         if instance not in INSTANCES:
             raise ValueError(f"VARTA_INSTANCE must be one of {INSTANCES}, got {instance!r}")
@@ -43,4 +48,9 @@ class Settings:
             plaid_client_id=os.environ.get("PLAID_CLIENT_ID") or None,
             plaid_secret=os.environ.get("PLAID_SECRET") or None,
             token_key=os.environ.get("TOKEN_ENCRYPTION_KEY") or None,
+            alpaca_key=os.environ.get("ALPACA_API_KEY") or None,
+            alpaca_secret=os.environ.get("ALPACA_SECRET_KEY") or None,
+            finnhub_key=os.environ.get("FINNHUB_API_KEY") or None,
+            typesafe_key=os.environ.get("TYPESAFE_API_KEY") or None,
+            sec_user_agent=os.environ.get("SEC_USER_AGENT") or None,
         )

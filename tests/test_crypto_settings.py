@@ -54,3 +54,13 @@ def test_from_env_reads_plaid(monkeypatch, tmp_path):
     s = Settings.from_env()
     assert (s.plaid_env, s.plaid_client_id, s.plaid_secret, s.token_key) == (
         "production", "cid", "sec", "k")
+
+
+def test_news_keys_from_env_hidden(monkeypatch, tmp_path):
+    for k, v in {"ALPACA_API_KEY": "ak", "ALPACA_SECRET_KEY": "as", "FINNHUB_API_KEY": "fk",
+                 "TYPESAFE_API_KEY": "tk", "SEC_USER_AGENT": "Varta dev@example.com"}.items():
+        monkeypatch.setenv(k, v)
+    s = Settings.from_env()
+    assert (s.alpaca_key, s.alpaca_secret, s.finnhub_key, s.typesafe_key, s.sec_user_agent) == (
+        "ak", "as", "fk", "tk", "Varta dev@example.com")
+    assert "ak" not in repr(s) and "tk" not in repr(s)
