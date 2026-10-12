@@ -1,8 +1,8 @@
 # Vārtā v2 — Status
 
-Last updated: 2026-10-12 (after sub-project 5). Branch `claude/varta-v2-ec24da` (worktree `.claude/worktrees/varta-v2-ec24da`), not pushed, not merged.
+Last updated: 2026-10-12 (after sub-project 6 code). Branch `claude/varta-v2-ec24da` (worktree `.claude/worktrees/varta-v2-ec24da`), not pushed, not merged.
 
-Read this first when resuming. Design: `specs/2026-10-11-varta-v2-design.md`. Plans: `plans/`. Per-task rulings and deferred minors: `ledgers/` (sub-projects 3–5; sub-projects 1–2 are summarized below).
+Read this first when resuming. Design: `specs/2026-10-11-varta-v2-design.md`. Plans: `plans/`. Per-task rulings and deferred minors: `ledgers/` (sub-projects 3–6; sub-projects 1–2 are summarized below).
 
 ## Done
 
@@ -13,12 +13,13 @@ Read this first when resuming. Design: `specs/2026-10-11-varta-v2-design.md`. Pl
 | 3 | Accounts — Plaid (httpx), Fernet tokens, sync, own recurring detector, finance read API, live Accounts/Spending/Bills/Goals/Home | `plans/2026-10-12-accounts.md` | Done, reviewed; live Plaid Sandbox verified |
 | 4 | News + sentiment — Alpaca/Finnhub/RSS/GDELT/EDGAR/Polymarket, dedupe/tagging, TypeSafe Jev scoring (+heuristic fallback, circuit breaker), news/sentiment/crowd-odds/holdings API, live News/Investments | `plans/2026-10-12-news.md` | Done, reviewed; live sources verified |
 | 5 | Advisor agent + evals — read-only toolbox (12 tools), hand-written tool loop, SSE chat, conversations, rule-based alerts, daily briefing, live Advisor + Home cards, 25-task eval harness | `plans/2026-10-12-agent.md` | Done, reviewed; live evals run; chat + home smoke-tested with Haiku |
+| 6 | Deploy (code) — per-visitor conversations (demo), chat + admin rate limits, local-tz today, JSON logs, scheduled worker (sync/news/alerts/briefing/backup/demo reset), Docker images, Compose demo/owner profiles on separate networks, Caddy (public demo, Tailscale-only owner), CI image builds, runbook `deploy/README.md` | `plans/2026-10-12-deploy.md` | Code done, reviewed; **not provisioned yet** (images first built in CI/VPS) |
 
-Tests: 238 Python (`uv run pytest -q`), 52 web (`cd web && pnpm test`); ruff, tsc, `next build` clean.
+Tests: 268 Python (`uv run pytest -q`), 53 web (`cd web && pnpm test`); ruff, tsc, `next build` clean.
 
 ## Next
 
-**Sub-project 6 — Deploy** (VPS, compose, Caddy, Tailscale, worker schedule incl. 07:00 briefing + alerts, demo reset, per-IP chat rate limit, **per-visitor conversation scoping on the demo** — today `/api/conversations` lists every conversation).
+**Sub-project 6, Task 6 — provision and go live (with Tarun):** order a VPS (Hetzner CX22-class, Ubuntu 24.04), point a demo domain's A record at it, Tailscale account, two OpenRouter keys with spend caps, Plaid Sandbox (demo) + Production Trial (owner) keys. Then follow `deploy/README.md`. Nothing has been pushed; CI's docker job (first image build) runs once the branch is pushed.
 
 ## Open items (need attention)
 
@@ -31,6 +32,8 @@ Tests: 238 Python (`uv run pytest -q`), 52 web (`cd web && pnpm test`); ruff, ts
 6. **Owner LLM: decided — OpenRouter (Haiku) for both instances** (spec §4 decision note). Local Ollama models removed from the Mac. SP6 needs no Tailscale link from the VPS to the Mac for the LLM.
 7. **Subscriptions "price up" is vs the average, not the previous charge** (agent tool + UI): Netflix shows +$1.33 instead of +$2.00. Same as item 2's "Price up" fix.
 8. Eval caveats: no merchant-invention check (ruling); "October 3rd"-style dates are not stripped by the number parser.
+
+9. **Deploy follow-ups:** runbook restore/key-generation steps verified only by read-through until the first VPS run; Plaid Production OAuth banks may need an HTTPS redirect URI on the owner instance; backups live on the same volume (off-box copy is manual).
 
 ## Environment notes
 
