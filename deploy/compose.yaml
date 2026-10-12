@@ -1,0 +1,82 @@
+# Run: docker compose -f deploy/compose.yaml --env-file deploy/caddy.env --profile demo [--profile owner] up -d
+# --env-file feeds interpolation (PUBLIC_IP, OWNER_TS_IP, Caddy vars); per-instance secrets come from demo.env / owner.env.
+# Only caddy publishes ports. If only one profile runs, the other site's upstream is unresolved and
+# errors per request (502) -- acceptable.
+x-api: &api
+  build: {context: .., dockerfile: Dockerfile}
+  image: varta-api
+  restart: unless-stopped
+
+x-web: &web
+  build: {context: ../web}
+  image: varta-web
+  restart: unless-stopped
+
+x-api-health: &api-health
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"]
+    interval: 30s
+    timeout: 5s
+    start_period: 20s
+    retries: 3
+
+services:
+  api-demo:
+    <<: [*api, *api-health]
+    profiles: [demo]
+    env_file: demo.env
+    environment: {VARTA_INSTANCE: demo, TRUST_PROXY: "1"}
+    volumes: [demo-data:/data]
+  worker-demo:
+    <<: *api
+    profiles: [demo]
+    command: ["python", "-m", "worker.main"]
+    healthcheck: {disable: true}  # image HEALTHCHECK targets the api port
+    env_file: demo.env
+    environment: {VARTA_INSTANCE: demo}
+    volumes: [demo-data:/data]
+  web-demo:
+    <<: *web
+    profiles: [demo]
+    environment: {API_URL: "http://api-demo:8000", VARTA_INSTANCE: demo}
+
+  api-owner:
+    <<: [*api, *api-health]
+    profiles: [owner]
+    env_file: owner.env
+    environment: {VARTA_INSTANCE: owner, TRUST_PROXY: "1"}
+    volumes: [owner-data:/data]
+  worker-owner:
+    <<: *api
+    profiles: [owner]
+    command: ["python", "-m", "worker.main"]
+    healthcheck: {disable: true}  # image HEALTHCHECK targets the api port
+    env_file: owner.env
+    environment: {VARTA_INSTANCE: owner}
+    volumes: [owner-data:/data]
+  web-owner:
+    <<: *web
+    profiles: [owner]
+    environment: {API_URL: "http://api-owner:8000", VARTA_INSTANCE: owner}
+
+  caddy:
+    image: caddy:2
+    profiles: [demo, owner]
+    restart: unless-stopped
+    env_file: caddy.env
+    ports:
+      - "${PUBLIC_IP}:80:80"
+      - "${PUBLIC_IP}:443:443"
+      # Owner site listens on container 8443; published only on the Tailscale IP.
+      - "${OWNER_TS_IP}:443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  demo-data:
+  owner-data:
+  caddy-data:
+  caddy-config:

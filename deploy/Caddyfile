@@ -1,0 +1,29 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DEMO_DOMAIN} {
+	handle /healthz {
+		reverse_proxy api-demo:8000
+	}
+	handle /api/* {
+		reverse_proxy api-demo:8000 {
+			flush_interval -1
+		}
+	}
+	handle {
+		encode zstd gzip
+		reverse_proxy web-demo:3000
+	}
+}
+
+{$OWNER_HOST}:8443 {
+	handle /api/* {
+		reverse_proxy api-owner:8000 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy web-owner:3000
+	}
+}
