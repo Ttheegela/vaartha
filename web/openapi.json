@@ -125,6 +125,118 @@
         "title": "AccountsOut",
         "type": "object"
       },
+      "AlertOut": {
+        "description": "An undismissed alert.",
+        "properties": {
+          "action_href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Href"
+          },
+          "action_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Label"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "kind",
+          "text",
+          "action_label",
+          "action_href"
+        ],
+        "title": "AlertOut",
+        "type": "object"
+      },
+      "BriefingOut": {
+        "description": "The latest daily briefing.",
+        "properties": {
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bullets",
+            "type": "array"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "headline",
+          "bullets",
+          "sources",
+          "model",
+          "generated_at"
+        ],
+        "title": "BriefingOut",
+        "type": "object"
+      },
       "BudgetOut": {
         "description": "A monthly category budget with this month's spend.",
         "properties": {
@@ -190,6 +302,59 @@
           "amount"
         ],
         "title": "CategorySpend",
+        "type": "object"
+      },
+      "ChatIn": {
+        "description": "A user message, optionally continuing a conversation.",
+        "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatIn",
+        "type": "object"
+      },
+      "ConversationOut": {
+        "description": "Conversation list row.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "updated_at"
+        ],
+        "title": "ConversationOut",
         "type": "object"
       },
       "CrowdOddsOut": {
@@ -530,6 +695,46 @@
         "title": "MerchantSpendOut",
         "type": "object"
       },
+      "MessageOut": {
+        "description": "One user or assistant message.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "tool_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "role",
+          "content",
+          "created_at",
+          "sources",
+          "tool_names"
+        ],
+        "title": "MessageOut",
+        "type": "object"
+      },
       "NetWorthPoint": {
         "description": "One daily net-worth snapshot.",
         "properties": {
@@ -808,6 +1013,57 @@
         "title": "SentimentPoint",
         "type": "object"
       },
+      "SourceOut": {
+        "description": "A news story cited in an answer.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "SourceOut",
+        "type": "object"
+      },
       "SpendingOut": {
         "description": "Month spending breakdown plus six months of cash flow.",
         "properties": {
@@ -985,6 +1241,89 @@
         "summary": "Accounts"
       }
     },
+    "/api/alerts": {
+      "get": {
+        "description": "Undismissed alerts, newest first.",
+        "operationId": "alerts_api_alerts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertOut"
+                  },
+                  "title": "Response Alerts Api Alerts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Alerts"
+      }
+    },
+    "/api/alerts/{alert_id}/dismiss": {
+      "post": {
+        "description": "Dismiss one alert.",
+        "operationId": "dismiss_api_alerts__alert_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "required": true,
+            "schema": {
+              "title": "Alert Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss"
+      }
+    },
+    "/api/briefing": {
+      "get": {
+        "description": "The latest stored briefing, or null.",
+        "operationId": "briefing_api_briefing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BriefingOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Briefing Api Briefing Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Briefing"
+      }
+    },
     "/api/budgets": {
       "get": {
         "description": "Monthly budgets with this month's spend per category.",
@@ -1006,6 +1345,110 @@
           }
         },
         "summary": "Budgets"
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "description": "Stream the advisor's answer as server-sent events.",
+        "operationId": "chat_api_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat"
+      }
+    },
+    "/api/conversations": {
+      "get": {
+        "description": "Newest conversations first; the title is the first user message.",
+        "operationId": "conversations_api_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response Conversations Api Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Conversations"
+      }
+    },
+    "/api/conversations/{conversation_id}": {
+      "get": {
+        "description": "User and assistant messages of one conversation, oldest first.",
+        "operationId": "conversation_api_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response Conversation Api Conversations  Conversation Id  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Conversation"
       }
     },
     "/api/crowd_odds": {

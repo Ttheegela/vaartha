@@ -77,3 +77,4 @@ CREATE TABLE IF NOT EXISTS crowd_odds (
   market_id TEXT PRIMARY KEY, question TEXT NOT NULL, yes_prob REAL NOT NULL, liquidity REAL,
   end_date TEXT, url TEXT, category TEXT, fetched_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);

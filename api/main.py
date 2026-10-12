@@ -11,9 +11,13 @@ from dataclasses import asdict
 from datetime import date
 from typing import Literal
 
+import polars as pl
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from api.advisor import build_advisor_router
+from api.agent import llm_client
+from api.agent_tools import build_toolbox
 from api.crypto import TokenBox
 from api.db import connect, init_db
 from api.finance import build_finance_router
@@ -22,6 +26,7 @@ from api.plaid_client import PlaidAPI, PlaidClient, PlaidError
 from api.settings import Settings
 from api.sync import link_item, sync_all
 from core.live import live_regime
+from core.prices import fetch_closes
 from core.regime import Regime
 
 log = logging.getLogger("varta.api")
@@ -71,6 +76,8 @@ def create_app(
     clock: Callable[[], float] = time.monotonic,
     today: Callable[[], date] = date.today,
     plaid: PlaidAPI | None = None,
+    llm=None,
+    closes_provider: Callable[[list[str]], pl.DataFrame] = lambda t: fetch_closes(t, "1y"),
 ) -> FastAPI:
     """Build the API: initialise the DB and register routes."""
     settings = settings or Settings.from_env()
@@ -119,6 +126,11 @@ def create_app(
 
     app.include_router(build_finance_router(settings.db_path, today))
     app.include_router(build_news_router(settings.db_path, today))
+    if llm is None and settings.llm_configured:
+        llm = llm_client(settings)
+    toolbox = build_toolbox(settings.db_path, today, current_regime, closes_provider)
+    app.include_router(build_advisor_router(
+        settings.db_path, toolbox, llm, settings.llm_model or "test-model"))
 
     @app.post("/api/plaid/link_token", response_model=LinkTokenOut)
     def plaid_link_token() -> LinkTokenOut:

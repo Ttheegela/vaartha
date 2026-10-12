@@ -15,6 +15,8 @@ from fastapi import HTTPException
 
 from api.finance import MONTH_RE, build_finance_router
 from api.news_read import build_news_router
+from core.live import live_regime
+from core.prices import fetch_closes
 from core.regime import Regime
 from core.risk import portfolio_risk
 
@@ -281,3 +283,8 @@ def build_toolbox(db_path: Path, today: Callable[[], date],
                   closes_provider: Callable[[list[str]], pl.DataFrame]) -> Toolbox:
     """Toolbox over one database with injected clock, regime and price providers."""
     return Toolbox(db_path, today, regime_provider, closes_provider)
+
+
+def default_toolbox(settings, today: Callable[[], date] = date.today) -> Toolbox:
+    """Toolbox wired to live regime and 1y price providers, for scripts."""
+    return build_toolbox(settings.db_path, today, live_regime, lambda t: fetch_closes(t, "1y"))

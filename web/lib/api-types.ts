@@ -24,6 +24,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alerts
+         * @description Undismissed alerts, newest first.
+         */
+        get: operations["alerts_api_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/alerts/{alert_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss
+         * @description Dismiss one alert.
+         */
+        post: operations["dismiss_api_alerts__alert_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/briefing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Briefing
+         * @description The latest stored briefing, or null.
+         */
+        get: operations["briefing_api_briefing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/budgets": {
         parameters: {
             query?: never;
@@ -36,6 +96,66 @@ export interface paths {
          * @description Monthly budgets with this month's spend per category.
          */
         get: operations["budgets_api_budgets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat
+         * @description Stream the advisor's answer as server-sent events.
+         */
+        post: operations["chat_api_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conversations
+         * @description Newest conversations first; the title is the first user message.
+         */
+        get: operations["conversations_api_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conversation
+         * @description User and assistant messages of one conversation, oldest first.
+         */
+        get: operations["conversation_api_conversations__conversation_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -347,6 +467,42 @@ export interface components {
             liabilities: number;
         };
         /**
+         * AlertOut
+         * @description An undismissed alert.
+         */
+        AlertOut: {
+            /** Action Href */
+            action_href: string | null;
+            /** Action Label */
+            action_label: string | null;
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Text */
+            text: string;
+        };
+        /**
+         * BriefingOut
+         * @description The latest daily briefing.
+         */
+        BriefingOut: {
+            /** Bullets */
+            bullets: string[];
+            /** Date */
+            date: string;
+            /** Generated At */
+            generated_at: string | null;
+            /** Headline */
+            headline: string;
+            /** Model */
+            model: string | null;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+        };
+        /**
          * BudgetOut
          * @description A monthly category budget with this month's spend.
          */
@@ -379,6 +535,28 @@ export interface components {
             amount: number;
             /** Category */
             category: string;
+        };
+        /**
+         * ChatIn
+         * @description A user message, optionally continuing a conversation.
+         */
+        ChatIn: {
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Message */
+            message: string;
+        };
+        /**
+         * ConversationOut
+         * @description Conversation list row.
+         */
+        ConversationOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at: string;
         };
         /**
          * CrowdOddsOut
@@ -494,6 +672,22 @@ export interface components {
             count: number;
             /** Merchant */
             merchant: string;
+        };
+        /**
+         * MessageOut
+         * @description One user or assistant message.
+         */
+        MessageOut: {
+            /** Content */
+            content: string;
+            /** Created At */
+            created_at: string;
+            /** Role */
+            role: string;
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+            /** Tool Names */
+            tool_names: string[];
         };
         /**
          * NetWorthPoint
@@ -618,6 +812,20 @@ export interface components {
             sentiment: number;
         };
         /**
+         * SourceOut
+         * @description A news story cited in an answer.
+         */
+        SourceOut: {
+            /** Id */
+            id?: number | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
          * SpendingOut
          * @description Month spending breakdown plus six months of cash flow.
          */
@@ -708,6 +916,75 @@ export interface operations {
             };
         };
     };
+    alerts_api_alerts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertOut"][];
+                };
+            };
+        };
+    };
+    dismiss_api_alerts__alert_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    briefing_api_briefing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefingOut"] | null;
+                };
+            };
+        };
+    };
     budgets_api_budgets_get: {
         parameters: {
             query?: never;
@@ -724,6 +1001,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BudgetOut"][];
+                };
+            };
+        };
+    };
+    chat_api_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    conversations_api_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationOut"][];
+                };
+            };
+        };
+    };
+    conversation_api_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
