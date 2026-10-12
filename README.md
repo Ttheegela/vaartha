@@ -10,7 +10,9 @@ v1 (course project, Streamlit) is frozen in [`legacy/`](legacy/).
 ## Develop
 
 ```bash
-uv sync
-uv run pytest
-uv run uvicorn --factory api.main:create_app --reload
+uv sync && uv run pytest                                  # API + core
+uv run uvicorn --factory api.main:create_app --reload     # API on :8000
+cd web && pnpm install && pnpm dev                        # UI on :3000, /api proxied to :8000
 ```
+
+After changing an API route: `uv run python -m scripts.dump_openapi && (cd web && pnpm gen:api)`.
