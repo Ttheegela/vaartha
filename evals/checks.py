@@ -35,7 +35,7 @@ def load_tasks(path: Path = TASKS_FILE) -> list[dict]:
 
 
 def parse_numbers(text: str) -> list[float]:
-    """Magnitudes of the numbers in the text; `$`, commas, `%`, signs, dates and `[n:ID]` dropped."""
+    """Magnitudes of the numbers in the text; `$`, commas, `%`, signs, dates, `[n:ID]` dropped."""
     cleaned = NOISE_RE.sub(" ", text)
     return [float(m.replace(",", "")) for m in NUMBER_RE.findall(cleaned)]
 
