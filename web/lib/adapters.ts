@@ -37,7 +37,7 @@ export function toBills(r: S["RecurringListOut"], today: Date): Bill[] {
     const diff = s.last_amount - s.avg_amount
     return {
       id: s.stream_id, merchant: s.merchant, amount: s.last_amount,
-      day: placed ? utc(placed).getUTCDate() : 0, date: DAY_FMT.format(utc(s.predicted_next_date)),
+      day: placed ? utc(placed).getUTCDate() : 0, date: DAY_FMT.format(utc(s.predicted_next_date)), nextDate: s.predicted_next_date,
       frequency: FREQUENCY[s.frequency], kind: s.kind === "bill" ? "bill" : "subscription",
       paid: Boolean(last), inactive: !s.is_active, priceUp: diff > PRICE_EPSILON ? cents(diff) : undefined,
     }

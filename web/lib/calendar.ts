@@ -12,8 +12,12 @@ export function firstWeekday(d: Date): number {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).getUTCDay()
 }
 
-/** Bills falling today through the next 7 days of this month, by day. Day 0 (unplaced) is excluded. */
+const DAY_MS = 86_400_000
+
+/** Active bills whose next date is within [today, today+7 days] (UTC, any month), soonest first. */
 export function upcomingBills(bills: Bill[], today: Date): Bill[] {
-  const t = today.getUTCDate()
-  return bills.filter((b) => b.day >= t && b.day <= t + UPCOMING_DAYS).sort((a, b) => a.day - b.day)
+  const start = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  const end = start + UPCOMING_DAYS * DAY_MS
+  const at = (b: Bill) => Date.parse(`${b.nextDate}T00:00:00Z`)
+  return bills.filter((b) => !b.inactive && at(b) >= start && at(b) <= end).sort((a, b) => at(a) - at(b))
 }

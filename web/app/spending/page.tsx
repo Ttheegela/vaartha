@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react"
 import { toBudgets, toMerchantSpend } from "@/lib/adapters"
 import type { components } from "@/lib/api-types"
+import { usd } from "@/lib/utils"
 import { apiGet } from "@/lib/server-api"
 import { PageHeading } from "@/components/page-heading"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button"
 export const dynamic = "force-dynamic"
 
 const MONTH_FMT = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" })
-const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`
 
 export default async function SpendingPage() {
   const [spending, budgetData] = await Promise.all([

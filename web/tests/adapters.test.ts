@@ -29,7 +29,7 @@ test("toBills maps frequency, price change, placement", () => {
   } as never, TODAY)
   const by = Object.fromEntries(bills.map((b) => [b.merchant, b]))
   assert.equal(by.Netflix.day, 15); assert.equal(by.Netflix.paid, false)
-  assert.equal(by.Netflix.priceUp, 1.5); assert.equal(by.Netflix.date, "Oct 15")
+  assert.equal(by.Netflix.priceUp, 1.5); assert.equal(by.Netflix.date, "Oct 15"); assert.equal(by.Netflix.nextDate, "2026-10-15")
   assert.equal(by.Prime.frequency, "Annual"); assert.equal(by.Prime.day, 2); assert.equal(by.Prime.paid, true)
   assert.equal(by.Old.inactive, true); assert.equal(by.Old.day, 0)
   assert.equal(by.Rent.kind, "bill"); assert.equal(by.Rent.day, 1); assert.equal(by.Rent.paid, true)
