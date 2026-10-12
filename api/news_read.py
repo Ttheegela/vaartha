@@ -154,10 +154,13 @@ def build_news_router(db_path: Path, today: Callable[[], date]) -> APIRouter:
     @router.get("/holdings", response_model=list[HoldingOut])
     def holdings() -> list[HoldingOut]:
         """Holdings by value descending, with weight = value / total value."""
+        # one row per security (summed across accounts); NULL-ticker rows group by security_id
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
-                "SELECT s.ticker, s.name, h.quantity, h.value, h.cost_basis FROM holdings h "
-                "JOIN securities s USING (security_id) ORDER BY h.value DESC").fetchall()
+                "SELECT s.ticker, MAX(s.name) AS name, SUM(h.quantity) AS quantity, "
+                "SUM(h.value) AS value, SUM(h.cost_basis) AS cost_basis FROM holdings h "
+                "JOIN securities s USING (security_id) "
+                "GROUP BY COALESCE(s.ticker, s.security_id) ORDER BY value DESC").fetchall()
         total = sum(r["value"] or 0 for r in rows)
         return [HoldingOut(**dict(r), weight=(r["value"] or 0) / total if total else 0.0)
                 for r in rows]

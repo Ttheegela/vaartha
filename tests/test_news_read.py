@@ -99,6 +99,31 @@ def test_holdings_weights_sum_to_one(seeded):
     assert sum(r["weight"] for r in rows) == pytest.approx(1.0, abs=1e-6)
 
 
+def test_holdings_aggregate_same_security_across_accounts(tmp_path):
+    path = tmp_path / "v.db"
+    conn = connect(path)
+    init_db(conn)
+    link_item(conn, FakePlaid(date(2026, 10, 12)), TokenBox(new_key()), "public-fake-1", TODAY)
+    before = {r["ticker"]: r for r in _client(path).get("/api/holdings").json()}
+    h = conn.execute("SELECT * FROM holdings ORDER BY value DESC LIMIT 1").fetchone()
+    other = conn.execute("SELECT account_id FROM accounts WHERE account_id != ?",
+                         (h["account_id"],)).fetchone()["account_id"]
+    conn.execute("INSERT INTO holdings (account_id, security_id, quantity, cost_basis, value, "
+                 "as_of) "
+                 "VALUES (?,?,?,?,?,?)",
+                 (other, h["security_id"], h["quantity"], h["cost_basis"], h["value"], h["as_of"]))
+    conn.commit()
+    conn.close()
+    rows = _client(path).get("/api/holdings").json()
+    tickers = [r["ticker"] for r in rows if r["ticker"]]
+    assert len(tickers) == len(set(tickers))
+    dup = next(r for r in rows if r["value"] == pytest.approx(2 * h["value"]))
+    assert dup["quantity"] == pytest.approx(2 * h["quantity"])
+    assert len(rows) == len(before)
+    assert [r["value"] for r in rows] == sorted((r["value"] for r in rows), reverse=True)
+    assert sum(r["weight"] for r in rows) == pytest.approx(1.0, abs=1e-6)
+
+
 def test_empty_db_returns_empty_lists(empty):
     for url in ("/api/news", "/api/sentiment?ticker=NVDA", "/api/crowd_odds", "/api/holdings"):
         assert empty.get(url).json() == []
