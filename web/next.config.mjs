@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
+const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000"
+
 const nextConfig = {
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${API_URL}/api/:path*` }]
+  },
   async headers() {
     return [{ source: "/(.*)", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },
