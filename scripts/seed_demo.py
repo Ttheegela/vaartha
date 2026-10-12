@@ -7,6 +7,7 @@ Reads VARTA_DB_PATH and TOKEN_ENCRYPTION_KEY from the environment.
 
 import argparse
 import json
+import logging
 from contextlib import closing
 from datetime import UTC, date, datetime
 
@@ -16,7 +17,9 @@ from api.plaid_client import PlaidAPI, PlaidClient
 from api.plaid_fake import FakePlaid
 from api.settings import Settings
 from api.sync import link_item
-from scripts.refresh_news import run
+from scripts.refresh_news import run as refresh_news_run
+
+log = logging.getLogger(__name__)
 
 SANDBOX_INSTITUTION = "ins_109508"  # verify in Plaid docs/dashboard before relying on it
 SANDBOX_PRODUCTS = ["transactions", "investments"]
@@ -61,13 +64,33 @@ def seed(settings: Settings, source: str, today: date, plaid: PlaidAPI | None = 
             [(name, target, when, json.dumps([a for s in subs for a in by_subtype.get(s, [])]))
              for name, target, when, subs in DEMO_GOALS])
         conn.commit()
-    run(settings, offline=(source == "fake"), now=datetime.now(UTC))
     return item_id
+
+
+def seed_news(settings: Settings, source: str) -> dict | None:
+    """Refresh news after seeding; returns the summary, or None if it failed (Plaid data stays)."""
+    try:
+        return refresh_news_run(settings, offline=(source == "fake"), now=datetime.now(UTC))
+    except Exception as exc:
+        log.warning("news refresh failed: %s", type(exc).__name__)
+        return None
+
+
+def news_status(item_id: str, news: dict | None) -> str:
+    """One-line CLI status for a seed run; flags a failed or empty news refresh."""
+    if news is None:
+        return (f"seeded item {item_id}; news refresh failed"
+                " - run scripts.refresh_news later")
+    line = f"seeded item {item_id}; news: stored={news['stored']} fetched={news['fetched']}"
+    if news["stored"] == 0 and not any(news["fetched"].values()):
+        line += "\nWARNING: no news fetched - check API keys in .env"
+    return line
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=["fake", "sandbox"], default="fake")
     args = parser.parse_args()
-    item = seed(Settings.from_env(), args.source, date.today())
-    print(f"seeded item {item}")
+    cfg = Settings.from_env()
+    item = seed(cfg, args.source, date.today())
+    print(news_status(item, seed_news(cfg, args.source)))
