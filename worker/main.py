@@ -65,7 +65,6 @@ def tick(settings: Settings, now: datetime, runner=run_job) -> list[str]:
     tz = ZoneInfo(settings.tz)
     ran = []
     with closing(connect(settings.db_path)) as conn:
-        init_db(conn)
         last = {k[len(STATE_PREFIX):]: datetime.fromisoformat(v) for k, v in conn.execute(
             "SELECT key, value FROM app_state WHERE key LIKE ?", (STATE_PREFIX + "%",))}
         for job in JOBS:
@@ -88,6 +87,8 @@ def main() -> None:
     setup_logging()
     settings = Settings.from_env()
     signal.signal(signal.SIGTERM, signal.default_int_handler)
+    with closing(connect(settings.db_path)) as conn:
+        init_db(conn)
     log.info("worker started instance=%s tz=%s", settings.instance, settings.tz)
     try:
         while True:

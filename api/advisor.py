@@ -100,6 +100,7 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
     """Routes for chat, conversations, alerts and briefing over one database."""
     router = APIRouter(prefix="/api")
     limiter = RateLimiter(settings.chat_rate_per_hour)
+    demo = settings.instance == "demo"
 
     def log_message(conv: str, vid: str, role: str, content: str | None, **cols) -> None:
         # one short-lived connection per write: the stream hops threads between yields
@@ -161,7 +162,7 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
             with closing(connect(db_path)) as conn:
                 owner = conn.execute("SELECT visitor_id FROM agent_messages "
                                      "WHERE conversation_id = ? LIMIT 1", (conv,)).fetchone()
-            if owner is not None and owner["visitor_id"] != vid:
+            if owner is not None and owner["visitor_id"] != vid and demo:
                 conv = None  # someone else's (or pre-migration) conversation: start fresh
         resp = StreamingResponse(stream(conv or uuid.uuid4().hex, vid, body.message),
                                  media_type="text/event-stream", headers=SSE_HEADERS)
@@ -174,8 +175,9 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
     def conversations(request: Request) -> list[dict]:
         """This visitor's conversations, newest first; the title is the first user message."""
         vid = visitor_id(request)
-        if vid is None:
+        if vid is None and demo:
             return []
+        where, args = ("1", ()) if not demo else ("visitor_id = ?", (vid,))
         with closing(connect(db_path)) as conn:
             rows = conn.execute(
                 # created_at is SQLite datetime('now'): UTC, no zone marker; emit ISO-8601 Z
@@ -183,8 +185,8 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
                 "AS updated_at, MAX(id) AS last, "
                 "(SELECT content FROM agent_messages f WHERE f.conversation_id = m.conversation_id "
                 "AND f.role = 'user' ORDER BY f.id LIMIT 1) AS title "
-                "FROM agent_messages m WHERE visitor_id = ? GROUP BY conversation_id "
-                "ORDER BY last DESC LIMIT ?", (vid, MAX_CONVERSATIONS)).fetchall()
+                f"FROM agent_messages m WHERE {where} GROUP BY conversation_id "
+                "ORDER BY last DESC LIMIT ?", (*args, MAX_CONVERSATIONS)).fetchall()
         return [{"id": r["id"], "title": (r["title"] or "")[:TITLE_CHARS],
                  "updated_at": r["updated_at"]} for r in rows]
 
@@ -196,9 +198,9 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
             rows = conn.execute(
                 "SELECT role, content, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) AS created_at, "
                 "tool_calls FROM agent_messages "
-                "WHERE conversation_id = ? AND visitor_id = ? ORDER BY id",
-                (conversation_id, vid)).fetchall()
-        if vid is None or not rows:
+                "WHERE conversation_id = ? AND (visitor_id = ? OR ?) ORDER BY id",
+                (conversation_id, vid, not demo)).fetchall()
+        if (vid is None and demo) or not rows:
             raise HTTPException(status_code=404, detail="conversation not found")
         out = []
         for r in rows:
@@ -221,11 +223,16 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
 
     @router.post("/alerts/{alert_id}/dismiss", status_code=204)
     def dismiss(alert_id: int) -> Response:
-        """Dismiss one alert."""
+        """Dismiss one alert (a no-op on the shared demo)."""
         with closing(connect(db_path)) as conn:
-            cur = conn.execute("UPDATE alerts SET dismissed = 1 WHERE id = ?", (alert_id,))
-            conn.commit()
-        if not cur.rowcount:
+            if demo:
+                cur = conn.execute("SELECT 1 FROM alerts WHERE id = ?", (alert_id,))
+                found = cur.fetchone() is not None
+            else:
+                cur = conn.execute("UPDATE alerts SET dismissed = 1 WHERE id = ?", (alert_id,))
+                conn.commit()
+                found = bool(cur.rowcount)
+        if not found:
             raise HTTPException(status_code=404, detail="alert not found")
         return Response(status_code=204)
 

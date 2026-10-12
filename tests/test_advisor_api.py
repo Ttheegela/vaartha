@@ -46,8 +46,8 @@ class FakeLLM:
         return r
 
 
-def _client(tmp_path, llm):
-    settings = Settings(db_path=tmp_path / "v.db", instance="demo", llm_model="test-model")
+def _client(tmp_path, llm, instance="demo"):
+    settings = Settings(db_path=tmp_path / "v.db", instance=instance, llm_model="test-model")
     app = create_app(settings, regime_provider=lambda: NORMAL, today=lambda: TODAY, llm=llm)
     return TestClient(app), settings
 
@@ -131,7 +131,7 @@ def test_sources_round_trip(tmp_path):
 
 
 def test_alerts_dismiss(tmp_path):
-    c, settings = _client(tmp_path, None)
+    c, settings = _client(tmp_path, None, instance="owner")
     conn = connect(settings.db_path)
     conn.execute("INSERT INTO alerts (created_at, kind, text) VALUES ('2026-10-12', 'k', 't')")
     conn.commit()
@@ -237,3 +237,24 @@ def test_chat_rate_limit(tmp_path):
 def test_conversations_without_cookie(tmp_path):
     c, _ = _client(tmp_path, FakeLLM())
     assert c.get("/api/conversations").json() == []
+
+
+def test_demo_dismiss_is_noop(tmp_path):
+    c, settings = _client(tmp_path, None)
+    conn = connect(settings.db_path)
+    conn.execute("INSERT INTO alerts (created_at, kind, text) VALUES ('2026-10-12', 'k', 't')")
+    conn.commit()
+    aid = c.get("/api/alerts").json()[0]["id"]
+    assert c.post(f"/api/alerts/{aid}/dismiss").status_code == 204
+    assert len(c.get("/api/alerts").json()) == 1
+    assert c.post("/api/alerts/999/dismiss").status_code == 404
+
+
+def test_owner_sees_all_conversations(tmp_path):
+    c, settings = _client(tmp_path, FakeLLM(_text("a"), _text("b")), instance="owner")
+    c.post("/api/chat", json={"message": "one", "conversation_id": "c-1"})
+    other = TestClient(c.app)  # no cookie: a different visitor
+    assert [x["id"] for x in other.get("/api/conversations").json()] == ["c-1"]
+    assert len(other.get("/api/conversations/c-1").json()) == 2
+    other.post("/api/chat", json={"message": "two", "conversation_id": "c-1"})
+    assert len(c.get("/api/conversations/c-1").json()) == 4

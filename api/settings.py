@@ -2,12 +2,20 @@
 
 import os
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 INSTANCES = ("owner", "demo")
 PLAID_ENVS = ("sandbox", "production")
 DEMO_CHAT_RATE = 20
+DEMO_ADMIN_RATE = 5  # sync / link_token / exchange calls per IP per hour on the demo
 DEFAULT_TZ = "America/New_York"
+
+
+def local_today(tz: str, now: datetime | None = None) -> date:
+    """The calendar date in zone `tz` (now = current UTC time unless given)."""
+    return (now or datetime.now(UTC)).astimezone(ZoneInfo(tz)).date()
 
 
 @dataclass(frozen=True)

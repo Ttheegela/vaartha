@@ -91,3 +91,19 @@ def test_sync_survives_failing_recurring_refresh(tmp_path, monkeypatch):
     monkeypatch.setattr("api.sync.refresh_recurring", boom)
     r = c.post("/api/sync")
     assert r.status_code == 200 and r.json() == {"items": {FAKE_ITEM_ID: "ok"}}
+
+
+def test_demo_admin_endpoints_rate_limited(tmp_path):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    for _ in range(5):
+        assert c.post("/api/plaid/link_token").status_code == 200
+    for path in ("/api/plaid/link_token", "/api/sync", "/api/plaid/exchange"):
+        r = c.post(path, json={"public_token": "public-fake-1"})
+        assert r.status_code == 429 and r.json() == {"detail": "rate limit: 5 per hour"}
+
+
+def test_owner_admin_endpoints_not_limited(tmp_path):
+    s = Settings(db_path=tmp_path / "v.db", instance="owner", token_key=new_key())
+    c = TestClient(create_app(s, regime_provider=lambda: NORMAL, today=lambda: TODAY,
+                              plaid=FakePlaid(TODAY)))
+    assert all(c.post("/api/plaid/link_token").status_code == 200 for _ in range(8))

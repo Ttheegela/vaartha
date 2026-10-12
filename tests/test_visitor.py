@@ -36,3 +36,22 @@ def test_visitor_id_validates():
     assert visitor_id(_req(cookies={"varta_vid": good})) == good
     assert visitor_id(_req(cookies={"varta_vid": "nope"})) is None
     assert visitor_id(_req()) is None
+
+
+def test_local_today_uses_zone_not_utc():
+    from datetime import UTC, date, datetime
+
+    from api.settings import local_today
+
+    now = datetime(2026, 10, 13, 2, 0, tzinfo=UTC)
+    assert local_today("America/New_York", now) == date(2026, 10, 12)
+    assert local_today("UTC", now) == date(2026, 10, 13)
+
+
+def test_limiter_thread_safe():
+    from concurrent.futures import ThreadPoolExecutor
+
+    rl = RateLimiter(50)
+    with ThreadPoolExecutor(16) as ex:
+        results = list(ex.map(lambda _: rl.allow("a"), range(400)))
+    assert sum(results) == 50

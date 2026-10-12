@@ -13,7 +13,7 @@ from api.agent_tools import default_toolbox
 from api.alerts import generate_alerts
 from api.briefing import make_briefing
 from api.db import TABLES, connect, init_db
-from api.settings import Settings
+from api.settings import Settings, local_today
 from scripts.refresh_news import run as refresh_news_run
 from scripts.seed_demo import seed
 
@@ -74,4 +74,4 @@ def reset(settings: Settings, today: date, now: datetime | None = None) -> dict:
 
 if __name__ == "__main__":
     cfg = Settings.from_env()
-    print(json.dumps(reset(cfg, datetime.now(UTC).astimezone().date()), default=str))
+    print(json.dumps(reset(cfg, local_today(cfg.tz)), default=str))

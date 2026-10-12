@@ -1,6 +1,7 @@
 """Anonymous visitor identity (cookie), client IP and a per-key rate limiter."""
 
 import re
+import threading
 import time
 from collections import defaultdict, deque
 from uuid import uuid4
@@ -37,16 +38,18 @@ class RateLimiter:
     def __init__(self, limit: int, window_s: int = DEFAULT_WINDOW_S, clock=time.monotonic):
         self.limit, self.window_s, self.clock = limit, window_s, clock
         self._hits: dict[str, deque] = defaultdict(deque)
+        self._lock = threading.Lock()
 
     def allow(self, key: str) -> bool:
         """Record a call for `key` and return whether it is within the limit."""
         if self.limit <= 0:
             return True
-        now = self.clock()
-        q = self._hits[key]
-        while q and q[0] <= now - self.window_s:
-            q.popleft()
-        if len(q) >= self.limit:
-            return False
-        q.append(now)
-        return True
+        with self._lock:
+            now = self.clock()
+            q = self._hits[key]
+            while q and q[0] <= now - self.window_s:
+                q.popleft()
+            if len(q) >= self.limit:
+                return False
+            q.append(now)
+            return True

@@ -12,7 +12,7 @@ from datetime import date
 from typing import Literal
 
 import polars as pl
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from api.advisor import build_advisor_router
@@ -24,8 +24,9 @@ from api.finance import build_finance_router
 from api.logs import setup_logging
 from api.news_read import build_news_router
 from api.plaid_client import PlaidAPI, PlaidClient, PlaidError
-from api.settings import Settings
+from api.settings import DEMO_ADMIN_RATE, Settings, local_today
 from api.sync import link_item, sync_all
+from api.visitor import RateLimiter, client_ip
 from core.live import live_regime
 from core.prices import fetch_closes
 from core.regime import Regime
@@ -75,7 +76,7 @@ def create_app(
     settings: Settings | None = None,
     regime_provider: Callable[[], Regime] = live_regime,
     clock: Callable[[], float] = time.monotonic,
-    today: Callable[[], date] = date.today,
+    today: Callable[[], date] | None = None,
     plaid: PlaidAPI | None = None,
     llm=None,
     closes_provider: Callable[[list[str]], pl.DataFrame] = lambda t: fetch_closes(t, "1y"),
@@ -83,6 +84,7 @@ def create_app(
     """Build the API: initialise the DB and register routes."""
     setup_logging()
     settings = settings or Settings.from_env()
+    today = today or (lambda: local_today(settings.tz))
     with closing(connect(settings.db_path)) as conn:
         init_db(conn)
 
@@ -92,7 +94,11 @@ def create_app(
         raise ValueError("TOKEN_ENCRYPTION_KEY is required when Plaid is configured")
     box = TokenBox(settings.token_key) if settings.token_key else None
 
-    def require_plaid() -> PlaidAPI:
+    admin_limiter = RateLimiter(DEMO_ADMIN_RATE if settings.instance == "demo" else 0)
+
+    def require_plaid(request: Request) -> PlaidAPI:
+        if not admin_limiter.allow(client_ip(request, settings.trust_proxy)):
+            raise HTTPException(status_code=429, detail=f"rate limit: {DEMO_ADMIN_RATE} per hour")
         if plaid is None or box is None:
             raise HTTPException(status_code=503, detail="plaid not configured")
         return plaid
@@ -135,9 +141,9 @@ def create_app(
         settings.db_path, toolbox, llm, settings.llm_model, settings))
 
     @app.post("/api/plaid/link_token", response_model=LinkTokenOut)
-    def plaid_link_token() -> LinkTokenOut:
+    def plaid_link_token(request: Request) -> LinkTokenOut:
         """Create a Plaid Link token for this instance's single user."""
-        p = require_plaid()
+        p = require_plaid(request)
         try:
             return LinkTokenOut(link_token=p.link_token_create(
                 settings.instance, PLAID_PRODUCTS, PLAID_IF_SUPPORTED))
@@ -145,9 +151,9 @@ def create_app(
             raise HTTPException(status_code=502, detail=exc.code) from exc
 
     @app.post("/api/plaid/exchange", response_model=ExchangeOut)
-    def plaid_exchange(body: ExchangeIn) -> ExchangeOut:
+    def plaid_exchange(body: ExchangeIn, request: Request) -> ExchangeOut:
         """Exchange Link's public token and run the first sync."""
-        p = require_plaid()
+        p = require_plaid(request)
         with closing(connect(settings.db_path)) as conn:
             try:
                 return ExchangeOut(item_id=link_item(conn, p, box, body.public_token, today()))
@@ -155,9 +161,9 @@ def create_app(
                 raise HTTPException(status_code=502, detail=exc.code) from exc
 
     @app.post("/api/sync", response_model=SyncOut)
-    def sync() -> SyncOut:
+    def sync(request: Request) -> SyncOut:
         """Sync every linked item; per-item status, never a 500 for one bad item."""
-        p = require_plaid()
+        p = require_plaid(request)
         with closing(connect(settings.db_path)) as conn:
             return SyncOut(items=sync_all(conn, p, box, today()))
 

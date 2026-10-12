@@ -55,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Dismiss
-         * @description Dismiss one alert.
+         * @description Dismiss one alert (a no-op on the shared demo).
          */
         post: operations["dismiss_api_alerts__alert_id__dismiss_post"];
         delete?: never;

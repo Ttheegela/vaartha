@@ -1266,7 +1266,7 @@
     },
     "/api/alerts/{alert_id}/dismiss": {
       "post": {
-        "description": "Dismiss one alert.",
+        "description": "Dismiss one alert (a no-op on the shared demo).",
         "operationId": "dismiss_api_alerts__alert_id__dismiss_post",
         "parameters": [
           {
