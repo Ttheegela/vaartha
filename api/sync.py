@@ -7,8 +7,11 @@ import logging
 import sqlite3
 from datetime import UTC, date, datetime
 
+import polars as pl
+
 from api.crypto import TokenBox
 from api.plaid_client import PlaidAPI, PlaidError
+from core.recurring import STREAM_COLUMNS, detect_recurring
 
 log = logging.getLogger("varta.sync")
 
@@ -136,8 +139,23 @@ def snapshot_networth(conn: sqlite3.Connection, today: date) -> None:
 
 
 def refresh_recurring(conn: sqlite3.Connection, today: date) -> int:
-    """Rebuild recurring_streams from transactions. Implemented in Task 4."""
-    return 0
+    """Rebuild recurring_streams from non-pending transactions; returns stream count."""
+    rows = conn.execute("SELECT account_id, date, amount, merchant, pfc_primary, pfc_detailed "
+                        "FROM transactions WHERE pending=0").fetchall()
+    txns = pl.DataFrame(
+        [dict(r) for r in rows],
+        schema={"account_id": pl.Utf8, "date": pl.Utf8, "amount": pl.Float64, "merchant": pl.Utf8,
+                "pfc_primary": pl.Utf8, "pfc_detailed": pl.Utf8},
+    ).with_columns(pl.col("date").str.to_date())
+    streams = detect_recurring(txns, today)
+    with conn:
+        conn.execute("DELETE FROM recurring_streams")
+        conn.executemany(
+            f"INSERT INTO recurring_streams ({', '.join(STREAM_COLUMNS)}) "
+            f"VALUES ({', '.join('?' * len(STREAM_COLUMNS))})",
+            [tuple(v.isoformat() if isinstance(v, date) else v for v in r)
+             for r in streams.select(STREAM_COLUMNS).iter_rows()])
+    return streams.height
 
 
 def sync_all(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,

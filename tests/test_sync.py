@@ -149,3 +149,15 @@ def test_sync_all_survives_non_plaid_error(env):
     _add_item(conn, TokenBox(new_key()), "item-2", "access-x")  # sealed with another key
     assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: "ok", "item-2": "ERROR"}
     assert _count(conn, "networth_snapshots") == 1
+
+
+def test_recurring_streams_built_on_link(env):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    rows = {r["merchant"]: dict(r) for r in conn.execute("SELECT * FROM recurring_streams")}
+    expected = {"Rent", "Spotify", "Con Edison", "Netflix", "Verizon", "Geico", "Amazon Prime"}
+    assert expected <= set(rows)
+    assert "Whole Foods" not in rows
+    assert rows["Rent"]["kind"] == "bill" and rows["Netflix"]["kind"] == "subscription"
+    assert rows["Netflix"]["last_amount"] == 22.99
+    assert rows["Amazon Prime"]["frequency"] == "ANNUALLY"
