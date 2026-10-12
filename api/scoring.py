@@ -39,11 +39,11 @@ BACKOFF_SECONDS = 1.0
 MAX_TEXT_CHARS = 2000
 HTTP_TIMEOUT_SECONDS = 30.0
 MARKET_TICKER = "MARKET"
+MAX_CONSECUTIVE_FAILURES = 3
 HEURISTIC_MODEL = "heuristic-v1"
 
 POSITIVE_WORDS = (
     "beat",
-    "beats",
     "surge",
     "record",
     "upgrade",
@@ -54,7 +54,6 @@ POSITIVE_WORDS = (
 )
 NEGATIVE_WORDS = (
     "miss",
-    "misses",
     "plunge",
     "downgrade",
     "cut",
@@ -113,6 +112,7 @@ class Scorer(Protocol):
 def questions(ticker: str) -> dict:
     """The five scoring questions as TypeSafe JSON."""
     subject = "the overall stock market" if ticker == MARKET_TICKER else "`ticker`"
+    market = ticker == MARKET_TICKER
     return {
         "sentiment": {
             "type": "score",
@@ -122,22 +122,23 @@ def questions(ticker: str) -> dict:
         "material": {
             "type": "noul",
             "instructions": (
-                "Is this item materially relevant to the company or market in `ticker`?"
+                "Does `item` contain information that could plausibly move "
+                + ("the overall stock market?" if market else "`ticker`'s price?")
             ),
         },
         "stress": {
             "type": "score",
-            "instructions": "How much systemic stress does this item signal?",
+            "instructions": "How much geopolitical or market stress does `item` describe?",
             "criteria": list(STRESS_LEVELS),
         },
         "event": {
             "type": "choice",
-            "instructions": "What kind of event does this item report?",
+            "instructions": "What kind of event is this?",
             "criteria": {e: None for e in EVENTS},
         },
         "noise": {
             "type": "noul",
-            "instructions": "Is this item noise: clickbait, a rehash, or without new information?",
+            "instructions": "Is `item` a joke, meme, or low-information post?",
         },
     }
 
@@ -158,8 +159,21 @@ class TypeSafeScorer:
             headers={"Authorization": f"Bearer {api_key}"},
         )
         self._sleep = sleep
+        self._failures = 0
 
     def score(
+        self, title: str, text: str, source: str, ticker: str, company: str
+    ) -> ScoreResult | None:
+        """Score one item; after repeated failures stop calling the API (circuit open)."""
+        if self._failures >= MAX_CONSECUTIVE_FAILURES:
+            return None
+        result = self._call(title, text, source, ticker, company)
+        self._failures = 0 if result else self._failures + 1
+        if self._failures == MAX_CONSECUTIVE_FAILURES:
+            log.warning("typesafe circuit open")
+        return result
+
+    def _call(
         self, title: str, text: str, source: str, ticker: str, company: str
     ) -> ScoreResult | None:
         """Call Jev with retries on 429/529; log status or exception type only."""
@@ -204,7 +218,7 @@ class TypeSafeScorer:
 
 def _has(text: str, words: tuple[str, ...]) -> bool:
     """True if any word appears as a whole word (optional plural s)."""
-    return any(re.search(rf"\b{re.escape(w)}s?\b", text) for w in words)
+    return any(re.search(rf"\b{re.escape(w)}(?:e?s)?\b", text) for w in words)
 
 
 class HeuristicScorer:
@@ -220,7 +234,7 @@ class HeuristicScorer:
             material = MATERIAL_MARKET
         else:
             names = [n.lower() for n in (ticker, company) if n]
-            material = MATERIAL_NAMED if any(n in title.lower() for n in names) else MATERIAL_OTHER
+            material = MATERIAL_NAMED if _has(title.lower(), tuple(names)) else MATERIAL_OTHER
         stress = next((lvl for lvl, words in STRESS_RULES if _has(t, words)), 0)
         event = next((e for e, words in EVENT_RULES if _has(t, words)), "other")
         return ScoreResult(

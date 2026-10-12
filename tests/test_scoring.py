@@ -110,3 +110,81 @@ def test_heuristic_is_deterministic():
     )
     b = h.score("US expands chip export controls and sanctions", "", "x", "MARKET", "")
     assert b.sentiment < 0 and b.stress == 2 and b.event == "geopolitical"
+
+
+def test_question_wording_matches_spec():
+    from api.scoring import questions
+
+    q = questions("NVDA")
+    assert (
+        q["sentiment"]["instructions"] == "How does this item bear on `ticker`'s near-term outlook?"
+    )
+    assert (
+        q["material"]["instructions"]
+        == "Does `item` contain information that could plausibly move `ticker`'s price?"
+    )
+    assert (
+        q["stress"]["instructions"]
+        == "How much geopolitical or market stress does `item` describe?"
+    )
+    assert q["event"]["instructions"] == "What kind of event is this?"
+    assert q["noise"]["instructions"] == "Is `item` a joke, meme, or low-information post?"
+    m = questions("MARKET")
+    assert (
+        m["material"]["instructions"]
+        == "Does `item` contain information that could plausibly move the overall stock market?"
+    )
+
+
+def test_circuit_breaker_stops_calling():
+    from api.scoring import MAX_ATTEMPTS
+
+    calls = []
+    t = httpx.MockTransport(lambda r: calls.append(1) or httpx.Response(429))
+    s = TypeSafeScorer("tk", transport=t, sleep=lambda x: None)
+    assert [s.score("t", "", "s", "NVDA", "N") for _ in range(5)] == [None] * 5
+    assert len(calls) == 3 * MAX_ATTEMPTS
+    calls.clear()
+    t = httpx.MockTransport(lambda r: calls.append(1) or httpx.Response(401))
+    s = TypeSafeScorer("tk", transport=t)
+    s.score("t", "", "s", "NVDA", "N")
+    assert len(calls) == 1
+
+
+def test_success_resets_failure_counter():
+    codes = iter([500, 500, 200, 500, 500, 200])
+    t = httpx.MockTransport(
+        lambda r: (lambda c: httpx.Response(c, json=JEV_OK) if c == 200 else httpx.Response(c))(
+            next(codes)
+        )
+    )
+    s = TypeSafeScorer("tk", transport=t)
+    assert [s.score("t", "", "s", "NVDA", "N") is not None for _ in range(6)] == [
+        False,
+        False,
+        True,
+        False,
+        False,
+        True,
+    ]
+
+
+def test_network_error_and_malformed_return_none():
+    def boom(req):
+        raise httpx.ConnectError("x")
+
+    assert (
+        TypeSafeScorer("tk", transport=httpx.MockTransport(boom)).score("t", "", "s", "NVDA", "N")
+        is None
+    )
+    bad = {"model": "m", "answers": {"sentiment": JEV_OK["answers"]["sentiment"]}}
+    t = httpx.MockTransport(lambda r: httpx.Response(200, json=bad))
+    assert TypeSafeScorer("tk", transport=t).score("t", "", "s", "NVDA", "N") is None
+    t = httpx.MockTransport(lambda r: httpx.Response(200, content=b"not json"))
+    assert TypeSafeScorer("tk", transport=t).score("t", "", "s", "NVDA", "N") is None
+
+
+def test_heuristic_whole_word_and_no_double_count():
+    h = HeuristicScorer()
+    assert h.score("Bank of X", "", "s", "BAN", "").material == 0.4
+    assert h.score("Firm beats", "", "s", "NVDA", "").sentiment == 0.5

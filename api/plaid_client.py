@@ -27,9 +27,13 @@ class PlaidError(Exception):
 class PlaidAPI(Protocol):
     """The Plaid calls Vārtā uses; implemented by PlaidClient and FakePlaid."""
 
-    def link_token_create(self, user_id: str, products: list[str],
-                          required_if_supported: list[str] | None = None,
-                          days_requested: int = MAX_HISTORY_DAYS) -> str: ...
+    def link_token_create(
+        self,
+        user_id: str,
+        products: list[str],
+        required_if_supported: list[str] | None = None,
+        days_requested: int = MAX_HISTORY_DAYS,
+    ) -> str: ...
     def exchange_public_token(self, public_token: str) -> tuple[str, str]: ...
     def accounts_get(self, access_token: str) -> dict: ...
     def transactions_sync(self, access_token: str, cursor: str | None) -> dict: ...
@@ -40,8 +44,9 @@ class PlaidAPI(Protocol):
 class PlaidClient:
     """Thin JSON-over-HTTPS client for the endpoints in PlaidAPI."""
 
-    def __init__(self, env: str, client_id: str, secret: str,
-                 transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(
+        self, env: str, client_id: str, secret: str, transport: httpx.BaseTransport | None = None
+    ) -> None:
         self._http = httpx.Client(
             base_url=PLAID_HOSTS[env],
             timeout=TIMEOUT_SECONDS,
@@ -61,10 +66,12 @@ class PlaidClient:
             data = None
         if resp.status_code >= 400 or data is None:
             if isinstance(data, dict) and "error_code" in data:
-                raise PlaidError(data["error_code"], data.get("error_message", ""),
-                                 resp.status_code)
-            raise PlaidError(f"HTTP_{resp.status_code}", resp.text[:ERROR_TEXT_LIMIT],
-                             resp.status_code)
+                raise PlaidError(
+                    data["error_code"], data.get("error_message", ""), resp.status_code
+                )
+            raise PlaidError(
+                f"HTTP_{resp.status_code}", resp.text[:ERROR_TEXT_LIMIT], resp.status_code
+            )
         return data
 
     @staticmethod
@@ -75,9 +82,13 @@ class PlaidClient:
         except (KeyError, TypeError) as exc:
             raise PlaidError("PLAID_BAD_RESPONSE", f"missing {key}", 0) from exc
 
-    def link_token_create(self, user_id: str, products: list[str],
-                          required_if_supported: list[str] | None = None,
-                          days_requested: int = MAX_HISTORY_DAYS) -> str:
+    def link_token_create(
+        self,
+        user_id: str,
+        products: list[str],
+        required_if_supported: list[str] | None = None,
+        days_requested: int = MAX_HISTORY_DAYS,
+    ) -> str:
         """Create a Link token. `products` must all be supported by an institution;
         `required_if_supported` are requested only where available."""
         body = {
@@ -114,9 +125,12 @@ class PlaidClient:
 
     def sandbox_public_token_create(self, institution_id: str, products: list[str]) -> str:
         """Sandbox only: create an item without Link."""
-        data = self._post("/sandbox/public_token/create", {
-            "institution_id": institution_id,
-            "initial_products": products,
-            "options": {"transactions": {"days_requested": MAX_HISTORY_DAYS}},
-        })
+        data = self._post(
+            "/sandbox/public_token/create",
+            {
+                "institution_id": institution_id,
+                "initial_products": products,
+                "options": {"transactions": {"days_requested": MAX_HISTORY_DAYS}},
+            },
+        )
         return self._field(data, "public_token")

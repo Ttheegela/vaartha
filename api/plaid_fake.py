@@ -43,11 +43,23 @@ SECURITIES = [
 ]
 
 
-def _txn(tid: str, day: date, merchant: str, amount: float, primary: str, detailed: str,
-         account: str = "acc-checking") -> dict:
+def _txn(
+    tid: str,
+    day: date,
+    merchant: str,
+    amount: float,
+    primary: str,
+    detailed: str,
+    account: str = "acc-checking",
+) -> dict:
     return {
-        "transaction_id": tid, "account_id": account, "date": day.isoformat(),
-        "amount": amount, "merchant_name": merchant, "name": merchant, "pending": False,
+        "transaction_id": tid,
+        "account_id": account,
+        "date": day.isoformat(),
+        "amount": amount,
+        "merchant_name": merchant,
+        "name": merchant,
+        "pending": False,
         "personal_finance_category": {"primary": primary, "detailed": detailed},
     }
 
@@ -71,8 +83,14 @@ def build_fake_dataset(today: date) -> dict:
             if start <= day <= today:
                 old = merchant == "Netflix" and (today - day).days > 60
                 price = NETFLIX_OLD_PRICE if old else amount
-                add(day, merchant, price, primary, detailed,
-                    "acc-credit" if primary == "ENTERTAINMENT" else "acc-checking")
+                add(
+                    day,
+                    merchant,
+                    price,
+                    primary,
+                    detailed,
+                    "acc-credit" if primary == "ENTERTAINMENT" else "acc-checking",
+                )
         for dom in PAYDAYS:
             day = d.replace(day=dom)
             if start <= day <= today:
@@ -84,34 +102,74 @@ def build_fake_dataset(today: date) -> dict:
 
     day, i = start, 0
     while day <= today:
-        add(day, "Whole Foods", round(rng.uniform(45, 140), 2),
-            "FOOD_AND_DRINK", "FOOD_AND_DRINK_GROCERIES", "acc-credit")
+        add(
+            day,
+            "Whole Foods",
+            round(rng.uniform(45, 140), 2),
+            "FOOD_AND_DRINK",
+            "FOOD_AND_DRINK_GROCERIES",
+            "acc-credit",
+        )
         day += timedelta(days=GROCERY_GAPS[i % len(GROCERY_GAPS)])
         i += 1
 
-    add(today - timedelta(days=2), "Whole Foods", 64.20,
-        "FOOD_AND_DRINK", "FOOD_AND_DRINK_GROCERIES", "acc-credit")  # guarantees spend this month
+    add(
+        today - timedelta(days=2),
+        "Whole Foods",
+        64.20,
+        "FOOD_AND_DRINK",
+        "FOOD_AND_DRINK_GROCERIES",
+        "acc-credit",
+    )  # guarantees spend this month
 
     for _ in range(60):
         day = today - timedelta(days=rng.randint(0, HISTORY_DAYS))
-        add(day, rng.choice(["Sweetgreen", "Blue Bottle", "Uber", "Target"]),
-            round(rng.uniform(8, 60), 2), "FOOD_AND_DRINK", "FOOD_AND_DRINK_RESTAURANT",
-            "acc-credit")
+        add(
+            day,
+            rng.choice(["Sweetgreen", "Blue Bottle", "Uber", "Target"]),
+            round(rng.uniform(8, 60), 2),
+            "FOOD_AND_DRINK",
+            "FOOD_AND_DRINK_RESTAURANT",
+            "acc-credit",
+        )
 
-    accounts = [{
-        "account_id": aid, "name": name, "official_name": name, "type": typ, "subtype": sub,
-        "mask": mask,
-        "balances": {"current": bal, "available": bal if typ == "depository" else None,
-                     "iso_currency_code": "USD"},
-    } for aid, name, typ, sub, mask, bal in ACCOUNTS]
-    securities = [{"security_id": sid, "ticker_symbol": t, "name": nm, "type": ty}
-                  for sid, t, nm, ty, _, _ in SECURITIES]
-    holdings = [{"account_id": "acc-brokerage", "security_id": sid, "quantity": q,
-                 "cost_basis": round(q * px * 0.8, 2), "institution_value": round(q * px, 2),
-                 "institution_price": px}
-                for sid, _, _, _, q, px in SECURITIES]
-    return {"accounts": accounts, "transactions": sorted(txns, key=lambda t: t["date"]),
-            "holdings": holdings, "securities": securities}
+    accounts = [
+        {
+            "account_id": aid,
+            "name": name,
+            "official_name": name,
+            "type": typ,
+            "subtype": sub,
+            "mask": mask,
+            "balances": {
+                "current": bal,
+                "available": bal if typ == "depository" else None,
+                "iso_currency_code": "USD",
+            },
+        }
+        for aid, name, typ, sub, mask, bal in ACCOUNTS
+    ]
+    securities = [
+        {"security_id": sid, "ticker_symbol": t, "name": nm, "type": ty}
+        for sid, t, nm, ty, _, _ in SECURITIES
+    ]
+    holdings = [
+        {
+            "account_id": "acc-brokerage",
+            "security_id": sid,
+            "quantity": q,
+            "cost_basis": round(q * px * 0.8, 2),
+            "institution_value": round(q * px, 2),
+            "institution_price": px,
+        }
+        for sid, _, _, _, q, px in SECURITIES
+    ]
+    return {
+        "accounts": accounts,
+        "transactions": sorted(txns, key=lambda t: t["date"]),
+        "holdings": holdings,
+        "securities": securities,
+    }
 
 
 class FakePlaid:
@@ -144,8 +202,10 @@ class FakePlaid:
         self._maybe_fail("accounts_get")
         if access_token in self.login_required_tokens:
             raise PlaidError("ITEM_LOGIN_REQUIRED", "simulated", 400)
-        return {"accounts": self.data["accounts"],
-                "item": {"item_id": FAKE_ITEM_ID, "institution_name": FAKE_INSTITUTION}}
+        return {
+            "accounts": self.data["accounts"],
+            "item": {"item_id": FAKE_ITEM_ID, "institution_name": FAKE_INSTITUTION},
+        }
 
     def transactions_sync(self, access_token, cursor):
         self._maybe_fail("transactions_sync")
@@ -161,10 +221,15 @@ class FakePlaid:
         if page == self.fail_on_page:
             self.fail_on_page = None
             raise PlaidError("INTERNAL_SERVER_ERROR", "simulated", 500)
-        chunk = txns[page * self.page_size:(page + 1) * self.page_size]
+        chunk = txns[page * self.page_size : (page + 1) * self.page_size]
         has_more = (page + 1) * self.page_size < len(txns)
-        return {"added": chunk, "modified": [], "removed": [],
-                "next_cursor": f"p{page + 1}" if has_more else "done", "has_more": has_more}
+        return {
+            "added": chunk,
+            "modified": [],
+            "removed": [],
+            "next_cursor": f"p{page + 1}" if has_more else "done",
+            "has_more": has_more,
+        }
 
     def investments_holdings_get(self, access_token):
         self._maybe_fail("investments_holdings_get")
@@ -178,5 +243,7 @@ class FakePlaid:
     def modify_and_remove(self, modified_id: str, new_amount: float, removed_id: str) -> None:
         """Queue a modified and a removed transaction for the next incremental sync."""
         txn = next(t for t in self.data["transactions"] if t["transaction_id"] == modified_id)
-        self._pending = {"modified": [{**txn, "amount": new_amount}],
-                         "removed": [{"transaction_id": removed_id}]}
+        self._pending = {
+            "modified": [{**txn, "amount": new_amount}],
+            "removed": [{"transaction_id": removed_id}],
+        }
