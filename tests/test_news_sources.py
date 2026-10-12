@@ -4,7 +4,14 @@ from datetime import date
 
 import httpx
 
-from api.news_sources import fetch_alpaca, fetch_finnhub, fetch_rss
+from api.news_sources import (
+    fetch_alpaca,
+    fetch_edgar,
+    fetch_finnhub,
+    fetch_gdelt,
+    fetch_polymarket,
+    fetch_rss,
+)
 
 RSS = """<?xml version="1.0"?><rss><channel>
 <item><title>Fed holds rates steady</title><link>https://mw.com/a</link>
@@ -129,3 +136,55 @@ def test_finnhub_missing_key_no_request():
         raise AssertionError("should not be called")
 
     assert fetch_finnhub(None, ["NVDA"], date(2026, 10, 12), transport=_t(h)) == []
+
+
+def test_gdelt_parses_and_survives_rate_limit_text():
+    ok = _t(lambda r: httpx.Response(200, json={"articles": [
+        {"url": "https://ft.com/x", "title": "New sanctions hit tankers",
+         "seendate": "20261011T143000Z",
+         "domain": "ft.com"}, {"url": "", "title": "no url"}]}))
+    items = fetch_gdelt(transport=ok)
+    assert [i.title for i in items] == ["New sanctions hit tankers"]
+    assert items[0].published_at == "2026-10-11T14:30:00Z" and items[0].source == "GDELT/ft.com"
+    limited = _t(lambda r: httpx.Response(200, text="Please limit requests to one every 5 seconds"))
+    assert fetch_gdelt(transport=limited) == []
+
+
+def test_edgar_needs_user_agent_and_filters_8k():
+    def h(req):
+        assert req.headers["User-Agent"] == "Varta dev@example.com"
+        if req.url.path.endswith("company_tickers.json"):
+            return httpx.Response(200, json={"0": {
+                "cik_str": 1045810, "ticker": "NVDA", "title": "NVIDIA CORP"}})
+        return httpx.Response(200, json={"name": "NVIDIA CORP", "filings": {"recent": {
+            "form": ["8-K", "10-Q", "8-K"],
+            "filingDate": ["2026-10-10", "2026-10-09", "2026-09-01"],
+            "accessionNumber": ["0001045810-26-000123", "x", "y"],
+            "primaryDocument": ["d8k.htm", "q.htm", "o.htm"]}}})
+
+    items = fetch_edgar("Varta dev@example.com", ["NVDA", "ZZZ"], date(2026, 10, 12),
+                        transport=_t(h))
+    assert len(items) == 1
+    assert items[0].url == (
+        "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000123/d8k.htm")
+    assert items[0].symbols == ("NVDA",) and items[0].source == "SEC EDGAR"
+    assert fetch_edgar(None, ["NVDA"], date(2026, 10, 12),
+                       transport=_t(lambda r: 1 / 0)) == []
+
+
+def test_polymarket_filters_and_ranks():
+    markets = [
+        {"id": 1, "question": "Will China blockade Taiwan in 2026?",
+         "outcomePrices": "[\"0.07\", \"0.93\"]", "liquidity": "900000",
+         "endDate": "2026-12-31T00:00:00Z", "slug": "china-taiwan"},
+        {"id": 2, "question": "NBA finals winner?", "outcomePrices": "[\"0.5\",\"0.5\"]",
+         "liquidity": "5", "slug": "nba"},
+        {"id": 3, "question": "US recession in 2026?", "outcomePrices": "[\"0.21\",\"0.79\"]",
+         "liquidity": "100", "endDate": "2026-12-31", "slug": "rec"},
+    ]
+    pages = iter([markets, [], []])
+    got = fetch_polymarket(
+        transport=_t(lambda r: httpx.Response(200, json=next(pages))))
+    assert [m.market_id for m in got] == ["1", "3"]
+    assert got[0].yes_prob == 0.07 and got[0].category == "China / Taiwan"
+    assert got[1].category == "US Macro"
