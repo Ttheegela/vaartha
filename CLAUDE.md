@@ -1,7 +1,7 @@
 # CLAUDE.md — Vārtā v2
 
 Read before changing anything. Design spec: `docs/superpowers/specs/2026-10-11-varta-v2-design.md`.
-Plans: `docs/superpowers/plans/`.
+Plans: `docs/superpowers/plans/`. Current status, open items and next step: `docs/superpowers/STATUS.md` (read it first when resuming).
 
 ## What this is
 Personal finance + investing advisor agent (Origin-style). Two instances from one codebase:
