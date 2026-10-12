@@ -4,12 +4,10 @@ Run: uv run python -m worker.main
 """
 
 import logging
-import os
 import signal
 import time
 from contextlib import closing
 from datetime import UTC, datetime
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from api.agent import llm_client
@@ -22,20 +20,14 @@ from api.logs import setup_logging
 from api.plaid_client import PlaidClient
 from api.settings import Settings
 from api.sync import sync_all
-from scripts.backup_db import backup
+from scripts.backup_db import DEFAULT_KEEP, backup, backup_dir
 from scripts.refresh_news import run as refresh_news_run
 from scripts.reset_demo import reset
 from worker.schedule import JOBS, due
 
 log = logging.getLogger("varta.worker")
 TICK_SECONDS = 60
-BACKUP_KEEP = 7
 STATE_PREFIX = "job:"
-
-
-def backup_dir() -> Path:
-    """Backup directory from VARTA_BACKUP_DIR, default data/backups."""
-    return Path(os.environ.get("VARTA_BACKUP_DIR", "data/backups"))
 
 
 def run_job(name: str, settings: Settings, now: datetime) -> None:
@@ -44,7 +36,7 @@ def run_job(name: str, settings: Settings, now: datetime) -> None:
     if name == "news":
         refresh_news_run(settings, offline=False, now=now)
     elif name == "backup":
-        backup(settings.db_path, backup_dir(), keep=BACKUP_KEEP, now=now)
+        backup(settings.db_path, backup_dir(), keep=DEFAULT_KEEP, now=now)
     elif name == "demo_reset":
         reset(settings, today, now=now)
     elif name == "sync":
@@ -95,11 +87,14 @@ def main() -> None:
     """Tick forever; SIGINT/SIGTERM exit cleanly."""
     setup_logging()
     settings = Settings.from_env()
-    signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
     log.info("worker started instance=%s tz=%s", settings.instance, settings.tz)
     try:
         while True:
-            tick(settings, datetime.now(UTC))
+            try:
+                tick(settings, datetime.now(UTC))
+            except Exception:  # noqa: BLE001 - keep the loop alive
+                log.exception("tick failed")
             time.sleep(TICK_SECONDS)
     except KeyboardInterrupt:
         log.info("worker stopped")

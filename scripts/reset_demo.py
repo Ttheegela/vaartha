@@ -24,17 +24,22 @@ DELETE_FIRST = ("news_scores", "holdings", "transactions", "recurring_streams")
 DELETE_LAST = ("securities", "accounts", "items")
 
 
+def _wipe(settings: Settings) -> None:
+    """Delete all rows except app_state in one transaction, children first."""
+    middle = [t for t in TABLES if t not in KEEP_TABLES + DELETE_FIRST + DELETE_LAST]
+    with closing(connect(settings.db_path)) as conn:
+        init_db(conn)
+        with conn:
+            for table in (*DELETE_FIRST, *middle, *DELETE_LAST):
+                conn.execute(f"DELETE FROM {table}")
+
+
 def reset(settings: Settings, today: date, now: datetime | None = None) -> dict:
     """Delete all data except app_state, reseed (sandbox, else fake), then refresh derived data."""
     if settings.instance != "demo":
         raise ValueError("reset_demo only runs on the demo instance")
     now = now or datetime.now(UTC)
-    middle = [t for t in TABLES if t not in KEEP_TABLES + DELETE_FIRST + DELETE_LAST]
-    with closing(connect(settings.db_path)) as conn:
-        init_db(conn)
-        with conn:  # one transaction
-            for table in (*DELETE_FIRST, *middle, *DELETE_LAST):
-                conn.execute(f"DELETE FROM {table}")
+    _wipe(settings)
     source = "sandbox" if settings.plaid_configured else "fake"
     try:
         seed(settings, source, today)
@@ -43,6 +48,7 @@ def reset(settings: Settings, today: date, now: datetime | None = None) -> dict:
             raise
         log.warning("sandbox seed failed (%s); falling back to fake", type(exc).__name__)
         source = "fake"
+        _wipe(settings)  # seed() is not atomic; drop partial sandbox rows
         seed(settings, source, today)
     out: dict = {"source": source, "news": None, "alerts": 0, "briefing": False}
     try:

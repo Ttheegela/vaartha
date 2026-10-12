@@ -4,6 +4,7 @@ Run: uv run python -m scripts.backup_db [--out data/backups] [--keep 7]
 """
 
 import argparse
+import os
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime
@@ -13,6 +14,11 @@ from api.settings import Settings
 
 DEFAULT_KEEP = 7
 DEFAULT_OUT = "data/backups"
+
+
+def backup_dir() -> Path:
+    """Backup directory from VARTA_BACKUP_DIR, default data/backups."""
+    return Path(os.environ.get("VARTA_BACKUP_DIR", DEFAULT_OUT))
 
 
 def backup(db_path: Path, out_dir: Path, keep: int = DEFAULT_KEEP,
@@ -29,7 +35,7 @@ def backup(db_path: Path, out_dir: Path, keep: int = DEFAULT_KEEP,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--out", type=Path, default=backup_dir())
     parser.add_argument("--keep", type=int, default=DEFAULT_KEEP)
     args = parser.parse_args()
-    print(backup(Settings.from_env().db_path, Path(args.out), args.keep))
+    print(backup(Settings.from_env().db_path, args.out, args.keep))

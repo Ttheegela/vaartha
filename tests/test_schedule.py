@@ -50,3 +50,12 @@ def test_down_three_days_one_run():
 def test_jobs_table():
     assert [j.name for j in JOBS] == ["sync", "news", "alerts", "briefing", "backup", "demo_reset"]
     assert [j.name for j in JOBS if j.demo_only] == ["demo_reset"]
+
+
+def test_backup_dst_days_run_once():
+    backup = next(j for j in JOBS if j.name == "backup")
+    for y, m, d in [(2026, 3, 8), (2026, 11, 1)]:
+        last = local(y, m, d, 2, 31) - timedelta(days=1)
+        first = utc(y, m, d, 12)  # well after 02:30 local
+        assert due(backup, first, last, NY)
+        assert not due(backup, first + timedelta(minutes=1), first, NY)
