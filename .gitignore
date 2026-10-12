@@ -48,7 +48,7 @@ src/models/kronos_repo/
 .claude/
 
 # v2 runtime data
-data/
+/data/
 *.db
 *.db-wal
 *.db-shm

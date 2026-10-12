@@ -47,7 +47,7 @@ def _normalize(v: float, lo: float, hi: float) -> float:
 
 
 def _clean(prices: list[float | None]) -> list[float]:
-    out = [float(p) for p in prices if p is not None and not math.isnan(p)]
+    out = [float(p) for p in prices if p is not None and math.isfinite(p)]
     if len(out) < MIN_POINTS:
         raise ValueError(f"need >= {MIN_POINTS} prices, got {len(out)}")
     if min(out) <= 0:

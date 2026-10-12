@@ -59,3 +59,10 @@ def test_non_positive_price_raises():
     bno[20] = 0.0
     with pytest.raises(ValueError, match="positive"):
         compute_regime(bno, [100.0] * 40, [1800.0] * 40)
+
+
+def test_infinite_price_raises():
+    bno = [100.0] * 40
+    bno[-5] = math.inf
+    with pytest.raises(ValueError, match="need >= 30|finite"):
+        compute_regime(bno[-30:], [100.0] * 40, [1800.0] * 40)
