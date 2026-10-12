@@ -1,7 +1,63 @@
-import { Link2, RefreshCw } from "lucide-react"
-import { accounts } from "@/lib/mock-data"
 import { PageHeading } from "@/components/page-heading"
-import { Button } from "@/components/ui/button"
+import { LinkAccountButton } from "@/components/link-account-button"
+import { SyncButton } from "@/components/sync-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { toAccounts } from "@/lib/adapters"
+import type { components } from "@/lib/api-types"
+import { relativeTime } from "@/lib/relative-time"
+import { apiGet } from "@/lib/server-api"
 
-export default function AccountsPage(){const institutions=[...new Set(accounts.map(a=>a.institution))];return <div><PageHeading title="Accounts" description="Balances across linked financial institutions." action={<Button><Link2 data-icon="inline-start"/>Link account</Button>}/><div className="mb-6 grid gap-4 sm:grid-cols-2"><Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Total assets</CardTitle></CardHeader><CardContent><p className="numeric text-3xl">$86,402.37</p></CardContent></Card><Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Total liabilities</CardTitle></CardHeader><CardContent><p className="numeric text-3xl text-destructive">$2,384.72</p></CardContent></Card></div><div className="flex flex-col gap-5">{institutions.map(inst=><Card key={inst}><CardHeader><CardTitle>{inst}</CardTitle><CardDescription className="flex items-center justify-between"><span>Linked via Plaid</span><Button variant="ghost" size="sm"><RefreshCw data-icon="inline-start"/>Sync now</Button></CardDescription></CardHeader><CardContent className="flex flex-col gap-1">{accounts.filter(a=>a.institution===inst).map(a=><div key={a.id} className="flex items-center gap-4 rounded-lg border bg-background/30 p-4"><div className="flex size-10 items-center justify-center rounded-lg bg-secondary font-mono text-primary">{inst[0]}</div><div className="min-w-0 flex-1"><p className="font-medium">{a.name}</p><p className="text-xs text-muted-foreground">{a.type} · <span className="numeric">{a.mask}</span></p></div><p className={a.liability?"numeric text-lg text-destructive":"numeric text-lg"}>{a.liability?"−":""}${a.balance.toLocaleString("en-US",{minimumFractionDigits:2})}</p></div>)}</CardContent></Card>)}</div><p className="mt-4 text-right text-xs text-muted-foreground">Last synced <span className="numeric">2h</span> ago</p></div>}
+export const dynamic = "force-dynamic"
+
+const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+
+export default async function AccountsPage() {
+  const data = await apiGet<components["schemas"]["AccountsOut"]>("/api/accounts")
+  const accounts = data ? toAccounts(data) : []
+  const institutions = [...new Set(accounts.map((a) => a.institution))]
+  const synced = data?.items.map((i) => i.last_synced_at).filter((s): s is string => !!s).sort().at(-1) ?? null
+  return (
+    <div>
+      <PageHeading
+        title="Accounts"
+        description="Balances across linked financial institutions."
+        action={accounts.length ? <div className="flex items-start gap-2"><SyncButton /><LinkAccountButton /></div> : undefined}
+      />
+      {accounts.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="serif-display text-3xl">Link your <em>first</em> account</CardTitle>
+            <CardDescription>
+              {data ? "Vārtā reads balances, transactions and holdings through Plaid. It can't move money." : "The API isn't reachable right now."}
+            </CardDescription>
+          </CardHeader>
+          {data && <CardContent><LinkAccountButton /></CardContent>}
+        </Card>
+      ) : (
+        <>
+          <div className="mb-6 grid gap-4 sm:grid-cols-2">
+            <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Total assets</CardTitle></CardHeader><CardContent><p className="numeric text-3xl">{usd(data!.assets)}</p></CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Total liabilities</CardTitle></CardHeader><CardContent><p className="numeric text-3xl text-destructive">{usd(data!.liabilities)}</p></CardContent></Card>
+          </div>
+          <div className="flex flex-col gap-5">
+            {institutions.map((inst) => (
+              <Card key={inst}>
+                <CardHeader><CardTitle>{inst}</CardTitle><CardDescription>Linked via Plaid</CardDescription></CardHeader>
+                <CardContent className="flex flex-col gap-1">
+                  {accounts.filter((a) => a.institution === inst).map((a) => (
+                    <div key={a.id} className="flex items-center gap-4 rounded-lg border bg-background/30 p-4">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-secondary font-mono text-primary">{inst[0]}</div>
+                      <div className="min-w-0 flex-1"><p className="font-medium">{a.name}</p><p className="text-xs text-muted-foreground">{a.type} · <span className="numeric">{a.mask}</span></p></div>
+                      <p className={a.liability ? "numeric text-lg text-destructive" : "numeric text-lg"}>{a.liability ? "−" : ""}{usd(a.balance)}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <p className="mt-4 text-right text-xs text-muted-foreground">Last synced <span className="numeric">{relativeTime(synced)}</span></p>
+        </>
+      )}
+    </div>
+  )
+}
