@@ -63,9 +63,13 @@ sudo tee /etc/systemd/system/docker.service.d/override.conf <<'CONF'
 [Unit]
 After=tailscaled.service
 Wants=tailscaled.service
+[Service]
+ExecStartPre=/bin/sh -c 'for i in $(seq 60); do tailscale ip -4 >/dev/null 2>&1 && exit 0; sleep 1; done; exit 0'
 CONF
 sudo systemctl daemon-reload
 ```
+
+`ExecStartPre` waits (up to 60s) for the Tailscale IP: caddy publishes on it, so Docker must wait for it, otherwise the public demo can fail to start too.
 
 If the owner site is down after a reboot (bind raced tailscaled), recover with `$dc up -d`.
 
@@ -109,7 +113,7 @@ $dc ps
 
 ## 4. First data
 
-- Demo: `$dc exec worker-demo python -m scripts.reset_demo`
+- Demo: `$dc exec worker-demo python -m scripts.reset_demo` (possibly redundant: on first start the worker runs all due jobs immediately, including `demo_reset` if it is past 03:00)
 - Owner: open `https://<OWNER_HOST>` from a tailnet device, then Accounts -> Link.
 
 ## 5. Verify
