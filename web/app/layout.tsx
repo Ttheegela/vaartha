@@ -10,6 +10,8 @@ const plexMono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-plex-mono
 export const metadata: Metadata = { title: { default: "Vārtā — your proactive financial advisor", template: "%s · Vārtā" }, description: "A calm, proactive personal finance and investing advisor." }
 export const viewport: Viewport = { colorScheme: "dark", themeColor: "#0a0a0a", userScalable: true }
 
+export const dynamic = "force-dynamic" // VARTA_INSTANCE is read per request, not frozen at build
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={`dark bg-background ${inter.variable} ${instrumentSerif.variable} ${plexMono.variable}`}><body className="min-h-screen antialiased"><AppShell>{children}</AppShell></body></html>
+  return <html lang="en" className={`dark bg-background ${inter.variable} ${instrumentSerif.variable} ${plexMono.variable}`}><body className="min-h-screen antialiased"><AppShell demo={process.env.VARTA_INSTANCE === "demo"}>{children}</AppShell></body></html>
 }

@@ -15,8 +15,8 @@ const nav = [
   { label: "News", href: "/news", icon: Newspaper }, { label: "Goals", href: "/goals", icon: Goal },
 ]
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname(); const [banner, setBanner] = useState(true); const [collapsed, setCollapsed] = useState(false); const [mobileNav, setMobileNav] = useState(false)
+export function AppShell({ children, demo }: { children: React.ReactNode; demo: boolean }) {
+  const pathname = usePathname(); const [banner, setBanner] = useState(demo); const [collapsed, setCollapsed] = useState(false); const [mobileNav, setMobileNav] = useState(false)
   const navigation = <>{nav.map(({ label, href, icon: Icon }) => <Link key={href} href={href} onClick={() => setMobileNav(false)} className={cn("flex h-11 items-center gap-3 rounded-xl px-3 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground", pathname === href && "bg-secondary text-foreground")}><Icon className="size-4 shrink-0"/><span className={cn(collapsed && "lg:hidden")}>{label}</span></Link>)}</>
   return <div className="min-h-screen bg-background">
     {banner && <div className="fixed inset-x-0 top-0 z-50 flex h-8 items-center justify-center gap-3 border-b bg-[#101010] px-4 text-[11px] text-muted-foreground"><span>Demo — Plaid Sandbox data, resets nightly. Not financial advice.</span><button onClick={() => setBanner(false)} aria-label="Dismiss demo notice"><X className="size-3.5"/></button></div>}
