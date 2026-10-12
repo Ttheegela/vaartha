@@ -99,19 +99,23 @@ def create_app(
             conn.execute("SELECT 1")
         return {"status": "ok", "instance": settings.instance}
 
+    def current_regime() -> Regime:
+        """Regime cached for REGIME_TTL_SECONDS; raises if the provider fails."""
+        hit = cache.get("regime")
+        if hit and clock() - hit[0] < REGIME_TTL_SECONDS:
+            return hit[1]
+        result = regime_provider()
+        cache["regime"] = (clock(), result)
+        return result
+
     @app.get("/api/regime", response_model=RegimeOut)
     def regime() -> dict:
         """Current market regime, cached for REGIME_TTL_SECONDS."""
-        hit = cache.get("regime")
-        if hit and clock() - hit[0] < REGIME_TTL_SECONDS:
-            return asdict(hit[1])
         try:
-            result = regime_provider()
+            return asdict(current_regime())
         except Exception as exc:  # network, short history, bad prices
             log.warning("regime unavailable: %s", exc)
             raise HTTPException(status_code=503, detail="regime unavailable") from exc
-        cache["regime"] = (clock(), result)
-        return asdict(result)
 
     app.include_router(build_finance_router(settings.db_path, today))
     app.include_router(build_news_router(settings.db_path, today))
