@@ -1,24 +1,46 @@
 """Instance settings from environment variables."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 INSTANCES = ("owner", "demo")
+PLAID_ENVS = ("sandbox", "production")
 
 
 @dataclass(frozen=True)
 class Settings:
-    """Per-instance configuration."""
+    """Per-instance configuration. Secrets are excluded from repr."""
 
     db_path: Path
     instance: str
+    plaid_env: str = "sandbox"
+    plaid_client_id: str | None = field(default=None, repr=False)
+    plaid_secret: str | None = field(default=None, repr=False)
+    token_key: str | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.plaid_env not in PLAID_ENVS:
+            raise ValueError(f"PLAID_ENV must be one of {PLAID_ENVS}, got {self.plaid_env!r}")
+        if self.instance == "demo" and self.plaid_env == "production":
+            raise ValueError("the demo instance must use the Plaid sandbox")
+
+    @property
+    def plaid_configured(self) -> bool:
+        """True when both Plaid credentials are present."""
+        return bool(self.plaid_client_id and self.plaid_secret)
 
     @classmethod
     def from_env(cls) -> "Settings":
-        """Read VARTA_DB_PATH and VARTA_INSTANCE; reject unknown instances."""
+        """Read VARTA_*, PLAID_* and TOKEN_ENCRYPTION_KEY; reject invalid combinations."""
         instance = os.environ.get("VARTA_INSTANCE", "demo")
         if instance not in INSTANCES:
             raise ValueError(f"VARTA_INSTANCE must be one of {INSTANCES}, got {instance!r}")
-        db_path = Path(os.environ.get("VARTA_DB_PATH", "data/varta.db"))
-        return cls(db_path=db_path, instance=instance)
+        return cls(
+            db_path=Path(os.environ.get("VARTA_DB_PATH", "data/varta.db")),
+            instance=instance,
+            plaid_env=os.environ.get("PLAID_ENV", "sandbox"),
+            plaid_client_id=os.environ.get("PLAID_CLIENT_ID") or None,
+            plaid_secret=os.environ.get("PLAID_SECRET") or None,
+            token_key=os.environ.get("TOKEN_ENCRYPTION_KEY") or None,
+        )
