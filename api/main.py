@@ -21,6 +21,7 @@ from api.agent_tools import build_toolbox
 from api.crypto import TokenBox
 from api.db import connect, init_db
 from api.finance import build_finance_router
+from api.logs import setup_logging
 from api.news_read import build_news_router
 from api.plaid_client import PlaidAPI, PlaidClient, PlaidError
 from api.settings import Settings
@@ -80,6 +81,7 @@ def create_app(
     closes_provider: Callable[[list[str]], pl.DataFrame] = lambda t: fetch_closes(t, "1y"),
 ) -> FastAPI:
     """Build the API: initialise the DB and register routes."""
+    setup_logging()
     settings = settings or Settings.from_env()
     with closing(connect(settings.db_path)) as conn:
         init_db(conn)
