@@ -72,3 +72,49 @@ def test_empty_db_returns_empty(empty):
     assert empty.get("/api/networth").json() == []
     assert empty.get("/api/recurring").json() == {"subscriptions": [], "bills": [],
                                                   "subscriptions_monthly": 0, "bills_monthly": 0}
+
+
+def _seed_budgets_goals(path):
+    conn = connect(path)
+    conn.execute("INSERT INTO budgets VALUES ('FOOD_AND_DRINK', 600), ('ENTERTAINMENT', 100)")
+    conn.execute("INSERT INTO goals (name, target_amount, target_date, account_ids) VALUES "
+                 "('Emergency fund', 25000, '2027-06-30', '[\"acc-savings\"]')")
+    conn.commit()
+
+
+def test_spending_excludes_income_and_transfers(seeded):
+    body = seeded.get("/api/spending?month=2026-10").json()
+    cats = {c["category"] for c in body["by_category"]}
+    assert "INCOME" not in cats and "TRANSFER_IN" not in cats
+    assert "RENT_AND_UTILITIES" in cats
+    assert len(body["by_merchant"]) <= 10
+    assert [m["month"] for m in body["cash_flow"]] == [
+        "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]
+    sep = next(m for m in body["cash_flow"] if m["month"] == "2026-09")
+    assert sep["income"] == pytest.approx(2 * 4120)
+    assert seeded.get("/api/spending?month=2026-13").status_code == 422
+    assert seeded.get("/api/spending?month=oct").status_code == 422
+
+
+def test_budgets_and_goals(tmp_path):
+    path = tmp_path / "v.db"
+    conn = connect(path)
+    init_db(conn)
+    link_item(conn, FakePlaid(TODAY), TokenBox(new_key()), "public-fake-1", TODAY)
+    _seed_budgets_goals(path)
+    c = _client(path)
+    budgets = {b["category"]: b for b in c.get("/api/budgets").json()}
+    assert budgets["FOOD_AND_DRINK"]["limit"] == 600
+    assert budgets["FOOD_AND_DRINK"]["spent"] > 0
+    goal = c.get("/api/goals").json()[0]
+    assert goal["current"] == pytest.approx(18000.0)
+    assert goal["progress"] == pytest.approx(0.72)
+    assert goal["months_left"] == 8
+
+
+def test_spending_budgets_goals_empty(empty):
+    body = empty.get("/api/spending").json()
+    assert body["by_category"] == [] and body["by_merchant"] == []
+    assert all(m["income"] == 0 and m["spend"] == 0 for m in body["cash_flow"])
+    assert empty.get("/api/budgets").json() == []
+    assert empty.get("/api/goals").json() == []

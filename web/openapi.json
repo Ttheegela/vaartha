@@ -125,6 +125,131 @@
         "title": "AccountsOut",
         "type": "object"
       },
+      "BudgetOut": {
+        "description": "A monthly category budget with this month's spend.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "number"
+          },
+          "spent": {
+            "title": "Spent",
+            "type": "number"
+          }
+        },
+        "required": [
+          "category",
+          "limit",
+          "spent"
+        ],
+        "title": "BudgetOut",
+        "type": "object"
+      },
+      "CashFlowMonth": {
+        "description": "Income and spend for one month (YYYY-MM).",
+        "properties": {
+          "income": {
+            "title": "Income",
+            "type": "number"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "spend": {
+            "title": "Spend",
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "income",
+          "spend"
+        ],
+        "title": "CashFlowMonth",
+        "type": "object"
+      },
+      "CategorySpend": {
+        "description": "Total spend for one category.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "amount"
+        ],
+        "title": "CategorySpend",
+        "type": "object"
+      },
+      "GoalOut": {
+        "description": "A savings goal with progress toward its target.",
+        "properties": {
+          "current": {
+            "title": "Current",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "months_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Months Left"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "number"
+          },
+          "target_amount": {
+            "title": "Target Amount",
+            "type": "number"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "target_amount",
+          "target_date",
+          "current",
+          "progress",
+          "months_left"
+        ],
+        "title": "GoalOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -179,6 +304,42 @@
           "last_synced_at"
         ],
         "title": "ItemOut",
+        "type": "object"
+      },
+      "MerchantSpendOut": {
+        "description": "Total spend and transaction count for one merchant.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "merchant": {
+            "title": "Merchant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "merchant",
+          "category",
+          "amount",
+          "count"
+        ],
+        "title": "MerchantSpendOut",
         "type": "object"
       },
       "NetWorthPoint": {
@@ -361,6 +522,44 @@
         "title": "RegimeOut",
         "type": "object"
       },
+      "SpendingOut": {
+        "description": "Month spending breakdown plus six months of cash flow.",
+        "properties": {
+          "by_category": {
+            "items": {
+              "$ref": "#/components/schemas/CategorySpend"
+            },
+            "title": "By Category",
+            "type": "array"
+          },
+          "by_merchant": {
+            "items": {
+              "$ref": "#/components/schemas/MerchantSpendOut"
+            },
+            "title": "By Merchant",
+            "type": "array"
+          },
+          "cash_flow": {
+            "items": {
+              "$ref": "#/components/schemas/CashFlowMonth"
+            },
+            "title": "Cash Flow",
+            "type": "array"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "by_category",
+          "by_merchant",
+          "cash_flow"
+        ],
+        "title": "SpendingOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -426,6 +625,52 @@
           }
         },
         "summary": "Accounts"
+      }
+    },
+    "/api/budgets": {
+      "get": {
+        "description": "Monthly budgets with this month's spend per category.",
+        "operationId": "budgets_api_budgets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetOut"
+                  },
+                  "title": "Response Budgets Api Budgets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Budgets"
+      }
+    },
+    "/api/goals": {
+      "get": {
+        "description": "Goals with current balance of linked accounts and months remaining.",
+        "operationId": "goals_api_goals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GoalOut"
+                  },
+                  "title": "Response Goals Api Goals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Goals"
       }
     },
     "/api/networth": {
@@ -511,6 +756,53 @@
           }
         },
         "summary": "Regime"
+      }
+    },
+    "/api/spending": {
+      "get": {
+        "description": "Spend by category and top merchants for a month, plus 6 months of cash flow.",
+        "operationId": "spending_api_spending_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Spending"
       }
     },
     "/healthz": {

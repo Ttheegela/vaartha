@@ -24,6 +24,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/budgets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Budgets
+         * @description Monthly budgets with this month's spend per category.
+         */
+        get: operations["budgets_api_budgets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Goals
+         * @description Goals with current balance of linked accounts and months remaining.
+         */
+        get: operations["goals_api_goals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/networth": {
         parameters: {
             query?: never;
@@ -76,6 +116,26 @@ export interface paths {
          * @description Current market regime, cached for REGIME_TTL_SECONDS.
          */
         get: operations["regime_api_regime_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/spending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Spending
+         * @description Spend by category and top merchants for a month, plus 6 months of cash flow.
+         */
+        get: operations["spending_api_spending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -146,6 +206,60 @@ export interface components {
             /** Liabilities */
             liabilities: number;
         };
+        /**
+         * BudgetOut
+         * @description A monthly category budget with this month's spend.
+         */
+        BudgetOut: {
+            /** Category */
+            category: string;
+            /** Limit */
+            limit: number;
+            /** Spent */
+            spent: number;
+        };
+        /**
+         * CashFlowMonth
+         * @description Income and spend for one month (YYYY-MM).
+         */
+        CashFlowMonth: {
+            /** Income */
+            income: number;
+            /** Month */
+            month: string;
+            /** Spend */
+            spend: number;
+        };
+        /**
+         * CategorySpend
+         * @description Total spend for one category.
+         */
+        CategorySpend: {
+            /** Amount */
+            amount: number;
+            /** Category */
+            category: string;
+        };
+        /**
+         * GoalOut
+         * @description A savings goal with progress toward its target.
+         */
+        GoalOut: {
+            /** Current */
+            current: number;
+            /** Id */
+            id: number;
+            /** Months Left */
+            months_left: number | null;
+            /** Name */
+            name: string;
+            /** Progress */
+            progress: number;
+            /** Target Amount */
+            target_amount: number;
+            /** Target Date */
+            target_date: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -164,6 +278,20 @@ export interface components {
             last_synced_at: string | null;
             /** Status */
             status: string;
+        };
+        /**
+         * MerchantSpendOut
+         * @description Total spend and transaction count for one merchant.
+         */
+        MerchantSpendOut: {
+            /** Amount */
+            amount: number;
+            /** Category */
+            category: string | null;
+            /** Count */
+            count: number;
+            /** Merchant */
+            merchant: string;
         };
         /**
          * NetWorthPoint
@@ -248,6 +376,20 @@ export interface components {
             /** Spy Dd */
             spy_dd: number;
         };
+        /**
+         * SpendingOut
+         * @description Month spending breakdown plus six months of cash flow.
+         */
+        SpendingOut: {
+            /** By Category */
+            by_category: components["schemas"]["CategorySpend"][];
+            /** By Merchant */
+            by_merchant: components["schemas"]["MerchantSpendOut"][];
+            /** Cash Flow */
+            cash_flow: components["schemas"]["CashFlowMonth"][];
+            /** Month */
+            month: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -286,6 +428,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountsOut"];
+                };
+            };
+        };
+    };
+    budgets_api_budgets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetOut"][];
+                };
+            };
+        };
+    };
+    goals_api_goals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalOut"][];
                 };
             };
         };
@@ -357,6 +539,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegimeOut"];
+                };
+            };
+        };
+    };
+    spending_api_spending_get: {
+        parameters: {
+            query?: {
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
