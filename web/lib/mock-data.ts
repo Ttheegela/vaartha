@@ -56,14 +56,6 @@ export const crowdOdds = [
   { question:"Fed cuts rates in December?", probability:61 }, { question:"Brent above $90 by year-end?", probability:34 }, { question:"U.S. recession before July?", probability:22 },
 ]
 
-export const highestImpact = { eyebrow: "HIGHEST IMPACT", prefix: "Save", figure: "$612/yr", suffix: "by cancelling 3 unused subscriptions", detail: "Vārtā found recurring charges you have not used in over 60 days." }
-export const healthScore = { score: 72, status: "Good foundation", actions: ["Build reserves to 4 months", "Reduce shopping by $110/mo", "Rebalance semiconductor exposure"] }
-export const advisorAlerts = [
-  { id: "a1", text: "Your Amex statement closes in 4 days.", action: "Pay now", time: "1m ago", kind: "bill" },
-  { id: "a2", text: "Spotify went up $2.00/mo.", action: "Review", time: "2h ago", kind: "price" },
-  { id: "a3", text: "NVDA sentiment turned negative on export-control news.", action: "See why", time: "3h ago", kind: "market" },
-  { id: "a4", text: "Regime moved to ELEVATED — your semis exposure is 41%.", action: "See impact", time: "today", kind: "risk" },
-] as const
 export const advisorConversations = [
   { id: "c1", title: "Upcoming bills", preview: "You have 3 bills due this week", time: "Today" },
   { id: "c2", title: "Portfolio exposure", preview: "Semiconductors are 41% of holdings", time: "Yesterday" },

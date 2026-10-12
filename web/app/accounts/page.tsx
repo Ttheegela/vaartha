@@ -4,6 +4,8 @@ import { SyncButton } from "@/components/sync-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toAccounts } from "@/lib/adapters"
 import type { components } from "@/lib/api-types"
+import { StatusBadge } from "@/components/status-badge"
+import { institutionStatus } from "@/lib/items"
 import { relativeTime } from "@/lib/relative-time"
 import { apiGet } from "@/lib/server-api"
 
@@ -15,7 +17,6 @@ export default async function AccountsPage() {
   const data = await apiGet<components["schemas"]["AccountsOut"]>("/api/accounts")
   const accounts = data ? toAccounts(data) : []
   const institutions = [...new Set(accounts.map((a) => a.institution))]
-  const synced = data?.items.map((i) => i.last_synced_at).filter((s): s is string => !!s).sort().at(-1) ?? null
   return (
     <div>
       <PageHeading
@@ -40,9 +41,14 @@ export default async function AccountsPage() {
             <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Total liabilities</CardTitle></CardHeader><CardContent><p className="numeric text-3xl text-destructive">{usd(data!.liabilities)}</p></CardContent></Card>
           </div>
           <div className="flex flex-col gap-5">
-            {institutions.map((inst) => (
+            {institutions.map((inst) => {
+              const status = institutionStatus(data!.items, inst)
+              return (
               <Card key={inst}>
-                <CardHeader><CardTitle>{inst}</CardTitle><CardDescription>Linked via Plaid</CardDescription></CardHeader>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">{inst}{status.needsLogin && <StatusBadge tone="warning">Needs re-login</StatusBadge>}</CardTitle>
+                  <CardDescription>Linked via Plaid · Last synced <span className="numeric">{relativeTime(status.lastSyncedAt)}</span></CardDescription>
+                </CardHeader>
                 <CardContent className="flex flex-col gap-1">
                   {accounts.filter((a) => a.institution === inst).map((a) => (
                     <div key={a.id} className="flex items-center gap-4 rounded-lg border bg-background/30 p-4">
@@ -53,9 +59,9 @@ export default async function AccountsPage() {
                   ))}
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
-          <p className="mt-4 text-right text-xs text-muted-foreground">Last synced <span className="numeric">{relativeTime(synced)}</span></p>
         </>
       )}
     </div>
