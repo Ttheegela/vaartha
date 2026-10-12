@@ -1,0 +1,38 @@
+{
+  "calm_2024": {
+    "label": "Normal",
+    "prob": 0.0,
+    "brent_vol": 0.2015,
+    "spy_dd": -0.029,
+    "gold_oil": 8.04,
+    "signals": {
+      "vol_score": 0.0,
+      "dd_score": 0.0,
+      "gold_oil_score": 0.0
+    }
+  },
+  "covid_2020": {
+    "label": "Crisis",
+    "prob": 1.0,
+    "brent_vol": 0.897,
+    "spy_dd": -0.3372,
+    "gold_oil": 16.35,
+    "signals": {
+      "vol_score": 1.0,
+      "dd_score": 1.0,
+      "gold_oil_score": 1.0
+    }
+  },
+  "ukraine_2022": {
+    "label": "Crisis",
+    "prob": 0.8,
+    "brent_vol": 0.4278,
+    "spy_dd": -0.1287,
+    "gold_oil": 5.36,
+    "signals": {
+      "vol_score": 1.0,
+      "dd_score": 1.0,
+      "gold_oil_score": 0.0
+    }
+  }
+}
