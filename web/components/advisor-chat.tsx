@@ -25,7 +25,7 @@ export function AdvisorChat({ full = false, conversationId, initial = [], onConv
     try {
       const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, conversation_id: convId }) })
       if (!res.ok || !res.body) throw new Error("unavailable")
-      const reader = res.body.getReader(), decoder = new TextDecoder(); let buf = ""
+      const reader = res.body.getReader(), decoder = new TextDecoder(); let buf = "", settled = false
       for (;;) {
         const { done, value } = await reader.read(); if (done) break
         const parsed = parseSSE(buf + decoder.decode(value, { stream: true })); buf = parsed.rest
@@ -33,11 +33,12 @@ export function AdvisorChat({ full = false, conversationId, initial = [], onConv
           const d = JSON.parse(ev.data)
           if (ev.event === "meta") { setConvId(d.conversation_id); onConversation?.(d.conversation_id) }
           else if (ev.event === "tool") patchLast((m) => ({ tools: [...(m.tools ?? []), d.name] }))
-          else if (ev.event === "answer") patchLast({ text: d.text })
+          else if (ev.event === "answer") { settled = true; patchLast({ text: d.text }) }
           else if (ev.event === "done") patchLast({ sources: d.sources, tools: d.tool_calls.map((t: { name: string }) => t.name) })
-          else if (ev.event === "error") patchLast({ text: UNAVAILABLE })
+          else if (ev.event === "error") { settled = true; patchLast({ text: UNAVAILABLE }) }
         }
       }
+      if (!settled) patchLast({ text: UNAVAILABLE })
     } catch { patchLast({ text: UNAVAILABLE }) }
     setBusy(false)
   }

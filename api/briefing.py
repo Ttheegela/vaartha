@@ -4,7 +4,7 @@ import json
 import sqlite3
 from datetime import UTC, datetime
 
-from api.agent import build_messages, run_agent
+from api.agent import EMPTY_ANSWER, build_messages, run_agent
 from api.agent_tools import Toolbox
 
 BRIEFING_PROMPT = ("Write today's briefing. First line: the single highest-impact thing to do or "
@@ -31,7 +31,7 @@ def make_briefing(conn: sqlite3.Connection, client, model: str, toolbox: Toolbox
             answer = ev["text"]
         elif ev["type"] == "done":
             done = ev
-    if not answer.strip():
+    if not answer.strip() or answer == EMPTY_ANSWER:
         raise ValueError("empty briefing")
     row = {"date": toolbox.today().isoformat(),
            "items_json": json.dumps({"text": answer, "sources": done.get("sources", [])}),

@@ -7,6 +7,7 @@ from types import SimpleNamespace as NS
 import pytest
 
 from api.agent import (
+    EMPTY_ANSWER,
     FORCE_ANSWER,
     MAX_TOOL_ROUNDS,
     SYSTEM_PROMPT,
@@ -107,8 +108,15 @@ def test_round_cap_forces_answer(seeded):
     ev = list(run_agent(llm, "m", [{"role": "user", "content": "q"}], seeded))
     assert len(llm.calls) == MAX_TOOL_ROUNDS + 1
     last = llm.calls[-1]
-    assert "tools" not in last and last["messages"][-1]["content"] == FORCE_ANSWER
+    assert last["tools"] == seeded.specs and last["tool_choice"] == "none"
+    assert last["messages"][-1]["content"] == FORCE_ANSWER
     assert ev[-2]["text"] == "final"
+
+
+@pytest.mark.parametrize("content", [None, "", "  \n"])
+def test_empty_answer_falls_back(seeded, content):
+    ev = list(run_agent(FakeLLM([_text(content)]), "m", [{"role": "user", "content": "q"}], seeded))
+    assert ev[-2]["text"] == EMPTY_ANSWER
 
 
 def test_sources_only_for_seen_ids(seeded):
@@ -128,6 +136,14 @@ def test_context_header_survives_failures(tmp_path):
     conn.close()
     h = context_header(_box(path, _boom))
     assert "regime: unavailable" in h and TODAY.isoformat() in h
+
+
+def test_context_header_no_accounts(tmp_path):
+    path = tmp_path / "e.db"
+    conn = connect(path)
+    init_db(conn)
+    conn.close()
+    assert "net worth: no accounts linked" in context_header(_box(path))
 
 
 def test_context_header_with_data(seeded):

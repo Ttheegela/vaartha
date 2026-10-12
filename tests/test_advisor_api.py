@@ -193,3 +193,13 @@ def test_concurrent_chats_all_complete(tmp_path):
     assert all(_events(t)[-1][0] == "done" for t in texts)
     count = connect(settings.db_path).execute("SELECT COUNT(*) FROM agent_messages").fetchone()[0]
     assert count == 2 * n
+
+
+def test_user_message_logged_when_history_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr("api.advisor.HISTORY_MESSAGES", "not-a-number")  # LIMIT ? raises
+    c, settings = _client(tmp_path, FakeLLM())
+    r = c.post("/api/chat", json={"message": "hi", "conversation_id": "c-1"})
+    assert [e[0] for e in _events(r.text)] == ["meta", "error"]
+    rows = connect(settings.db_path).execute(
+        "SELECT role, content FROM agent_messages ORDER BY id").fetchall()
+    assert [(x["role"], x["content"]) for x in rows][0] == ("user", "hi")

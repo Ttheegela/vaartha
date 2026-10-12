@@ -17,7 +17,7 @@ from api.briefing import parse_briefing
 from api.db import connect
 
 log = logging.getLogger("varta.advisor")
-HISTORY_TURNS = 10
+HISTORY_MESSAGES = 10
 MAX_MESSAGE_CHARS = 2000
 MAX_CONVERSATION_ID_CHARS = 64
 MAX_CONVERSATIONS = 50
@@ -105,14 +105,14 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str) -> AP
             rows = conn.execute(
                 "SELECT role, content FROM agent_messages WHERE conversation_id = ? "
                 "AND role IN ('user', 'assistant') AND content IS NOT NULL "
-                "ORDER BY id DESC LIMIT ?", (conv, HISTORY_TURNS)).fetchall()
+                "ORDER BY id DESC LIMIT ?", (conv, HISTORY_MESSAGES)).fetchall()
         return [dict(r) for r in reversed(rows)]
 
     def stream(conv: str, message: str) -> Iterator[str]:
         yield _sse("meta", {"conversation_id": conv})
         try:
-            history = load_history(conv)
             log_message(conv, "user", message)
+            history = load_history(conv)[:-1]  # drop the message just logged
             for ev in run_agent(llm, model, build_messages(toolbox, history, message), toolbox):
                 if ev["type"] == "answer":
                     answer = ev["text"]

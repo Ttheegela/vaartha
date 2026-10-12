@@ -18,6 +18,7 @@ MS_PER_SECOND = 1000
 CITATION_RE = re.compile(r"\[n:(\d+)\]")
 FORCE_ANSWER = "Answer now using only the data you already have."
 UNAVAILABLE = "unavailable"
+EMPTY_ANSWER = "I couldn't put together an answer from the data. Please try rephrasing."
 
 SYSTEM_PROMPT = """You are Vārtā, a personal finance and investing assistant for one person.
 Rules:
@@ -41,7 +42,8 @@ def context_header(toolbox: Toolbox) -> str:
     net = toolbox.call("get_net_worth", {})
     bills = toolbox.call("get_upcoming_bills", {"days": BILLS_WINDOW_DAYS})
     regime_s = UNAVAILABLE if "error" in regime else regime.get("label", UNAVAILABLE)
-    net_s = UNAVAILABLE if "error" in net else f"{net.get('net')}"
+    net_s = (UNAVAILABLE if "error" in net else
+             "no accounts linked" if not net.get("accounts") else f"{net.get('net')}")
     bills_s = (UNAVAILABLE if "error" in bills
                else f"{len(bills['items'])} totaling {bills['total']}")
     return (f"Today: {toolbox.today().isoformat()}\nregime: {regime_s}\n"
@@ -77,12 +79,13 @@ def run_agent(client, model: str, messages: list[dict], toolbox: Toolbox,
         if final:
             messages.append({"role": "user", "content": FORCE_ANSWER})
         resp = client.chat.completions.create(
-            model=model, messages=messages, **({} if final else {"tools": toolbox.specs}))
+            model=model, messages=messages, tools=toolbox.specs,
+            **({"tool_choice": "none"} if final else {}))
         if resp.usage:
             tin, tout = tin + resp.usage.prompt_tokens, tout + resp.usage.completion_tokens
         msg = resp.choices[0].message
         if final or not msg.tool_calls:
-            answer = msg.content or ""
+            answer = (msg.content or "").strip() and msg.content or EMPTY_ANSWER
             break
         messages.append({"role": "assistant", "content": msg.content or "", "tool_calls": [
             {"id": tc.id, "type": "function",
