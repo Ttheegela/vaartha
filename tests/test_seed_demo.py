@@ -4,6 +4,7 @@ from datetime import date
 
 from api.crypto import new_key
 from api.db import connect
+from api.plaid_fake import FakePlaid
 from api.settings import Settings
 from scripts.seed_demo import DEMO_BUDGETS, seed
 
@@ -26,3 +27,13 @@ def test_seed_requires_key(tmp_path):
     import pytest
     with pytest.raises(ValueError, match="TOKEN_ENCRYPTION_KEY"):
         seed(Settings(db_path=tmp_path / "v.db", instance="demo"), "fake", TODAY)
+
+
+def test_seed_fails_when_first_sync_fails(tmp_path):
+    import pytest
+    s = Settings(db_path=tmp_path / "v.db", instance="demo", token_key=new_key())
+    plaid = FakePlaid(TODAY)
+    plaid.fail_next["accounts_get"] = "INTERNAL_SERVER_ERROR"
+    with pytest.raises(RuntimeError, match="first sync failed"):
+        seed(s, "fake", TODAY, plaid)
+    assert connect(s.db_path).execute("SELECT COUNT(*) FROM goals").fetchone()[0] == 0

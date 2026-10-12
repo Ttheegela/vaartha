@@ -45,6 +45,9 @@ def seed(settings: Settings, source: str, today: date, plaid: PlaidAPI | None = 
     with closing(connect(settings.db_path)) as conn:
         init_db(conn)
         item_id = link_item(conn, plaid, TokenBox(settings.token_key), public_token, today)
+        if conn.execute("SELECT last_synced_at FROM items WHERE item_id=?",
+                        (item_id,)).fetchone()[0] is None:
+            raise RuntimeError(f"first sync failed for item {item_id}; see logs")
         conn.executemany(
             "INSERT OR REPLACE INTO budgets (pfc_primary, monthly_limit) VALUES (?, ?)",
             list(DEMO_BUDGETS.items()))
