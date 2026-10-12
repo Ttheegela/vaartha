@@ -61,3 +61,10 @@ test("time relative, url and ids pass through", () => {
 test("crowd odds -> rounded percent", () => {
   assert.deepEqual(toCrowdOdds([{ market_id: "m", question: "Q?", yes_prob: 0.614, liquidity: 1, end_date: null, url: "u", category: "c" }] as never), [{ question: "Q?", probability: 61 }])
 })
+
+test("only http(s) urls are kept", () => {
+  const u = (v: string) => toNewsItems([item({ url: v })], NOW)[0].url
+  assert.equal(u("javascript:alert(1)"), null)
+  assert.equal(u("ftp://x"), null)
+  assert.equal(u("https://ok"), "https://ok")
+})

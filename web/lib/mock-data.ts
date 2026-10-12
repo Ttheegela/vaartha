@@ -34,7 +34,6 @@ export const briefings = [
   "Dining spend is at 82% of budget with 11 days left", "NVDA news sentiment turned negative on export controls",
 ]
 
-
 export const advisorConversations = [
   { id: "c1", title: "Upcoming bills", preview: "You have 3 bills due this week", time: "Today" },
   { id: "c2", title: "Portfolio exposure", preview: "Semiconductors are 41% of holdings", time: "Yesterday" },
