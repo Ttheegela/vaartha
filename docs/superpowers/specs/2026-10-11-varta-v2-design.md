@@ -61,9 +61,9 @@ legacy/    v1 Streamlit app, frozen, reference only
 - `/transactions/sync`: cursor-based, returns `added` / `modified` / `removed`. Loop while `has_more`. On `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION`, restart from the first page's cursor.
 - `/transactions/recurring/get`: streams with `merchant_name`, `frequency` (WEEKLY, BIWEEKLY, SEMI_MONTHLY, MONTHLY, ANNUALLY, UNKNOWN), `average_amount`, `last_amount`, `last_date`, `predicted_next_date` (nullable), `status` (MATURE, EARLY_DETECTION, TOMBSTONED, UNKNOWN), `is_active`. It is an **add-on that needs an access request**, works best with 180+ days of history, and sandbox support is not stated.
 
-**Open items to verify before sub-project 3:** whether the Investments product is covered on the Trial plan, and whether sandbox returns recurring streams.
+- Trial plan products (billing docs): Transactions and Investments are included; **Recurring Transactions is not listed**. Fidelity may need a separate institution-access request.
 
-**Fallback (build only if needed):** if recurring access is denied or sandbox lacks it, a small detector over `transactions`: same merchant, regular cadence (≥3 hits within ±3 days of a weekly/monthly/annual period), `next = last_date + period`.
+**Recurring detection: own detector is primary** (keeps the owner instance on the free Trial): a small detector over `transactions`: same merchant, regular cadence (≥3 hits within ±3 days of a weekly/monthly/annual period), `next = last_date + period`. `/transactions/recurring/get` is used only if access is later granted.
 
 **Tables**
 ```
@@ -189,7 +189,7 @@ questions = {
 
 **Sentiment eval:** about 100 hand-labeled headlines; report Jev agreement next to the agent evals.
 
-**Open items:** TypeSafe pricing, rate limits, and batching. Confirm before sub-project 4.
+**Cost and access:** third-party reports put Jev at about $0.04 per million input tokens, with output free and no free tier. TypeSafe's direct API is waitlisted, but Jev is reported as available through OpenRouter. At roughly 450 scoring calls a day × 600 tokens, that is under $1/month. **Open items:** confirm price and rate limits with TypeSafe, and whether the SDK's `system_one` call can be routed through OpenRouter, before sub-project 4.
 
 ## 6. UI
 
@@ -259,7 +259,7 @@ Each sub-project gets its own implementation plan and is verified before the nex
 
 | Risk | Mitigation |
 |---|---|
-| Plaid recurring add-on denied or missing in sandbox | own detector (§3 fallback) |
+| Recurring Transactions not on Plaid Trial | own detector is primary (§3) |
 | Reddit approval slow or denied | Reddit is optional; Polymarket is the day-one crowd signal |
 | Local 8–14B model too weak at tool calling | evals decide; owner can switch model, or opt into OpenRouter for non-sensitive prompts later |
 | Mac asleep, so owner agent offline | dashboards, calendar and sync keep working; chat shows "advisor offline"; briefing retries |
