@@ -5,21 +5,9 @@ from pathlib import Path
 
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 TABLES = (
-    "items",
-    "accounts",
-    "transactions",
-    "securities",
-    "holdings",
-    "recurring_streams",
-    "budgets",
-    "goals",
-    "networth_snapshots",
-    "news_items",
-    "news_scores",
-    "alerts",
-    "briefings",
-    "agent_messages",
-    "crowd_odds",
+    "items", "accounts", "transactions", "securities", "holdings", "recurring_streams",
+    "budgets", "goals", "networth_snapshots", "news_items", "news_scores", "alerts",
+    "briefings", "agent_messages", "crowd_odds",
 )
 MIGRATIONS = [
     ("news_scores", "channel", "TEXT NOT NULL DEFAULT 'news'"),

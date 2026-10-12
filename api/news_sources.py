@@ -16,10 +16,8 @@ log = logging.getLogger(__name__)
 
 ALPACA_NEWS_URL = "https://data.alpaca.markets/v1beta1/news"
 FINNHUB_NEWS_URL = "https://finnhub.io/api/v1/company-news"
-RSS_FEEDS = (
-    ("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
-    ("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"),
-)
+RSS_FEEDS = (("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
+             ("MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"))
 TIMEOUT_SECONDS = 10.0
 FINNHUB_MAX_SYMBOLS = 8
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
@@ -33,36 +31,14 @@ SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 EDGAR_DAYS = 7
 POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
 POLY_INCLUDE = (
-    "taiwan",
-    "iran",
-    "ukraine",
-    "ceasefire",
-    "russia invade",
-    "china blockade",
-    "us invade",
-    "nuclear deal",
-    "us recession",
-    "china invad",
-    "nato",
-    "iranian regime",
+    "taiwan", "iran", "ukraine", "ceasefire", "russia invade",
+    "china blockade", "us invade", "nuclear deal", "us recession",
+    "china invad", "nato", "iranian regime",
 )
 POLY_EXCLUDE = (
-    "fifa",
-    "world cup",
-    "nhl",
-    "nba",
-    "nfl",
-    "mlb",
-    "super bowl",
-    "oscar",
-    "grammy",
-    "bitcoin",
-    "crypto",
-    "election",
-    "senator",
-    "governor",
-    "nominee",
-    "primary",
+    "fifa", "world cup", "nhl", "nba", "nfl", "mlb", "super bowl",
+    "oscar", "grammy", "bitcoin", "crypto", "election", "senator",
+    "governor", "nominee", "primary",
 )
 POLY_PAGES = (0, 500, 1000)
 POLY_MAX_MARKETS = 10
@@ -94,14 +70,8 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def fetch_alpaca(
-    key: str | None,
-    secret: str | None,
-    symbols: list[str],
-    *,
-    limit: int = 50,
-    transport: httpx.BaseTransport | None = None,
-) -> list[RawItem]:
+def fetch_alpaca(key: str | None, secret: str | None, symbols: list[str], *, limit: int = 50,
+                 transport: httpx.BaseTransport | None = None) -> list[RawItem]:
     """Latest Alpaca news for the symbols; [] without credentials or on any failure."""
     if not key or not secret:
         return []
@@ -119,16 +89,11 @@ def fetch_alpaca(
             try:
                 if not n.get("headline"):
                     continue
-                items.append(
-                    RawItem(
-                        f"Alpaca/{n['source']}",
-                        n["url"],
-                        n["headline"],
-                        n.get("summary") or "",
-                        _iso(datetime.fromisoformat(n["created_at"].replace("Z", "+00:00"))),
-                        tuple(n.get("symbols") or ()),
-                    )
-                )
+                items.append(RawItem(
+                    f"Alpaca/{n['source']}", n["url"], n["headline"], n.get("summary") or "",
+                    _iso(datetime.fromisoformat(n["created_at"].replace("Z", "+00:00"))),
+                    tuple(n.get("symbols") or ()),
+                ))
             except Exception as exc:
                 log.warning("alpaca item skipped: %s", type(exc).__name__)
         return items
@@ -137,14 +102,8 @@ def fetch_alpaca(
         return []
 
 
-def fetch_finnhub(
-    key: str | None,
-    symbols: list[str],
-    today: date,
-    *,
-    days: int = 3,
-    transport: httpx.BaseTransport | None = None,
-) -> list[RawItem]:
+def fetch_finnhub(key: str | None, symbols: list[str], today: date, *, days: int = 3,
+                  transport: httpx.BaseTransport | None = None) -> list[RawItem]:
     """Finnhub company news per symbol (first FINNHUB_MAX_SYMBOLS); a failing symbol is skipped."""
     if not key:
         return []
@@ -156,11 +115,8 @@ def fetch_finnhub(
                     r = c.get(
                         FINNHUB_NEWS_URL,
                         headers={"X-Finnhub-Token": key},
-                        params={
-                            "symbol": sym,
-                            "from": (today - timedelta(days=days)).isoformat(),
-                            "to": today.isoformat(),
-                        },
+                        params={"symbol": sym, "from": (today - timedelta(days=days)).isoformat(),
+                                "to": today.isoformat()},
                     )
                     r.raise_for_status()
                     articles = r.json()
@@ -168,16 +124,11 @@ def fetch_finnhub(
                         try:
                             if not n.get("headline"):
                                 continue
-                            items.append(
-                                RawItem(
-                                    f"Finnhub/{n['source']}",
-                                    n["url"],
-                                    n["headline"],
-                                    n.get("summary") or "",
-                                    _iso(datetime.fromtimestamp(n["datetime"], tz=UTC)),
-                                    (sym,),
-                                )
-                            )
+                            items.append(RawItem(
+                                f"Finnhub/{n['source']}", n["url"], n["headline"],
+                                n.get("summary") or "",
+                                _iso(datetime.fromtimestamp(n["datetime"], tz=UTC)), (sym,),
+                            ))
                         except Exception as exc:
                             log.warning("finnhub item skipped: %s", type(exc).__name__)
                 except Exception as exc:
@@ -218,17 +169,9 @@ def fetch_gdelt(*, transport: httpx.BaseTransport | None = None) -> list[RawItem
     """Recent GDELT articles for the geopolitical query; [] on rate-limit text or any failure."""
     try:
         with _client(transport) as c:
-            r = c.get(
-                GDELT_URL,
-                params={
-                    "query": GDELT_QUERY,
-                    "mode": "artlist",
-                    "format": "json",
-                    "maxrecords": GDELT_MAX_RECORDS,
-                    "timespan": "1d",
-                    "sort": "datedesc",
-                },
-            )
+            r = c.get(GDELT_URL, params={
+                "query": GDELT_QUERY, "mode": "artlist", "format": "json",
+                "maxrecords": GDELT_MAX_RECORDS, "timespan": "1d", "sort": "datedesc"})
             r.raise_for_status()
             try:
                 articles = r.json()["articles"]
@@ -250,13 +193,8 @@ def fetch_gdelt(*, transport: httpx.BaseTransport | None = None) -> list[RawItem
         return []
 
 
-def fetch_edgar(
-    user_agent: str | None,
-    tickers: list[str],
-    today: date,
-    *,
-    transport: httpx.BaseTransport | None = None,
-) -> list[RawItem]:
+def fetch_edgar(user_agent: str | None, tickers: list[str], today: date, *,
+                transport: httpx.BaseTransport | None = None) -> list[RawItem]:
     """Recent 8-K filings for tracked tickers; [] without a User-Agent; bad tickers skipped."""
     if not user_agent:
         return []
@@ -276,30 +214,17 @@ def fetch_edgar(
                     r = c.get(SEC_SUBMISSIONS_URL.format(cik=f"{cik:010d}"), headers=headers)
                     r.raise_for_status()
                     recent = r.json()["filings"]["recent"]
-                    for form, filed, acc, doc in zip(
-                        recent["form"],
-                        recent["filingDate"],
-                        recent["accessionNumber"],
-                        recent["primaryDocument"],
-                        strict=False,
-                    ):
+                    for form, filed, acc, doc in zip(recent["form"], recent["filingDate"],
+                                                     recent["accessionNumber"],
+                                                     recent["primaryDocument"], strict=False):
                         try:
                             if form != "8-K" or not cutoff <= filed <= today.isoformat():
                                 continue
-                            url = (
-                                f"https://www.sec.gov/Archives/edgar/data/{cik}/"
-                                f"{acc.replace('-', '')}/{doc}"
-                            )
-                            items.append(
-                                RawItem(
-                                    "SEC EDGAR",
-                                    url,
-                                    f"{company} files 8-K",
-                                    "",
-                                    f"{filed}T00:00:00Z",
-                                    (sym,),
-                                )
-                            )
+                            url = (f"https://www.sec.gov/Archives/edgar/data/{cik}/"
+                                   f"{acc.replace('-', '')}/{doc}")
+                            items.append(RawItem(
+                                "SEC EDGAR", url,
+                                f"{company} files 8-K", "", f"{filed}T00:00:00Z", (sym,)))
                         except Exception as exc:
                             log.warning("edgar item skipped: %s", type(exc).__name__)
                 except Exception as exc:
@@ -342,17 +267,10 @@ def fetch_polymarket(*, transport: httpx.BaseTransport | None = None) -> list[Ma
                     continue
                 prices = m["outcomePrices"]
                 prices = json.loads(prices) if isinstance(prices, str) else prices
-                markets.append(
-                    Market(
-                        str(m.get("id") or m["slug"]),
-                        m["question"],
-                        round(float(prices[0]), 4),
-                        float(m.get("liquidity") or 0),
-                        (m.get("endDate") or "")[:10],
-                        f"https://polymarket.com/event/{m.get('slug', '')}",
-                        _poly_category(q),
-                    )
-                )
+                markets.append(Market(
+                    str(m.get("id") or m["slug"]), m["question"], round(float(prices[0]), 4),
+                    float(m.get("liquidity") or 0), (m.get("endDate") or "")[:10],
+                    f"https://polymarket.com/event/{m.get('slug', '')}", _poly_category(q)))
             except Exception as exc:
                 log.warning("polymarket item skipped: %s", type(exc).__name__)
         return sorted(markets, key=lambda x: x.liquidity, reverse=True)[:POLY_MAX_MARKETS]
