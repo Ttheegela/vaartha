@@ -1,3 +1,5 @@
+This is the VPS path. Current hosting is Heroku (demo) + Mac (owner): see `deploy/heroku.md` and `deploy/owner-mac.md`.
+
 # Vārtā deploy runbook
 
 One VPS, two instances from one codebase, fronted by Caddy:

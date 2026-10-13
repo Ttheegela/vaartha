@@ -244,6 +244,8 @@ The demo instance shows a slim "Demo — Plaid Sandbox data, resets nightly. Not
 - Backups: nightly `sqlite3 .backup` to a volume. Plaid remains the source of truth for financial data.
 - Monitoring: `/healthz`, structured JSON logs, UptimeRobot on the demo URL.
 
+> **Decision 2026-10-13 (hosting):** the demo runs on Heroku, paid by the GitHub Student credit ($13/month for 24 months): a Basic API dyno (embedded scheduler) plus an Eco or Basic web dyno, on a custom domain (`vaartha.dev` from the Name.com Student Pack, served as `demo.<domain>` and `api.<domain>`). The owner instance runs on Tarun's Mac via `scripts/owner.sh`, exposed only through `tailscale serve`. The VPS/Compose path (`deploy/README.md`) stays as the alternative. Reasons: zero hosting cost for two years, and owner bank data stays on the Mac instead of a third-party host.
+
 ## 8. Build order
 
 Each sub-project gets its own implementation plan and is verified before the next begins.

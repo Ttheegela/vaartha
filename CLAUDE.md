@@ -5,8 +5,8 @@ Plans: `docs/superpowers/plans/`. Current status, open items and next step: `doc
 
 ## What this is
 Personal finance + investing advisor agent (Origin-style). Two instances from one codebase:
-- owner: Tarun's real accounts (Plaid Trial), Tailscale-only, LLM = OpenRouter (local Ollama dropped 2026-10-12: too slow, overheats the laptop)
-- demo: public, Plaid Sandbox, LLM = OpenRouter, rate-limited
+- owner: Tarun's real accounts (Plaid Trial), on Tarun's Mac (`scripts/owner.sh`, exposed only via `tailscale serve`), LLM = OpenRouter (local Ollama dropped 2026-10-12: too slow, overheats the laptop)
+- demo: public, hosted on Heroku, Plaid Sandbox, LLM = OpenRouter, rate-limited
 
 ## Layout
 - `core/` pure Python analytics (Polars, no web deps, no I/O at import)
@@ -14,6 +14,7 @@ Personal finance + investing advisor agent (Origin-style). Two instances from on
 - `web/` Next.js (from v0). Pure UI logic in `web/lib/*.ts` with relative `.ts` imports, tested by `pnpm test` (node:test). Typed client from `web/openapi.json` (`pnpm gen:api`).
 - `evals/` advisor evals: `uv run python -m evals.run --model ID --base-url URL` (live, manual), `--report` writes `evals/RESULTS.md`; CI replays `evals/recordings/`
 - `worker/` scheduler loop (`python -m worker.main`); `deploy/` Compose + Caddy + runbook (`deploy/README.md`)
+- Hosting: demo on Heroku (`deploy/heroku.md`), owner on the Mac (`deploy/owner-mac.md`, `scripts/owner.sh`); VPS alternative in `deploy/README.md`
 - `legacy/` v1 Streamlit app — frozen, reference only, never edit
 
 ## Rules
