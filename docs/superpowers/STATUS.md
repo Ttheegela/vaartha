@@ -14,14 +14,13 @@ Read this first when resuming. Design: `specs/2026-10-11-varta-v2-design.md`. Pl
 | 4 | News + sentiment — Alpaca/Finnhub/RSS/GDELT/EDGAR/Polymarket, dedupe/tagging, TypeSafe Jev scoring (+heuristic fallback, circuit breaker), news/sentiment/crowd-odds/holdings API, live News/Investments | `plans/2026-10-12-news.md` | Done, reviewed; live sources verified |
 | 5 | Advisor agent + evals — read-only toolbox (12 tools), hand-written tool loop, SSE chat, conversations, rule-based alerts, daily briefing, live Advisor + Home cards, 25-task eval harness | `plans/2026-10-12-agent.md` | Done, reviewed; live evals run; chat + home smoke-tested with Haiku |
 | 6 | Deploy (code) — per-visitor conversations (demo), chat + admin rate limits, local-tz today, JSON logs, scheduled worker (sync/news/alerts/briefing/backup/demo reset), Docker images, Compose demo/owner profiles on separate networks, Caddy (public demo, Tailscale-only owner), CI image builds, runbook `deploy/README.md` | `plans/2026-10-12-deploy.md` | Code done, reviewed; **not provisioned yet** (superseded for hosting by row 7; the VPS path stays as an alternative) |
-
 | 7 | Hosting — demo on Heroku (GitHub Student credit, `deploy/heroku.md`), owner on the Mac via `scripts/owner.sh` + `tailscale serve` (`deploy/owner-mac.md`) | `plans/2026-10-13-heroku-mac.md` | Code done, reviewed; **not provisioned** |
 
 Tests: 288 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, tsc, `next build` clean.
 
 ## Next
 
-**Provision and start (with Tarun):** create the Heroku apps and the `vaartha.dev` custom domain (`demo.<domain>`, `api.<domain>`) per `deploy/heroku.md`, then start the owner instance on the Mac per `deploy/owner-mac.md`. Nothing has been pushed; CI's docker job and the Heroku release run once the branch is pushed.
+**Provision and start (with Tarun):** create the Heroku apps and the `vaartha.dev` custom domain (`demo.<domain>`, `api.<domain>`) per `deploy/heroku.md`, then start the owner instance on the Mac per `deploy/owner-mac.md`. Nothing has been pushed; CI's docker job runs once the branch is pushed; the Heroku release is a manual workflow (see `deploy/heroku.md`).
 
 ## Open items (need attention)
 

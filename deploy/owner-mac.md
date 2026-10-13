@@ -28,7 +28,7 @@ open http://127.0.0.1:3000
 scripts/owner.sh status | stop
 ```
 
-`start` rebuilds the web when the git commit changed since the last build (after a pull; about a minute).
+`start` rebuilds the web when the git commit changed since the last build (after a pull; about a minute). The stamp only tracks commits: after a manual `pnpm build` or uncommitted web changes, run `rm web/.next/owner-build-stamp` to force an owner rebuild.
 Logs: `~/Library/Logs/Vaartha`.
 
 ## 3. Phone access (Tailscale)

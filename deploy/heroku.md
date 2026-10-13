@@ -21,12 +21,12 @@ Public Suffix List), so the visitor cookie (SameSite=Lax) and credentialed brows
    - Non-secret: `VARTA_INSTANCE=demo`, `PLAID_ENV=sandbox`, `SEC_USER_AGENT`, `LLM_BASE_URL`, `LLM_MODEL`
    - `CHAT_RATE_PER_HOUR=20`, `VARTA_TZ`, `TRUST_PROXY=1`, `RUN_WORKER=1`
    - `CORS_ORIGINS=https://demo.<domain>`, `COOKIE_DOMAIN=.<domain>`, `VARTA_DB_PATH=/tmp/varta.db`
-   - `VARTA_BACKUP_DIR` is not needed (the filesystem is ephemeral).
+   - `VARTA_BACKUP_DIR=/tmp/backups` (the filesystem is ephemeral)
 4. Web config vars: `heroku config:set API_URL=https://api.<domain> VARTA_INSTANCE=demo -a <web-app>`.
 5. GitHub repo Settings, Secrets and variables:
    - Secret `HEROKU_API_KEY` (from `heroku authorizations:create`).
    - Variables `HEROKU_API_APP`, `HEROKU_WEB_APP`, `NEXT_PUBLIC_API_BASE=https://api.<domain>`.
-6. Actions tab, run the "deploy-heroku" workflow. (Images are built on amd64 runners and released via the Platform API formation endpoint.)
+6. Run the "deploy-heroku" workflow. It only appears in the Actions tab once it is on the default branch: merge to main first, or run `gh workflow run deploy-heroku.yml --ref claude/varta-v2-ec24da`. (Images are built on amd64 runners and released via the Platform API formation endpoint.)
 7. Dynos:
    - `heroku ps:type web=basic -a <api-app>`
    - `heroku ps:type web=eco -a <web-app>` (sleeps) or `web=basic` (always on)

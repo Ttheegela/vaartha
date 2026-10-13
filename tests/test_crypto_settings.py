@@ -106,3 +106,10 @@ def test_worker_cors_cookie_from_env(monkeypatch):
     s = Settings.from_env()
     assert s.run_worker and s.cors_origins == ("https://a.dev", "https://b.dev")
     assert s.cookie_domain == ".a.dev"
+
+
+def test_wildcard_cors_rejected(monkeypatch):
+    monkeypatch.setenv("VARTA_INSTANCE", "owner")
+    monkeypatch.setenv("CORS_ORIGINS", "https://a.dev,*")
+    with pytest.raises(ValueError, match="CORS_ORIGINS"):
+        Settings.from_env()

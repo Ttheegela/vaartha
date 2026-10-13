@@ -11,7 +11,7 @@ from api.agent_tools import Toolbox
 from api.settings import Settings
 
 MAX_TOOL_ROUNDS = 8
-LLM_TIMEOUT_SECONDS = 60
+LLM_TIMEOUT_SECONDS = 45  # under Heroku's 55 s idle window on the SSE stream
 LLM_MAX_RETRIES = 1
 BILLS_WINDOW_DAYS = 7
 MS_PER_SECOND = 1000

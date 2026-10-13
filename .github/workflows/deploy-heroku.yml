@@ -20,6 +20,7 @@ jobs:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           set -euo pipefail
+          : "${HEROKU_API_APP:?}" "${HEROKU_WEB_APP:?}" "${NEXT_PUBLIC_API_BASE:?}"
           echo "$HEROKU_API_KEY" | docker login registry.heroku.com -u _ --password-stdin
 
       - name: Build images

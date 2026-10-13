@@ -48,6 +48,8 @@ class Settings:
             raise ValueError(f"PLAID_ENV must be one of {PLAID_ENVS}, got {self.plaid_env!r}")
         if self.instance == "demo" and self.plaid_env == "production":
             raise ValueError("the demo instance must use the Plaid sandbox")
+        if "*" in self.cors_origins:
+            raise ValueError("CORS_ORIGINS must list explicit origins, not *")
 
     @property
     def plaid_configured(self) -> bool:
