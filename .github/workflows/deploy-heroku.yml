@@ -2,6 +2,9 @@ name: deploy-heroku
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest # amd64, as Heroku requires
@@ -9,11 +12,12 @@ jobs:
       HEROKU_API_APP: ${{ vars.HEROKU_API_APP }}
       HEROKU_WEB_APP: ${{ vars.HEROKU_WEB_APP }}
       NEXT_PUBLIC_API_BASE: ${{ vars.NEXT_PUBLIC_API_BASE }}
-      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Registry login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           set -euo pipefail
           echo "$HEROKU_API_KEY" | docker login registry.heroku.com -u _ --password-stdin
@@ -32,6 +36,8 @@ jobs:
           docker push "registry.heroku.com/${HEROKU_WEB_APP}/web"
 
       - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           set -euo pipefail
           for app in "$HEROKU_API_APP" "$HEROKU_WEB_APP"; do
