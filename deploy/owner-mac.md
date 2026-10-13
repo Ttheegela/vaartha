@@ -16,6 +16,9 @@ Set: `PLAID_ENV=production` with `PLAID_CLIENT_ID` / `PLAID_SECRET` (Trial keys)
 own cap), `LLM_BASE_URL`, `LLM_MODEL`; `VARTA_TZ`. Do not set `VARTA_INSTANCE=demo`. The script
 forces the instance, DB and backup paths, and the worker.
 
+Values containing spaces must be quoted, e.g. `SEC_USER_AGENT="Your Name you@example.com"`; the file is
+sourced as shell and `check` rejects it otherwise.
+
 ## 2. Run
 
 ```
@@ -25,6 +28,7 @@ open http://127.0.0.1:3000
 scripts/owner.sh status | stop
 ```
 
+`start` rebuilds the web when the git commit changed since the last build (after a pull; about a minute).
 Logs: `~/Library/Logs/Vaartha`.
 
 ## 3. Phone access (Tailscale)
@@ -37,7 +41,7 @@ Never use `tailscale funnel`: it is public.
 
 ```
 cp deploy/macos/dev.vaartha.owner.plist.template ~/Library/LaunchAgents/dev.vaartha.owner.plist
-# edit it: replace <repo> and <user>
+# edit it: replace <repo> (repo path) and <user> (your username; PATH needs ~/.local/bin for uv)
 mkdir -p ~/Library/Logs/Vaartha
 launchctl load ~/Library/LaunchAgents/dev.vaartha.owner.plist
 ```

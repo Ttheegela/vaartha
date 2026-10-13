@@ -21,7 +21,10 @@ check() {
     return 1
   fi
   local inst
-  inst="$(set -a; . "$ENV_FILE" >/dev/null 2>&1; echo "${VARTA_INSTANCE:-owner}")"
+  if ! inst="$(unset VARTA_INSTANCE; set -eu; set -a; . "$ENV_FILE" >/dev/null 2>&1; echo "${VARTA_INSTANCE:-owner}")"; then
+    echo "env file is not valid shell; quote values containing spaces" >&2
+    return 1
+  fi
   if [ "$inst" = "demo" ]; then
     echo "VARTA_INSTANCE=demo in env file; the owner instance must not be demo" >&2
     return 1
@@ -34,10 +37,16 @@ alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 start() {
   check
   mkdir -p "$DATA_DIR/backups" "$LOG_DIR"
-  if [ ! -f "$STANDALONE/server.js" ]; then
+  local stamp want
+  stamp="$ROOT/web/.next/owner-build-stamp"
+  want="$(git -C "$ROOT" rev-parse HEAD)-owner"
+  if [ ! -f "$STANDALONE/server.js" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
     # Owner build: same-origin API calls, rewrites to the default http://127.0.0.1:8000.
     (cd "$ROOT" && env -u NEXT_PUBLIC_API_BASE -u API_URL pnpm -C web build)
+    rm -rf "$STANDALONE/.next/static"
+    echo "$want" >"$stamp"
   fi
+  if [ ! -x "$ROOT/.venv/bin/uvicorn" ]; then (cd "$ROOT" && uv sync --locked); fi
   if [ ! -d "$STANDALONE/.next/static" ]; then
     mkdir -p "$STANDALONE/.next"
     cp -R "$ROOT/web/.next/static" "$STANDALONE/.next/static"
@@ -52,7 +61,7 @@ start() {
         VARTA_BACKUP_DIR="$DATA_DIR/backups" RUN_WORKER=1
       unset TRUST_PROXY CORS_ORIGINS COOKIE_DOMAIN
       cd "$ROOT"
-      nohup uv run uvicorn --factory api.main:create_app --host 127.0.0.1 --port 8000 \
+      nohup "$ROOT/.venv/bin/uvicorn" --factory api.main:create_app --host 127.0.0.1 --port 8000 \
         >>"$LOG_DIR/api.log" 2>&1 &
       echo $! >"$DATA_DIR/api.pid"
     )
@@ -60,7 +69,7 @@ start() {
   if alive "$DATA_DIR/web.pid"; then echo "web already running"; else
     (
       cd "$ROOT"
-      HOSTNAME=127.0.0.1 PORT=3000 API_URL=http://127.0.0.1:8000 VARTA_INSTANCE=owner \
+      HOSTNAME=127.0.0.1 PORT=3000 VARTA_INSTANCE=owner \
         nohup node "$STANDALONE/server.js" >>"$LOG_DIR/web.log" 2>&1 &
       echo $! >"$DATA_DIR/web.pid"
     )

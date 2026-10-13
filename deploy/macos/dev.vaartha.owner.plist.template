@@ -11,9 +11,10 @@
   </array>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>PATH</key><string>/Users/<user>/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
   <key>RunAtLoad</key><true/>
+  <key>AbandonProcessGroup</key><true/>
   <key>KeepAlive</key><false/>
   <key>StandardOutPath</key><string>/Users/<user>/Library/Logs/Vaartha/launchd.log</string>
   <key>StandardErrorPath</key><string>/Users/<user>/Library/Logs/Vaartha/launchd.log</string>
