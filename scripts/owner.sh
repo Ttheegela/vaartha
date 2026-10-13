@@ -32,7 +32,17 @@ check() {
   echo "ok: $ENV_FILE"
 }
 
-alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
+# alive PIDFILE MARKER: pid is live AND its command contains MARKER (guards recycled pids after reboot/crash).
+alive() {
+  local pid
+  [ -f "$1" ] || return 1
+  pid="$(cat "$1")"
+  if kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= 2>/dev/null | grep -q -- "$2"; then return 0; fi
+  rm -f "$1"
+  return 1
+}
+
+marker() { case "$1" in api) echo uvicorn ;; *) echo server.js ;; esac; }
 
 start() {
   check
@@ -54,7 +64,7 @@ start() {
   if [ -d "$ROOT/web/public" ] && [ ! -d "$STANDALONE/public" ]; then
     cp -R "$ROOT/web/public" "$STANDALONE/public"
   fi
-  if alive "$DATA_DIR/api.pid"; then echo "api already running"; else
+  if alive "$DATA_DIR/api.pid" uvicorn; then echo "api already running"; else
     (
       set -a; . "$ENV_FILE"; set +a
       export VARTA_INSTANCE=owner VARTA_DB_PATH="$DATA_DIR/varta.db" \
@@ -66,7 +76,7 @@ start() {
       echo $! >"$DATA_DIR/api.pid"
     )
   fi
-  if alive "$DATA_DIR/web.pid"; then echo "web already running"; else
+  if alive "$DATA_DIR/web.pid" server.js; then echo "web already running"; else
     (
       cd "$ROOT"
       HOSTNAME=127.0.0.1 PORT=3000 VARTA_INSTANCE=owner \
@@ -80,7 +90,7 @@ start() {
 stop() {
   local n
   for n in web api; do
-    if alive "$DATA_DIR/$n.pid"; then kill "$(cat "$DATA_DIR/$n.pid")" && echo "stopped $n"; fi
+    if alive "$DATA_DIR/$n.pid" "$(marker $n)"; then kill "$(cat "$DATA_DIR/$n.pid")" && echo "stopped $n"; fi
     rm -f "$DATA_DIR/$n.pid"
   done
 }
@@ -88,7 +98,7 @@ stop() {
 status() {
   local n
   for n in api web; do
-    if alive "$DATA_DIR/$n.pid"; then echo "$n: running (pid $(cat "$DATA_DIR/$n.pid"))"
+    if alive "$DATA_DIR/$n.pid" "$(marker $n)"; then echo "$n: running (pid $(cat "$DATA_DIR/$n.pid"))"
     else echo "$n: stopped"; fi
   done
   curl -s 127.0.0.1:8000/healthz || echo "healthz: no response"

@@ -66,3 +66,23 @@ def test_shell_instance_not_inherited(tmp_path):
     env = {**os.environ, "VAARTHA_OWNER_ENV": str(env_file), "VARTA_INSTANCE": "demo"}
     r = subprocess.run(["bash", str(SCRIPT), "check"], env=env, capture_output=True, text=True)
     assert r.returncode == 0
+
+
+def test_stale_pidfile_with_recycled_pid_is_ignored(tmp_path):
+    """A pidfile pointing at an unrelated live process is stale: not running, never killed."""
+    data = tmp_path / "Library" / "Application Support" / "Vaartha"
+    data.mkdir(parents=True)
+    victim = subprocess.Popen(["sleep", "30"])
+    try:
+        for n in ("api", "web"):
+            (data / f"{n}.pid").write_text(str(victim.pid))
+        env = {**os.environ, "HOME": str(tmp_path)}
+        for cmd in ("status", "stop"):
+            r = subprocess.run(["bash", str(SCRIPT), cmd], env=env, capture_output=True, text=True)
+            assert "api: running" not in r.stdout and "web: running" not in r.stdout
+            assert "stopped api" not in r.stdout and "stopped web" not in r.stdout
+            assert victim.poll() is None, f"{cmd} killed an unrelated process"
+        assert not (data / "api.pid").exists() and not (data / "web.pid").exists()
+    finally:
+        victim.kill()
+        victim.wait()
