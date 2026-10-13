@@ -16,7 +16,7 @@ Read this first when resuming. Design: `specs/2026-10-11-varta-v2-design.md`. Pl
 | 6 | Deploy (code) — per-visitor conversations (demo), chat + admin rate limits, local-tz today, JSON logs, scheduled worker (sync/news/alerts/briefing/backup/demo reset), Docker images, Compose demo/owner profiles on separate networks, Caddy (public demo, Tailscale-only owner), CI image builds, runbook `deploy/README.md` | `plans/2026-10-12-deploy.md` | Code done, reviewed; **not provisioned yet** (superseded for hosting by row 7; the VPS path stays as an alternative) |
 | 7 | Hosting — demo on Heroku (GitHub Student credit, `deploy/heroku.md`), owner on the Mac via `scripts/owner.sh` + `tailscale serve` (`deploy/owner-mac.md`) | `plans/2026-10-13-heroku-mac.md` | Code done, reviewed; **not provisioned** |
 
-Tests: 288 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, tsc, `next build` clean.
+Tests: 290 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, tsc, `next build` clean.
 
 ## Next
 
