@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Replace <repo> with the absolute path of this repository and <user> with your username. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.vaartha.owner</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string><repo>/scripts/owner.sh</string>
+    <string>start</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><false/>
+  <key>StandardOutPath</key><string>/Users/<user>/Library/Logs/Vaartha/launchd.log</string>
+  <key>StandardErrorPath</key><string>/Users/<user>/Library/Logs/Vaartha/launchd.log</string>
+</dict>
+</plist>
