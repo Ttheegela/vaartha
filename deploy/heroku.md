@@ -15,7 +15,7 @@ Public Suffix List), so the visitor cookie (SameSite=Lax) and credentialed brows
    ```
    read -rs "?Plaid secret: " v && heroku config:set PLAID_SECRET="$v" -a <api-app> > /dev/null && unset v
    ```
-   (zsh syntax; in bash use `read -rsp "Plaid secret: " v`.) Repeat for each secret below.
+   (zsh syntax; in bash use `read -rsp "Plaid secret: " v`.) `PLAID_SECRET="$v"` is briefly visible to local `ps`; acceptable on a personal machine. Repeat for each secret below.
    - Secrets: `PLAID_CLIENT_ID`, `PLAID_SECRET`, `ALPACA_API_KEY`, `ALPACA_SECRET_KEY`, `FINNHUB_API_KEY`, `TYPESAFE_API_KEY`, `OPENROUTER_API_KEY` (demo key with a spend cap)
    - `TOKEN_ENCRYPTION_KEY`: `heroku config:set "$(uv run python -m scripts.new_token_key)" -a <api-app> > /dev/null`
    - Non-secret: `VARTA_INSTANCE=demo`, `PLAID_ENV=sandbox`, `SEC_USER_AGENT`, `LLM_BASE_URL`, `LLM_MODEL`
@@ -27,7 +27,9 @@ Public Suffix List), so the visitor cookie (SameSite=Lax) and credentialed brows
    - Secret `HEROKU_API_KEY` (from `heroku authorizations:create`).
    - Variables `HEROKU_API_APP`, `HEROKU_WEB_APP`, `NEXT_PUBLIC_API_BASE=https://api.<domain>`.
 6. Actions tab, run the "deploy-heroku" workflow. (Images are built on amd64 runners and released via the Platform API formation endpoint.)
-7. Dynos: `heroku ps:type web=basic -a <api-app>`. Web app: `eco` (sleeps) or `basic` (always on).
+7. Dynos:
+   - `heroku ps:type web=basic -a <api-app>`
+   - `heroku ps:type web=eco -a <web-app>` (sleeps) or `web=basic` (always on)
    Basic (api) + Eco (web) is $12 a month and fits the $13 credit. Basic + Basic is $14, about $1 a month on the card.
    Then scale both:
    - `heroku ps:scale web=1 -a <api-app>`
@@ -43,5 +45,5 @@ Public Suffix List), so the visitor cookie (SameSite=Lax) and credentialed brows
    - `heroku logs -t -a <api-app>` shows JSON lines.
 10. Notes:
     - Conversations reset at the daily dyno restart, and the demo data reseeds then.
-    - A Basic dyno has 512 MB and the API image already runs a single uvicorn process. On R14 in `heroku logs`, upgrade the API dyno to Standard-1X. `RUN_WORKER=0` is not an option on Heroku (separate dynos have separate disks).
+    - A Basic dyno has 512 MB and the API image already runs a single uvicorn process. First check memory in `heroku logs` (R14 lines show usage). Standard-1X is also 512 MB, so it does not help. The real lever is Standard-2X (1 GB, $50 a month per heroku.com/pricing on 2026-10-13; check current pricing), well outside the $13 credit. Cheaper alternative: run the demo API on the VPS/Compose path in `deploy/README.md`. `RUN_WORKER=0` is not an option on Heroku (separate dynos have separate disks).
     - Calendar reminders: credit end and domain transfer.
