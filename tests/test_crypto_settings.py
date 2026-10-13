@@ -94,3 +94,15 @@ def test_chat_rate_proxy_tz_from_env(monkeypatch):
     monkeypatch.setenv("VARTA_TZ", "UTC")
     s = Settings.from_env()
     assert (s.chat_rate_per_hour, s.trust_proxy, s.tz) == (5, True, "UTC")
+
+
+def test_worker_cors_cookie_from_env(monkeypatch):
+    monkeypatch.setenv("VARTA_INSTANCE", "owner")
+    s = Settings.from_env()
+    assert not s.run_worker and s.cors_origins == () and s.cookie_domain is None
+    monkeypatch.setenv("RUN_WORKER", "1")
+    monkeypatch.setenv("CORS_ORIGINS", " https://a.dev , ,https://b.dev")
+    monkeypatch.setenv("COOKIE_DOMAIN", ".a.dev")
+    s = Settings.from_env()
+    assert s.run_worker and s.cors_origins == ("https://a.dev", "https://b.dev")
+    assert s.cookie_domain == ".a.dev"

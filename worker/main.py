@@ -5,7 +5,7 @@ Run: uv run python -m worker.main
 
 import logging
 import signal
-import time
+import threading
 from contextlib import closing
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
@@ -18,7 +18,7 @@ from api.crypto import TokenBox
 from api.db import connect, init_db
 from api.logs import setup_logging
 from api.plaid_client import PlaidClient
-from api.settings import Settings
+from api.settings import Settings, local_today
 from api.sync import sync_all
 from scripts.backup_db import DEFAULT_KEEP, backup, backup_dir
 from scripts.refresh_news import run as refresh_news_run
@@ -28,6 +28,7 @@ from worker.schedule import JOBS, due
 log = logging.getLogger("varta.worker")
 TICK_SECONDS = 60
 STATE_PREFIX = "job:"
+RESEED_JOBS = ("demo_reset", "news", "alerts", "briefing")  # done by reset_demo.reset
 
 
 def run_job(name: str, settings: Settings, now: datetime) -> None:
@@ -82,23 +83,51 @@ def tick(settings: Settings, now: datetime, runner=run_job) -> list[str]:
     return ran
 
 
+def run_loop(settings: Settings, stop: threading.Event, tick_seconds: int = TICK_SECONDS,
+             clock=lambda: datetime.now(UTC)) -> None:
+    """Init the DB, then tick until `stop` is set; a failing tick is logged, never fatal."""
+    with closing(connect(settings.db_path)) as conn:
+        init_db(conn)
+    log.info("worker started instance=%s tz=%s", settings.instance, settings.tz)
+    while not stop.is_set():
+        try:
+            tick(settings, clock())
+        except Exception:  # noqa: BLE001 - keep the loop alive
+            log.exception("tick failed")
+        stop.wait(tick_seconds)
+    log.info("worker stopped")
+
+
+def boot_reseed_if_empty(settings: Settings) -> bool:
+    """On an empty demo DB run the reset now and mark its jobs done so tick won't repeat them."""
+    if settings.instance != "demo":
+        return False
+    try:
+        with closing(connect(settings.db_path)) as conn:
+            init_db(conn)
+            if conn.execute("SELECT 1 FROM accounts LIMIT 1").fetchone():
+                return False
+        now = datetime.now(UTC)
+        reset(settings, local_today(settings.tz, now), now=now)
+        with closing(connect(settings.db_path)) as conn:
+            for name in RESEED_JOBS:
+                conn.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES (?, ?)",
+                             (STATE_PREFIX + name, now.isoformat()))
+            conn.commit()
+        return True
+    except Exception:  # noqa: BLE001 - a failed reseed must not stop the scheduler
+        log.exception("boot reseed failed")
+        return False
+
+
 def main() -> None:
     """Tick forever; SIGINT/SIGTERM exit cleanly."""
     setup_logging()
     settings = Settings.from_env()
-    signal.signal(signal.SIGTERM, signal.default_int_handler)
-    with closing(connect(settings.db_path)) as conn:
-        init_db(conn)
-    log.info("worker started instance=%s tz=%s", settings.instance, settings.tz)
-    try:
-        while True:
-            try:
-                tick(settings, datetime.now(UTC))
-            except Exception:  # noqa: BLE001 - keep the loop alive
-                log.exception("tick failed")
-            time.sleep(TICK_SECONDS)
-    except KeyboardInterrupt:
-        log.info("worker stopped")
+    stop = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    signal.signal(signal.SIGINT, lambda *_: stop.set())
+    run_loop(settings, stop)
 
 
 if __name__ == "__main__":

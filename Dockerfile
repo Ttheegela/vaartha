@@ -14,6 +14,6 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 \
     VARTA_DB_PATH=/data/varta.db VARTA_BACKUP_DIR=/data/backups
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
-  CMD ["python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"]
+  CMD ["sh", "-c", "python -c \"import urllib.request as u; u.urlopen('http://127.0.0.1:${PORT:-8000}/healthz', timeout=4)\""]
 # No --proxy-headers: client IP comes from api/visitor.client_ip, gated by TRUST_PROXY.
-CMD ["uvicorn", "--factory", "api.main:create_app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+CMD ["sh", "-c", "exec uvicorn --factory api.main:create_app --host 0.0.0.0 --port \"${PORT:-8000}\" --no-access-log"]

@@ -168,7 +168,8 @@ def build_advisor_router(db_path: Path, toolbox: Toolbox, llm, model: str,
                                  media_type="text/event-stream", headers=SSE_HEADERS)
         if minted:
             resp.set_cookie(VISITOR_COOKIE, vid, max_age=COOKIE_MAX_AGE, path="/", httponly=True,
-                            samesite="lax", secure=settings.trust_proxy)
+                            samesite="lax", secure=settings.trust_proxy,
+                            domain=settings.cookie_domain)
         return resp
 
     @router.get("/conversations", response_model=list[ConversationOut])

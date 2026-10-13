@@ -39,6 +39,9 @@ class Settings:
     chat_rate_per_hour: int = 0  # 0 = off
     trust_proxy: bool = False
     tz: str = DEFAULT_TZ
+    run_worker: bool = False  # run the scheduler in the API process (single-dyno hosting)
+    cors_origins: tuple[str, ...] = ()
+    cookie_domain: str | None = None
 
     def __post_init__(self) -> None:
         if self.plaid_env not in PLAID_ENVS:
@@ -81,4 +84,8 @@ class Settings:
                 "CHAT_RATE_PER_HOUR", DEMO_CHAT_RATE if instance == "demo" else 0)),
             trust_proxy=os.environ.get("TRUST_PROXY") == "1",
             tz=os.environ.get("VARTA_TZ") or DEFAULT_TZ,
+            run_worker=os.environ.get("RUN_WORKER") == "1",
+            cors_origins=tuple(o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",")
+                               if o.strip()),
+            cookie_domain=os.environ.get("COOKIE_DOMAIN") or None,
         )

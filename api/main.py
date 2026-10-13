@@ -4,15 +4,17 @@ Run: uvicorn --factory api.main:create_app
 """
 
 import logging
+import threading
 import time
 from collections.abc import Callable
-from contextlib import closing
+from contextlib import asynccontextmanager, closing
 from dataclasses import asdict
 from datetime import date
 from typing import Literal
 
 import polars as pl
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from api.advisor import build_advisor_router
@@ -30,11 +32,13 @@ from api.visitor import RateLimiter, client_ip
 from core.live import live_regime
 from core.prices import fetch_closes
 from core.regime import Regime
+from worker import main as worker_main
 
 log = logging.getLogger("varta.api")
 REGIME_TTL_SECONDS = 300
 PLAID_PRODUCTS = ["transactions"]
 PLAID_IF_SUPPORTED = ["investments"]
+WORKER_JOIN_SECONDS = 5
 
 
 class RegimeOut(BaseModel):
@@ -103,7 +107,27 @@ def create_app(
             raise HTTPException(status_code=503, detail="plaid not configured")
         return plaid
 
-    app = FastAPI(title="Vārtā API")
+    def worker_body(stop: threading.Event) -> None:
+        worker_main.boot_reseed_if_empty(settings)
+        worker_main.run_loop(settings, stop)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        stop, thread = threading.Event(), None
+        if settings.run_worker:
+            thread = threading.Thread(target=worker_body, args=(stop,), name="varta-worker",
+                                      daemon=True)
+            thread.start()
+        yield
+        stop.set()
+        if thread:
+            thread.join(WORKER_JOIN_SECONDS)
+
+    app = FastAPI(title="Vārtā API", lifespan=lifespan)
+    if settings.cors_origins:
+        app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
+                           allow_credentials=True, allow_methods=["GET", "POST"],
+                           allow_headers=["content-type"])
     # ponytail: single-process in-memory cache; move to the DB if the api runs >1 worker
     cache: dict[str, tuple[float, Regime]] = {}
 
