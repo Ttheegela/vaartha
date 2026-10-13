@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { X } from "lucide-react"
+import { apiUrl } from "@/lib/api-base"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import type { components } from "@/lib/api-types"
 
@@ -14,7 +15,7 @@ export function AlertFeed({ initial }: { initial: Alert[] }) {
   async function dismiss(alert: Alert) {
     setAlerts((a) => a.filter((x) => x.id !== alert.id))
     let ok = false
-    try { ok = (await fetch(`/api/alerts/${alert.id}/dismiss`, { method: "POST" })).ok } catch {}
+    try { ok = (await fetch(apiUrl(`/api/alerts/${alert.id}/dismiss`), { method: "POST", credentials: "include" })).ok } catch {}
     if (!ok) setAlerts((a) => a.some((x) => x.id === alert.id) ? a : [...a, alert].sort((p, q) => p.id - q.id))
   }
   if (alerts.length === 0) return null

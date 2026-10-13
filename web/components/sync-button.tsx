@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { RefreshCw } from "lucide-react"
+import { apiUrl } from "@/lib/api-base"
 import { Button } from "@/components/ui/button"
 
 export function SyncButton() {
@@ -11,7 +12,7 @@ export function SyncButton() {
   async function sync() {
     setBusy(true)
     setNote(null)
-    const r = await fetch("/api/sync", { method: "POST" }).catch(() => null)
+    const r = await fetch(apiUrl("/api/sync"), { method: "POST", credentials: "include" }).catch(() => null)
     setBusy(false)
     if (!r?.ok) return setNote("Sync unavailable")
     const failed = Object.values((await r.json()).items as Record<string, string>).filter((s) => s !== "ok")

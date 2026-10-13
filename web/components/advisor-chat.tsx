@@ -3,6 +3,7 @@
 import { FormEvent, Fragment, useState } from "react"
 import Link from "next/link"
 import { ChevronDown, Send, Sparkles, Wrench } from "lucide-react"
+import { apiUrl } from "@/lib/api-base"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -23,7 +24,7 @@ export function AdvisorChat({ full = false, conversationId, initial = [], onConv
     if (!text.trim() || busy) return
     setMessages((m) => [...m, { role: "user", text }, { role: "assistant", text: "", tools: [] }]); setInput(""); setBusy(true)
     try {
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, conversation_id: convId }) })
+      const res = await fetch(apiUrl("/api/chat"), { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, conversation_id: convId }) })
       if (!res.ok || !res.body) throw new Error("unavailable")
       const reader = res.body.getReader(), decoder = new TextDecoder(); let buf = "", settled = false
       for (;;) {

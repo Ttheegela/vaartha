@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { MessageSquarePlus } from "lucide-react"
 import { AdvisorChat, type ChatMessage } from "@/components/advisor-chat"
+import { apiUrl } from "@/lib/api-base"
 import { Button } from "@/components/ui/button"
 import { relativeTime } from "@/lib/relative-time"
 import type { components } from "@/lib/api-types"
@@ -11,7 +12,7 @@ type Conversation = components["schemas"]["ConversationOut"]
 export function AdvisorWorkspace({ conversations }: { conversations: Conversation[] }) {
   const [list, setList] = useState(conversations); const [active, setActive] = useState<{ key: string; id?: string; initial: ChatMessage[] }>({ key: "new", initial: [] })
   async function open(id: string) {
-    const res = await fetch(`/api/conversations/${id}`); if (!res.ok) return
+    const res = await fetch(apiUrl(`/api/conversations/${id}`), { credentials: "include" }); if (!res.ok) return
     const rows: components["schemas"]["MessageOut"][] = await res.json()
     setActive({ key: id, id, initial: rows.map((r) => ({ role: r.role === "user" ? "user" : "assistant", text: r.content, sources: r.sources, tools: r.tool_names })) })
   }

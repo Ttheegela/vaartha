@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { usePlaidLink } from "react-plaid-link"
 import { Link2 } from "lucide-react"
+import { apiUrl } from "@/lib/api-base"
 import { Button } from "@/components/ui/button"
 
 export function LinkAccountButton() {
@@ -12,7 +13,7 @@ export function LinkAccountButton() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    fetch("/api/plaid/link_token", { method: "POST" })
+    fetch(apiUrl("/api/plaid/link_token"), { method: "POST", credentials: "include" })
       .then(async (r) => (r.ok ? setToken((await r.json()).link_token) : setError("Account linking is unavailable")))
       .catch(() => setError("Account linking is unavailable"))
   }, [])
@@ -20,8 +21,8 @@ export function LinkAccountButton() {
   const onSuccess = useCallback(async (publicToken: string | null) => {
     if (!publicToken) return
     setBusy(true)
-    const r = await fetch("/api/plaid/exchange", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    const r = await fetch(apiUrl("/api/plaid/exchange"), {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ public_token: publicToken }),
     }).catch(() => null)
     setBusy(false)
