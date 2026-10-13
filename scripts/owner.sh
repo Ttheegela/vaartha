@@ -21,10 +21,12 @@ check() {
     return 1
   fi
   local inst
-  if ! inst="$(unset VARTA_INSTANCE; set -eu; set -a; . "$ENV_FILE" >/dev/null 2>&1; echo "${VARTA_INSTANCE:-owner}")"; then
+  # Separate bash processes: bash 4+ ignores set -e inside a command substitution in an if/||.
+  if ! env -i HOME="$HOME" PATH="$PATH" bash -euc 'set -a; . "$1"' _ "$ENV_FILE" >/dev/null 2>&1; then
     echo "env file is not valid shell; quote values containing spaces" >&2
     return 1
   fi
+  inst="$(env -i HOME="$HOME" PATH="$PATH" bash -c 'set -a; . "$1" >/dev/null 2>&1; printf %s "${VARTA_INSTANCE:-owner}"' _ "$ENV_FILE")"
   if [ "$inst" = "demo" ]; then
     echo "VARTA_INSTANCE=demo in env file; the owner instance must not be demo" >&2
     return 1
