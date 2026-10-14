@@ -49,3 +49,15 @@ export function createIdleTimer({ timeoutMs, now, onIdle, store }: { timeoutMs: 
     stop() { stopped = true },
   }
 }
+
+export const LOCK_STORAGE_KEY = "varta:locked"
+
+/** Tell the other tabs (via the `storage` event) that this tab locked the shared session. */
+export function markLocked(storage: MiniStorage | null, t: number): void {
+  try { storage?.setItem(LOCK_STORAGE_KEY, String(t)) } catch { /* no sharing */ }
+}
+
+/** True for a `storage` event announcing a lock from another tab. */
+export function isLockEvent(e: { key: string | null }): boolean {
+  return e.key === LOCK_STORAGE_KEY
+}

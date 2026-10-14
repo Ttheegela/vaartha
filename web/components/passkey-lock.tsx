@@ -80,7 +80,7 @@ export function PasskeyLock({ next }: { next: string }) {
           <form className="flex w-full flex-col gap-3" onSubmit={(e) => { e.preventDefault(); register() }}>
             <p className="font-medium">Set up your passkey</p>
             <label className="text-xs text-muted-foreground" htmlFor="setup-code">
-              Run <code className="font-mono">uv run python -m scripts.passkey setup-code</code> on your Mac and enter the code.
+              Run <code className="font-mono">scripts/owner.sh passkey setup-code</code> on your Mac and enter the code.
             </label>
             <Input id="setup-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={SETUP_CODE_MAX}
               autoComplete="one-time-code" autoCapitalize="characters" spellCheck={false} placeholder="XXXX-XXXX" className="text-center font-mono tracking-widest" />

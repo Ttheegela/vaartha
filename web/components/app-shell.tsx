@@ -9,7 +9,7 @@ import { Logo } from "@/components/logo"
 import { RegimePill } from "@/components/regime-pill"
 import { apiUrl } from "@/lib/api-base"
 import { LOCK_PATH, lockPath } from "@/lib/auth"
-import { createIdleTimer, IDLE_CHECK_MS, IDLE_TIMEOUT_MS, storageStore } from "@/lib/idle"
+import { createIdleTimer, IDLE_CHECK_MS, IDLE_TIMEOUT_MS, isLockEvent, markLocked, storageStore } from "@/lib/idle"
 import { cn } from "@/lib/utils"
 
 const nav = [
@@ -24,6 +24,7 @@ const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "scroll", "whe
 async function lockNow(): Promise<boolean> {
   const res = await fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include", keepalive: true }).catch(() => null)
   if (!res?.ok) return false
+  markLocked(sharedStorage(), Date.now()) // other tabs share this session: lock them too
   window.location.assign(lockPath(window.location.pathname + window.location.search))
   return true
 }
@@ -47,7 +48,10 @@ export function AppShell({ children, demo, auth }: { children: React.ReactNode; 
     ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, reset, { capture: true, passive: true }))
     document.addEventListener("visibilitychange", onVisibility)
     const id = window.setInterval(() => timer.check(), IDLE_CHECK_MS)
+    const onStorage = (e: StorageEvent) => { if (isLockEvent(e)) window.location.assign(lockPath(window.location.pathname + window.location.search)) }
+    window.addEventListener("storage", onStorage)
     return () => {
+      window.removeEventListener("storage", onStorage)
       timer.stop(); window.clearInterval(id); document.removeEventListener("visibilitychange", onVisibility)
       ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, reset, { capture: true }))
     }

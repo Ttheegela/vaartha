@@ -65,3 +65,19 @@ test("storageStore survives blocked or throwing storage", () => {
   const t = createIdleTimer({ timeoutMs: 100, now: c.now, onIdle: () => { fired++ }, store: storageStore(boom) })
   c.advance(100); t.check(); assert.equal(fired, 1)
 })
+
+import { LOCK_STORAGE_KEY, markLocked, isLockEvent } from "../lib/idle.ts"
+
+test("markLocked writes the shared lock key; isLockEvent matches only it", () => {
+  const storage = fakeStorage()
+  markLocked(storage, 1234)
+  assert.equal(storage.getItem(LOCK_STORAGE_KEY), "1234")
+  assert.equal(isLockEvent({ key: LOCK_STORAGE_KEY }), true)
+  assert.equal(isLockEvent({ key: "varta:last-activity" }), false)
+  assert.equal(isLockEvent({ key: null }), false) // storage.clear()
+})
+
+test("markLocked survives blocked storage", () => {
+  markLocked({ getItem: () => null, setItem: () => { throw new Error("blocked") } }, 1)
+  markLocked(null, 1)
+})
