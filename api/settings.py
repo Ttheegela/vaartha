@@ -140,8 +140,9 @@ class Settings:
                                if o.strip()),
             cookie_domain=os.environ.get("COOKIE_DOMAIN") or None,
             auth_required=instance == "owner" and os.environ.get("OWNER_AUTH") != "0",
-            passkey_rp_id=os.environ.get("PASSKEY_RP_ID") or None,
-            passkey_origin=os.environ.get("PASSKEY_ORIGIN") or None,
+            # Browsers serialize origins in lowercase; compare like with like.
+            passkey_rp_id=(os.environ.get("PASSKEY_RP_ID") or "").lower() or None,
+            passkey_origin=(os.environ.get("PASSKEY_ORIGIN") or "").lower() or None,
             passkey_rp_name=os.environ.get("PASSKEY_RP_NAME") or PASSKEY_RP_NAME,
             auth_idle_minutes=int(os.environ.get("AUTH_IDLE_MINUTES") or AUTH_IDLE_MINUTES),
         )

@@ -42,6 +42,21 @@ check() {
       fi
     done
   fi
+  if [ "$(envval OWNER_AUTH)" != "0" ]; then
+    local py="$ROOT/.venv/bin/python" msg
+    [ -x "$py" ] || py="python3"
+    # Same rule as the API (never prints the values, only the rule that failed).
+    if ! msg="$(PASSKEY_RP_ID="$(envval PASSKEY_RP_ID)" PASSKEY_ORIGIN="$(envval PASSKEY_ORIGIN)" PYTHONPATH="$ROOT" \
+      "$py" -c 'import os, sys
+from api.settings import _check_passkey_config as c
+try:
+    c(os.environ["PASSKEY_RP_ID"].lower(), os.environ["PASSKEY_ORIGIN"].lower())
+except ValueError:
+    sys.exit("PASSKEY_ORIGIN must be https://<host on PASSKEY_RP_ID> exactly (no trailing slash or path; http only for localhost)")' 2>&1)"; then
+      echo "$msg" >&2
+      return 1
+    fi
+  fi
   echo "ok: $ENV_FILE"
 }
 
@@ -85,7 +100,7 @@ start() {
   fi
   if alive "$DATA_DIR/api.pid" uvicorn; then echo "api already running"; else
     (
-      set -a; . "$ENV_FILE"; set +a
+      unset OWNER_AUTH; set -a; . "$ENV_FILE"; set +a
       export VARTA_INSTANCE=owner VARTA_DB_PATH="$DATA_DIR/varta.db" \
         VARTA_BACKUP_DIR="$DATA_DIR/backups" RUN_WORKER=1
       unset TRUST_PROXY CORS_ORIGINS COOKIE_DOMAIN
@@ -98,7 +113,7 @@ start() {
   if alive "$DATA_DIR/web.pid" "$(marker web)"; then echo "web already running"; else
     (
       cd "$ROOT"
-      auth=1; [ "$(envval OWNER_AUTH)" = "0" ] && auth=0
+      auth=1; [ "$(envval OWNER_AUTH)" = "0" ] && auth=0 # from the env file only, same as the API
       HOSTNAME=127.0.0.1 PORT="$WEB_PORT" VARTA_INSTANCE=owner VARTA_AUTH="$auth" \
         PASSKEY_ORIGIN="$(envval PASSKEY_ORIGIN)" \
         nohup node "$STANDALONE/server.js" >>"$LOG_DIR/web.log" 2>&1 &
@@ -117,11 +132,26 @@ passkey_hint() {
     [ -n "$st" ] && break
     sleep 1
   done
+  if [ -z "$st" ]; then
+    echo "API did not come up; see $LOG_DIR/api.log" >&2
+    return 1
+  fi
   case "$st" in
     *'"auth_required":true'*'"has_credentials":false'* | *'"has_credentials":false'*'"auth_required":true'*)
-      echo "No passkey yet: run 'uv run python -m scripts.passkey setup-code' and open $(envval PASSKEY_ORIGIN)/lock" ;;
+      echo "No passkey yet: run 'scripts/owner.sh passkey setup-code' and open $(envval PASSKEY_ORIGIN)/lock" ;;
   esac
   return 0
+}
+
+# passkey ARGS: run the passkey CLI against the owner database (setup-code | list | reset).
+passkey() {
+  check >/dev/null
+  (
+    unset OWNER_AUTH; set -a; . "$ENV_FILE"; set +a
+    export VARTA_INSTANCE=owner VARTA_DB_PATH="$DATA_DIR/varta.db"
+    cd "$ROOT"
+    exec "$ROOT/.venv/bin/python" -m scripts.passkey "$@"
+  )
 }
 
 stop() {
@@ -147,5 +177,6 @@ case "${1:-}" in
   stop) stop ;;
   status) status ;;
   check) check ;;
-  *) echo "usage: owner.sh start|stop|status|check" >&2; exit 2 ;;
+  passkey) shift; passkey "$@" ;;
+  *) echo "usage: owner.sh start|stop|status|check|passkey" >&2; exit 2 ;;
 esac

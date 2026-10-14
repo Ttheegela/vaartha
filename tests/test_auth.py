@@ -445,8 +445,25 @@ def test_logout_invalidates_server_side(tmp_path, clock, fake_verify):
 
 # --- CLI ------------------------------------------------------------------------------
 
+def test_cli_refuses_missing_db(tmp_path, capsys):
+    s = _settings(tmp_path)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["list"], s)
+    assert "no database" in str(e.value.code) and not s.db_path.exists()
+
+
+def test_from_env_lowercases_passkey_values(monkeypatch):
+    monkeypatch.setenv("VARTA_INSTANCE", "owner")
+    monkeypatch.setenv("PASSKEY_RP_ID", "Mac.Tail.TS.net")
+    monkeypatch.setenv("PASSKEY_ORIGIN", "https://Mac.Tail.TS.net")
+    s = Settings.from_env()
+    assert (s.passkey_rp_id, s.passkey_origin) == ("mac.tail.ts.net", "https://mac.tail.ts.net")
+
+
 def test_cli_setup_code(tmp_path, capsys):
     s = _settings(tmp_path)
+    with _db(s):
+        pass
     cli.main(["setup-code"], s)
     out = capsys.readouterr().out
     assert re.fullmatch(r"Setup code \(valid 10 min\): [A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}\n",

@@ -24,7 +24,7 @@ sourced as shell and `check` rejects it otherwise.
 ```
 scripts/owner.sh check
 scripts/owner.sh start      # first start builds the web (needs pnpm, node, uv)
-open http://127.0.0.1:3100
+open http://127.0.0.1:3100   # with the lock on this redirects to PASSKEY_ORIGIN: set up tailscale serve (§3) first
 scripts/owner.sh status | stop
 ```
 
@@ -74,10 +74,10 @@ The owner instance is locked behind a passkey (Touch ID). The API refuses to sta
 values, then restart: the first start fails until they are set.
 
 - **Always open Vārtā via the Tailscale URL** (`PASSKEY_ORIGIN`). A passkey is bound to that host; `http://127.0.0.1:3100` redirects there.
-- **First setup:** `uv run python -m scripts.passkey setup-code` prints a one-time code (`owner.sh start` also prints a reminder while no passkey exists). Open `<PASSKEY_ORIGIN>/lock`, enter the code, register with Touch ID.
+- **First setup:** `scripts/owner.sh passkey setup-code` prints a one-time code (`owner.sh start` also prints a reminder while no passkey exists). Open `<PASSKEY_ORIGIN>/lock`, enter the code, register with Touch ID.
 - **iPhone:** if the passkey syncs through iCloud Keychain it is already on the phone. Otherwise run `setup-code` again and register from the phone's Safari.
 - **Auto-lock:** after 15 idle minutes (`AUTH_IDLE_MINUTES`) or when you press the Lock button. Unlock with Touch ID.
-- **Recovery** (lost device or passkey): `uv run python -m scripts.passkey reset`, then `setup-code` and register again. `scripts.passkey list` shows registered passkeys.
+- **Recovery** (lost device or passkey): `scripts/owner.sh passkey reset`, then `setup-code` and register again. `scripts/owner.sh passkey list` shows registered passkeys.
 
 ## 6. Dock / home-screen app
 

@@ -1,8 +1,9 @@
 """Manage the owner instance's passkey lock.
 
-Run: uv run python -m scripts.passkey setup-code   # one-time code to register a passkey
-     uv run python -m scripts.passkey list         # count and dates, never key material
-     uv run python -m scripts.passkey reset [--yes] # delete every passkey and session
+Run via the owner script so it uses the owner database:
+     scripts/owner.sh passkey setup-code    # one-time code to register a passkey
+     scripts/owner.sh passkey list          # count and dates, never key material
+     scripts/owner.sh passkey reset [--yes] # delete every passkey and session
 """
 
 import argparse
@@ -26,6 +27,9 @@ def main(argv: list[str] | None = None, settings: Settings | None = None) -> Non
     reset.add_argument("--yes", action="store_true", help="skip the confirmation prompt")
     args = parser.parse_args(argv)
     settings = settings or Settings.from_env()
+    if not settings.db_path.exists():
+        raise SystemExit(f"no database at {settings.db_path}; run via "
+                         "'scripts/owner.sh passkey ...' (the owner instance's DB)")
     with closing(connect(settings.db_path)) as conn:
         init_db(conn)
 

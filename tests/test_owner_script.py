@@ -97,3 +97,50 @@ def test_stale_pidfile_with_recycled_pid_is_ignored(tmp_path):
     finally:
         victim.kill()
         victim.wait()
+
+
+OK_PASSKEY = "PASSKEY_RP_ID=h.example\nPASSKEY_ORIGIN=https://h.example\n"
+
+
+def test_malformed_passkey_origin_fails_check(tmp_path):
+    for origin in ("https://h.example/", "http://h.example", "https://other.example"):
+        r = _check(tmp_path, f"PASSKEY_RP_ID=h.example\nPASSKEY_ORIGIN={origin}\n")
+        out = r.stdout + r.stderr
+        assert r.returncode == 1 and "PASSKEY_ORIGIN" in out, origin
+    assert _check(tmp_path, OK_PASSKEY).returncode == 0
+
+
+def test_owner_auth_not_inherited_by_check(tmp_path):
+    env_file = tmp_path / "owner.env"
+    env_file.write_text("VARTA_INSTANCE=owner\n")
+    env_file.chmod(0o600)
+    env = {**os.environ, "VAARTHA_OWNER_ENV": str(env_file), "OWNER_AUTH": "0"}
+    r = subprocess.run(["bash", str(SCRIPT), "check"], env=env, capture_output=True, text=True)
+    assert r.returncode == 1  # the shell's OWNER_AUTH=0 must not disable the lock
+
+
+def test_passkey_subcommand_uses_owner_db(tmp_path):
+    """`owner.sh passkey` runs the CLI against $DATA_DIR/varta.db, not a cwd-relative DB."""
+    import sqlite3
+
+    from api.db import connect, init_db
+
+    data = tmp_path / "Library" / "Application Support" / "Vaartha"
+    data.mkdir(parents=True)
+    conn = connect(data / "varta.db")
+    init_db(conn)
+    conn.close()
+    env_file = tmp_path / "owner.env"
+    env_file.write_text(OK_PASSKEY)
+    env_file.chmod(0o600)
+    env = {**os.environ, "HOME": str(tmp_path), "VAARTHA_OWNER_ENV": str(env_file)}
+    env.pop("VARTA_DB_PATH", None)
+    run = lambda *a: subprocess.run(  # noqa: E731
+        ["bash", str(SCRIPT), "passkey", *a], env=env, capture_output=True, text=True, cwd=tmp_path)
+    r = run("list")
+    assert r.returncode == 0 and "0 passkey(s)" in r.stdout, r.stdout + r.stderr
+    r = run("setup-code")
+    assert r.returncode == 0 and "Setup code" in r.stdout, r.stdout + r.stderr
+    rows = sqlite3.connect(data / "varta.db").execute("SELECT count(*) FROM app_state").fetchone()
+    assert rows[0] >= 1
+    assert not (tmp_path / "data").exists()
