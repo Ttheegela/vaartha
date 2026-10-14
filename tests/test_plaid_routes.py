@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.crypto import new_key
-from api.main import LINK_EVENT_RATE, create_app
+from api.main import LINK_EVENT_MAX_BYTES, LINK_EVENT_RATE, LINK_TOKEN_RATE, create_app
 from api.plaid_client import PlaidClient
 from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_INSTITUTION_ID, FAKE_ITEM_ID, FakePlaid
 from api.settings import Settings
@@ -18,8 +18,8 @@ TODAY = date(2026, 10, 12)
 NORMAL = compute_regime([100.0] * 40, [100.0] * 40, [1800.0] * 40)
 
 
-def _app(tmp_path, plaid=None, **settings_kw):
-    s = Settings(db_path=tmp_path / "v.db", instance="demo", **settings_kw)
+def _app(tmp_path, plaid=None, instance="demo", **settings_kw):
+    s = Settings(db_path=tmp_path / "v.db", instance=instance, **settings_kw)
     app = create_app(s, regime_provider=lambda: NORMAL, today=lambda: TODAY, plaid=plaid)
     return TestClient(app)
 
@@ -97,10 +97,18 @@ def test_sync_survives_failing_recurring_refresh(tmp_path, monkeypatch):
 def test_demo_admin_endpoints_rate_limited(tmp_path):
     c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
     for _ in range(5):
-        assert c.post("/api/plaid/link_token").status_code == 200
-    for path in ("/api/plaid/link_token", "/api/sync", "/api/plaid/exchange"):
+        assert c.post("/api/sync").status_code == 200
+    for path in ("/api/sync", "/api/plaid/exchange"):
         r = c.post(path, json={"public_token": "public-fake-1"})
         assert r.status_code == 429 and r.json() == {"detail": "rate limit: 5 per hour"}
+
+
+def test_demo_link_token_has_its_own_limit(tmp_path):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    codes = [c.post("/api/plaid/link_token").status_code for _ in range(LINK_TOKEN_RATE + 1)]
+    assert codes[:LINK_TOKEN_RATE] == [200] * LINK_TOKEN_RATE and codes[-1] == 429
+    r = c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+    assert r.status_code == 200  # page loads never starve the exchange after Link
 
 
 def test_owner_admin_endpoints_not_limited(tmp_path):
@@ -187,3 +195,56 @@ def test_update_mode_refused_for_removed_item(tmp_path):
     c.post("/api/sync")
     r = c.post("/api/plaid/link_token", json={"item_id": FAKE_ITEM_ID})
     assert r.status_code == 409
+
+
+def _relink_as_new_item(fake):
+    """Make the fake hand out a new item with new account/transaction ids (a fresh link)."""
+    d = fake.data
+    for a in d["accounts"]:
+        a["account_id"] += "-2"
+    for t in d["transactions"]:
+        t["account_id"] += "-2"
+        t["transaction_id"] += "-2"
+    for h in d["holdings"]:
+        h["account_id"] += "-2"
+    fake.exchange_public_token = lambda public_token: ("access-fake-2", "item-fake-2")
+
+
+def test_removed_item_not_double_counted_after_relink(tmp_path):
+    fake = FakePlaid(TODAY)
+    c = _app(tmp_path, plaid=fake, token_key=new_key(), instance="owner")
+    c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+    before = c.get("/api/accounts").json()
+    spend_before = c.get("/api/spending").json()
+    holdings_before = sum(h["value"] for h in c.get("/api/holdings").json())
+    fake.fail_next["accounts_get"] = "ITEM_NOT_FOUND"
+    c.post("/api/sync")
+    _relink_as_new_item(fake)
+    r = c.post("/api/plaid/exchange",
+               json={"public_token": "public-fake-2", "institution_id": FAKE_INSTITUTION_ID})
+    assert r.status_code == 200
+    after = c.get("/api/accounts").json()
+    assert (after["assets"], after["liabilities"]) == (before["assets"], before["liabilities"])
+    assert len(after["accounts"]) == len(before["accounts"])
+    assert {i["status"] for i in after["items"]} == {"active", "not_found"}
+    assert c.get("/api/spending").json() == spend_before
+    assert sum(h["value"] for h in c.get("/api/holdings").json()) == holdings_before
+    assert c.get("/api/networth").json()[-1]["assets"] == before["assets"]
+
+
+def test_exchange_stores_institution_id_even_if_first_sync_fails(tmp_path):
+    fake = FakePlaid(TODAY)
+    fake.fail_next["accounts_get"] = "INTERNAL_SERVER_ERROR"
+    c = _app(tmp_path, plaid=fake, token_key=new_key())
+    c.post("/api/plaid/exchange",
+           json={"public_token": "public-fake-1", "institution_id": FAKE_INSTITUTION_ID})
+    r = c.post("/api/plaid/exchange",
+               json={"public_token": "public-fake-2", "institution_id": FAKE_INSTITUTION_ID})
+    assert r.status_code == 409
+
+
+def test_link_event_rejects_large_body(tmp_path):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    big = '{"event": "OPEN", "pad": "' + "x" * LINK_EVENT_MAX_BYTES + '"}'
+    r = c.post("/api/plaid/link_event", content=big, headers={"content-type": "application/json"})
+    assert r.status_code == 413

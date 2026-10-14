@@ -24,6 +24,10 @@ NEEDS_RECONNECT = {"ITEM_LOGIN_REQUIRED", "INVALID_CREDENTIALS", "ITEM_LOCKED",
 ITEM_NOT_FOUND = "ITEM_NOT_FOUND"  # item removed or revoked: unrecoverable, needs a fresh link
 STATUS_RECONNECT = "login_required"
 STATUS_NOT_FOUND = "not_found"
+# SQL predicate on account_id: leave out accounts of items removed at Plaid. Their history stays
+# for reference, but a re-link brings new account_ids, so counting both would double totals.
+LIVE_ACCOUNT = ("account_id NOT IN (SELECT ra.account_id FROM accounts ra JOIN items ri "
+                f"USING (item_id) WHERE ri.status='{STATUS_NOT_FOUND}')")
 NO_INVESTMENTS = {"PRODUCTS_NOT_SUPPORTED", "NO_INVESTMENT_ACCOUNTS", "PRODUCT_NOT_ENABLED",
                   "ADDITIONAL_CONSENT_REQUIRED", "PRODUCT_NOT_READY"}
 MAX_SYNC_RESTARTS = 3
@@ -34,7 +38,7 @@ def _now() -> str:
 
 
 def link_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
-              public_token: str, today: date) -> str:
+              public_token: str, today: date, institution_id: str | None = None) -> str:
     """Exchange a public token, store the encrypted token, then try the first sync.
 
     Once the item is stored this always returns its id; a failed first sync is logged
@@ -42,10 +46,11 @@ def link_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
     """
     access_token, item_id = plaid.exchange_public_token(public_token)
     conn.execute(
-        "INSERT INTO items (item_id, access_token_enc, status) VALUES (?, ?, 'active') "
+        "INSERT INTO items (item_id, access_token_enc, status, institution_id) "
+        "VALUES (?, ?, 'active', ?) "
         "ON CONFLICT(item_id) DO UPDATE SET access_token_enc=excluded.access_token_enc, "
-        "status='active'",
-        (item_id, box.seal(access_token)),
+        "status='active', institution_id=COALESCE(excluded.institution_id, institution_id)",
+        (item_id, box.seal(access_token), institution_id),
     )
     conn.commit()
     try:
@@ -111,9 +116,11 @@ def sync_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
             conn.execute("UPDATE items SET status=? WHERE item_id=?", (STATUS_RECONNECT, item_id))
             conn.commit()
         elif exc.code == ITEM_NOT_FOUND:  # purge the dead token; keep history until unlinked
-            conn.execute("UPDATE items SET status=?, access_token_enc=? WHERE item_id=?",
-                         (STATUS_NOT_FOUND, b"", item_id))
-            conn.commit()
+            with conn:
+                conn.execute("UPDATE items SET status=?, access_token_enc=? WHERE item_id=?",
+                             (STATUS_NOT_FOUND, b"", item_id))
+                conn.execute("DELETE FROM holdings WHERE account_id IN "
+                             "(SELECT account_id FROM accounts WHERE item_id=?)", (item_id,))
         raise
 
     with conn:
@@ -157,9 +164,10 @@ def snapshot_networth(conn: sqlite3.Connection, today: date) -> None:
     a_ph = ",".join("?" * len(ASSET_TYPES))
     l_ph = ",".join("?" * len(LIABILITY_TYPES))
     assets = conn.execute(f"SELECT COALESCE(SUM(balance_current),0) FROM accounts "
-                          f"WHERE type IN ({a_ph})", ASSET_TYPES).fetchone()[0]
+                          f"WHERE type IN ({a_ph}) AND {LIVE_ACCOUNT}", ASSET_TYPES).fetchone()[0]
     liabilities = conn.execute(f"SELECT COALESCE(SUM(balance_current),0) FROM accounts "
-                               f"WHERE type IN ({l_ph})", LIABILITY_TYPES).fetchone()[0]
+                               f"WHERE type IN ({l_ph}) AND {LIVE_ACCOUNT}",
+                               LIABILITY_TYPES).fetchone()[0]
     conn.execute("INSERT OR REPLACE INTO networth_snapshots (date, assets, liabilities) "
                  "VALUES (?,?,?)", (today.isoformat(), assets, liabilities))
     conn.commit()
@@ -168,7 +176,7 @@ def snapshot_networth(conn: sqlite3.Connection, today: date) -> None:
 def refresh_recurring(conn: sqlite3.Connection, today: date) -> int:
     """Rebuild recurring_streams from non-pending transactions; returns stream count."""
     rows = conn.execute("SELECT account_id, date, amount, merchant, pfc_primary, pfc_detailed "
-                        "FROM transactions WHERE pending=0").fetchall()
+                        f"FROM transactions WHERE pending=0 AND {LIVE_ACCOUNT}").fetchall()
     txns = pl.DataFrame(
         [dict(r) for r in rows],
         schema={"account_id": pl.Utf8, "date": pl.Utf8, "amount": pl.Float64, "merchant": pl.Utf8,

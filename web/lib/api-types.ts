@@ -296,6 +296,8 @@ export interface paths {
         /**
          * Plaid Link Event
          * @description Log one Link telemetry event as JSON (link_session_id is what Plaid support needs).
+         *
+         *     The body is capped at LINK_EVENT_MAX_BYTES before parsing.
          */
         post: operations["plaid_link_event_api_plaid_link_event_post"];
         delete?: never;
@@ -672,26 +674,6 @@ export interface components {
             last_synced_at: string | null;
             /** Status */
             status: string;
-        };
-        /**
-         * LinkEventIn
-         * @description Plaid Link onEvent/onExit/onSuccess metadata. Unknown fields (tokens) are dropped.
-         */
-        LinkEventIn: {
-            /** Error Code */
-            error_code?: string | null;
-            /** Error Type */
-            error_type?: string | null;
-            /** Event */
-            event: string;
-            /** Institution Id */
-            institution_id?: string | null;
-            /** Link Session Id */
-            link_session_id?: string | null;
-            /** Request Id */
-            request_id?: string | null;
-            /** View Name */
-            view_name?: string | null;
         };
         /**
          * LinkTokenIn
@@ -1306,7 +1288,22 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LinkEventIn"];
+                "application/json": {
+                    /** Error Code */
+                    error_code?: string | null;
+                    /** Error Type */
+                    error_type?: string | null;
+                    /** Event */
+                    event: string;
+                    /** Institution Id */
+                    institution_id?: string | null;
+                    /** Link Session Id */
+                    link_session_id?: string | null;
+                    /** Request Id */
+                    request_id?: string | null;
+                    /** View Name */
+                    view_name?: string | null;
+                };
             };
         };
         responses: {
@@ -1316,15 +1313,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };

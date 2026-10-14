@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from api.db import connect
-from api.sync import LIABILITY_TYPES
+from api.sync import LIABILITY_TYPES, LIVE_ACCOUNT
 
 WEEKS_PER_MONTH = 52 / 12
 MONTHS_PER_YEAR = 12
@@ -26,7 +26,8 @@ MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 # Shared WHERE fragment; parameters: EXCLUDED_PRIMARY + EXCLUDED_DETAILED
 _COUNTED = (
     f"pending=0 AND COALESCE(pfc_primary,'') NOT IN ({','.join('?' * len(EXCLUDED_PRIMARY))}) "
-    f"AND COALESCE(pfc_detailed,'') NOT IN ({','.join('?' * len(EXCLUDED_DETAILED))})")
+    f"AND COALESCE(pfc_detailed,'') NOT IN ({','.join('?' * len(EXCLUDED_DETAILED))}) "
+    f"AND {LIVE_ACCOUNT}")
 _COUNTED_ARGS = EXCLUDED_PRIMARY + EXCLUDED_DETAILED
 
 
@@ -181,7 +182,8 @@ def build_finance_router(db_path: Path, today: Callable[[], date]) -> APIRouter:
             rows = conn.execute(
                 "SELECT a.account_id, i.institution, a.name, a.type, a.subtype, a.mask, "
                 "a.balance_current, a.balance_available FROM accounts a "
-                "JOIN items i USING (item_id) ORDER BY i.institution, a.name").fetchall()
+                f"JOIN items i USING (item_id) WHERE {LIVE_ACCOUNT} "
+                "ORDER BY i.institution, a.name").fetchall()
         accts = [AccountOut(**dict(r), is_liability=r["type"] in LIABILITY_TYPES) for r in rows]
         return AccountsOut(
             accounts=accts, items=items,
@@ -267,8 +269,8 @@ def build_finance_router(db_path: Path, today: Callable[[], date]) -> APIRouter:
         """Goals with current balance of linked accounts and months remaining."""
         now = today()
         with closing(connect(db_path)) as conn:
-            balances = {r["account_id"]: r["balance_current"] or 0
-                        for r in conn.execute("SELECT account_id, balance_current FROM accounts")}
+            live = f"SELECT account_id, balance_current FROM accounts WHERE {LIVE_ACCOUNT}"
+            balances = {r["account_id"]: r["balance_current"] or 0 for r in conn.execute(live)}
             rows = conn.execute("SELECT id, name, target_amount, target_date, account_ids "
                                 "FROM goals ORDER BY id").fetchall()
         out = []

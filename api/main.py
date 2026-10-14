@@ -17,7 +17,7 @@ import polars as pl
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from api.advisor import build_advisor_router
 from api.agent import llm_client
@@ -45,6 +45,8 @@ WORKER_JOIN_SECONDS = 5
 HTTPS_REDIRECT_STATUS = 308  # permanent, keeps method and body
 LINK_EVENT_RATE = 120  # Link telemetry posts per IP per hour on the demo (a session sends ~10)
 LINK_FIELD_MAX = 128
+LINK_EVENT_MAX_BYTES = 4096
+LINK_TOKEN_RATE = 20  # link tokens per IP per hour on the demo; exchange/sync keep their own
 
 
 class RegimeOut(BaseModel):
@@ -125,10 +127,12 @@ def create_app(
 
     admin_limiter = RateLimiter(DEMO_ADMIN_RATE if settings.instance == "demo" else 0)
     link_event_limiter = RateLimiter(LINK_EVENT_RATE if settings.instance == "demo" else 0)
+    link_token_limiter = RateLimiter(LINK_TOKEN_RATE if settings.instance == "demo" else 0)
 
-    def require_plaid(request: Request) -> PlaidAPI:
-        if not admin_limiter.allow(client_ip(request, settings.trust_proxy)):
-            raise HTTPException(status_code=429, detail=f"rate limit: {DEMO_ADMIN_RATE} per hour")
+    def require_plaid(request: Request, limiter: RateLimiter | None = None,
+                      rate: int = DEMO_ADMIN_RATE) -> PlaidAPI:
+        if not (limiter or admin_limiter).allow(client_ip(request, settings.trust_proxy)):
+            raise HTTPException(status_code=429, detail=f"rate limit: {rate} per hour")
         if plaid is None or box is None:
             raise HTTPException(status_code=503, detail="plaid not configured")
         return plaid
@@ -202,7 +206,7 @@ def create_app(
     @app.post("/api/plaid/link_token", response_model=LinkTokenOut)
     def plaid_link_token(request: Request, body: LinkTokenIn | None = None) -> LinkTokenOut:
         """Create a Link token; with item_id, an update-mode token to reconnect that item."""
-        p = require_plaid(request)
+        p = require_plaid(request, link_token_limiter, LINK_TOKEN_RATE)
         access_token = None
         if body and body.item_id:
             with closing(connect(settings.db_path)) as conn:
@@ -225,18 +229,36 @@ def create_app(
         """Exchange Link's public token and run the first sync; refuse a duplicate bank."""
         p = require_plaid(request)
         with closing(connect(settings.db_path)) as conn:
+            # ponytail: dedupe by institution_id only (one login per bank for one user).
+            # ITEM-011's finer check (persistent_account_id, else mask + subtype) is deferred;
+            # see PLAID_PLAN.md.
             if body.institution_id and institution_linked(conn, body.institution_id):
                 raise HTTPException(status_code=409, detail="institution already linked")
             try:
-                return ExchangeOut(item_id=link_item(conn, p, box, body.public_token, today()))
+                return ExchangeOut(item_id=link_item(conn, p, box, body.public_token, today(),
+                                                     body.institution_id))
             except PlaidError as exc:
                 raise HTTPException(status_code=502, detail=exc.code) from exc
 
-    @app.post("/api/plaid/link_event", status_code=204)
-    def plaid_link_event(body: LinkEventIn, request: Request) -> Response:
-        """Log one Link telemetry event as JSON (link_session_id is what Plaid support needs)."""
+    @app.post("/api/plaid/link_event", status_code=204,
+              openapi_extra={"requestBody": {"required": True, "content": {"application/json": {
+                  "schema": LinkEventIn.model_json_schema()}}}})
+    async def plaid_link_event(request: Request) -> Response:
+        """Log one Link telemetry event as JSON (link_session_id is what Plaid support needs).
+
+        The body is capped at LINK_EVENT_MAX_BYTES before parsing.
+        """
         if not link_event_limiter.allow(client_ip(request, settings.trust_proxy)):
             raise HTTPException(status_code=429, detail=f"rate limit: {LINK_EVENT_RATE} per hour")
+        raw = b""
+        async for chunk in request.stream():
+            raw += chunk
+            if len(raw) > LINK_EVENT_MAX_BYTES:
+                raise HTTPException(status_code=413, detail="body too large")
+        try:
+            body = LinkEventIn.model_validate_json(raw)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail="invalid link event") from exc
         link_log.info(json.dumps(body.model_dump()))
         return Response(status_code=204)
 
