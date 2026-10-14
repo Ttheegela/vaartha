@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toAccounts } from "@/lib/adapters"
 import type { components } from "@/lib/api-types"
 import { StatusBadge } from "@/components/status-badge"
-import { institutionStatus, itemsWithoutAccounts } from "@/lib/items"
+import { institutionStatus, itemsWithoutAccounts, reconnectItemId } from "@/lib/items"
 import { relativeTime } from "@/lib/relative-time"
 import { apiGet } from "@/lib/server-api"
 
@@ -47,17 +47,19 @@ export default async function AccountsPage() {
               <Card key={it.id}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">{it.title}{it.badge && <StatusBadge tone="warning">{it.badge}</StatusBadge>}</CardTitle>
-                  <CardDescription>Use Sync now to retry.</CardDescription>
+                  {it.badge === "Needs re-login" ? <LinkAccountButton itemId={it.id} label="RECONNECT" /> : <CardDescription>Use Sync now to retry.</CardDescription>}
                 </CardHeader>
               </Card>
             ))}
             {institutions.map((inst) => {
               const status = institutionStatus(data!.items, inst)
+              const reconnectId = reconnectItemId(data!.items, inst)
               return (
               <Card key={inst}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">{inst}{status.needsLogin && <StatusBadge tone="warning">Needs re-login</StatusBadge>}</CardTitle>
                   <CardDescription>Linked via Plaid · Last synced <span className="numeric">{relativeTime(status.lastSyncedAt)}</span></CardDescription>
+                  {reconnectId && <LinkAccountButton itemId={reconnectId} label="RECONNECT" />}
                 </CardHeader>
                 <CardContent className="flex flex-col gap-1">
                   {accounts.filter((a) => a.institution === inst).map((a) => (

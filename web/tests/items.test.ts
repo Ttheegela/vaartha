@@ -29,3 +29,10 @@ test("itemsWithoutAccounts", () => {
   assert.deepEqual(itemsWithoutAccounts(all, ["Chase", "Fidelity", "Ally"]).map((i) => i.id), ["d"])
   assert.deepEqual(itemsWithoutAccounts([], []), [])
 })
+
+import { reconnectItemId } from "../lib/items.ts"
+test("reconnectItemId picks the institution's item that needs re-login", () => {
+  assert.equal(reconnectItemId(items, "Chase"), "b")
+  assert.equal(reconnectItemId(items, "Fidelity"), null)
+  assert.equal(reconnectItemId([{ item_id: "z", institution: null, last_synced_at: null, status: "login_required" }], "Unknown"), "z")
+})

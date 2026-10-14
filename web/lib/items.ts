@@ -22,3 +22,8 @@ export function itemsWithoutAccounts(items: Item[], accountInstitutions: string[
       badge: i.status === LOGIN_REQUIRED ? "Needs re-login" : i.last_synced_at === null ? "Sync failed" : null,
     }))
 }
+
+/** The item to reconnect (Link update mode) for an institution, or null when none needs re-login. */
+export function reconnectItemId(items: Item[], institution: string): string | null {
+  return items.find((i) => (i.institution ?? "Unknown") === institution && i.status === LOGIN_REQUIRED)?.item_id ?? null
+}
