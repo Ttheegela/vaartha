@@ -57,7 +57,8 @@ def test_passkey_vars_required_unless_auth_off(tmp_path):
     assert "PASSKEY_RP_ID" in r.stdout + r.stderr and SENTINEL not in r.stdout + r.stderr
     r = _check(tmp_path, "PASSKEY_RP_ID=h.example\n")
     assert r.returncode == 1 and "PASSKEY_ORIGIN" in r.stdout + r.stderr
-    assert _check(tmp_path, "PASSKEY_RP_ID=h.example\nPASSKEY_ORIGIN=https://h.example\n").returncode == 0
+    ok = "PASSKEY_RP_ID=h.example\nPASSKEY_ORIGIN=https://h.example\n"
+    assert _check(tmp_path, ok).returncode == 0
     assert _check(tmp_path, "OWNER_AUTH=0\n").returncode == 0
 
 
