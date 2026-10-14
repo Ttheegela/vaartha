@@ -37,6 +37,10 @@ Install Tailscale on the Mac and phone, then `tailscale serve --bg 3000` and ope
 `https://<mac>.<tailnet>.ts.net` on the phone. Works only while the Mac is awake.
 Never use `tailscale funnel`: it is public.
 
+OAuth banks (Chase, PNC and others) return to `https://<mac>.<tailnet>.ts.net/oauth-return`. Add that exact
+URL in the Plaid Dashboard (Developers > API > Allowed redirect URIs, production) and set
+`PLAID_REDIRECT_URI` to the same value in `owner.env`, then restart. Without it, OAuth banks fail or are hidden in Link.
+
 ## 4. Start at login
 
 ```

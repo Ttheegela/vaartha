@@ -32,8 +32,8 @@ Tests: 290 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, ts
 
 ## Open items (need attention)
 
-1. **Plaid Link UI flow not verified.** The user's Link attempt produced no `/api/plaid/exchange` call (Plaid `onSuccess` never fired). Only console signal: "link-initialize.js embedded more than once" (React dev StrictMode). Ask what Plaid's window showed; retry.
-2. **Before linking a real (production) bank:** Link update mode for `login_required` items; remove/flag accounts Plaid no longer returns; "Price up" should compare to the previous charge (not all-time average); recurring cadence tuning on real data.
+1. **Plaid Link UI flow: fix in, browser click-through pending.** Likely cause of the missing `onSuccess` was react-plaid-link re-inserting link-initialize.js under StrictMode ("embedded more than once"); the web now loads the script once before mounting Link (2026-10-14). Backend verified against Sandbox; see `PLAID_PLAN.md` (build-kit plan, human tasks, rules checked).
+2. **Before linking a real (production) bank:** `PLAID_PLAN.md` human tasks H1–H4 (Production secret, redirect URI `https://<mac>.<tailnet>.ts.net/oauth-return` + `PLAID_REDIRECT_URI`, company profile/security questionnaire, DTM); remove/flag accounts Plaid no longer returns; "Price up" should compare to the previous charge (not all-time average); recurring cadence tuning on real data.
 3. **GDELT** returns HTTP 429 from this network; fail-soft today. Needs a longer interval/backoff, and its JSON field names are still unverified live.
 4. **Finnhub/EDGAR** should skip non-equity tickers (options, crypto, fund IDs) before calling.
 5. **`.env` hygiene (user's file, never committed):** `TOKEN_ENCRYPTION_KEY` appears 3× — keep one (last wins today). Values with spaces must be quoted; the file must end with a newline.
