@@ -125,6 +125,7 @@ class FakePlaid:
         self.mutate_once = False
         self.fail_on_page: int | None = None  # 0-based sync page to fail once
         self.login_required_tokens: set[str] = set()
+        self.link_calls: list[dict] = []
         self._pending: dict = {"modified": [], "removed": []}
 
     def _maybe_fail(self, method: str) -> None:
@@ -132,8 +133,12 @@ class FakePlaid:
         if code:
             raise PlaidError(code, "simulated", 400)
 
-    def link_token_create(self, user_id, products, required_if_supported=None, days_requested=730):
+    def link_token_create(self, user_id, products, additional_consented=None,
+                          days_requested=730, redirect_uri=None, access_token=None):
+        """Record the call and return a fixed link token."""
         self._maybe_fail("link_token_create")
+        self.link_calls.append({"products": products, "additional_consented": additional_consented,
+                                "redirect_uri": redirect_uri, "access_token": access_token})
         return "link-fake-1"
 
     def exchange_public_token(self, public_token):

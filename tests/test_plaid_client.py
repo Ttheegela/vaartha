@@ -31,7 +31,9 @@ def test_auth_in_headers_not_body():
     assert SECRET not in json.dumps(seen["body"])
     assert seen["body"]["user"] == {"client_user_id": "owner"}
     assert seen["body"]["products"] == ["transactions"]
-    assert seen["body"]["required_if_supported_products"] == ["investments"]
+    assert seen["body"]["additional_consented_products"] == ["investments"]
+    assert "required_if_supported_products" not in seen["body"]
+    assert "redirect_uri" not in seen["body"]
     assert seen["body"]["country_codes"] == ["US"]
     assert seen["body"]["transactions"] == {"days_requested": 730}
 
@@ -94,3 +96,39 @@ def test_malformed_body_is_plaid_bad_response():
     with pytest.raises(PlaidError) as exc:
         client.exchange_public_token("public-1")
     assert exc.value.code == "PLAID_BAD_RESPONSE"
+
+
+def _capture_link_body(**kw):
+    seen = {}
+
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"link_token": "link-x"})
+
+    _client(handler).link_token_create("owner", ["transactions"], ["investments"], **kw)
+    return seen["body"]
+
+
+def test_link_token_passes_redirect_uri():
+    body = _capture_link_body(redirect_uri="https://mac.tail.ts.net/oauth-return")
+    assert body["redirect_uri"] == "https://mac.tail.ts.net/oauth-return"
+
+
+def test_update_mode_link_token_uses_access_token_and_redirect_uri():
+    body = _capture_link_body(redirect_uri="https://mac.tail.ts.net/oauth-return",
+                              access_token="access-1")
+    assert body["access_token"] == "access-1"
+    assert body["redirect_uri"] == "https://mac.tail.ts.net/oauth-return"
+    for key in ("products", "additional_consented_products", "transactions"):
+        assert key not in body
+
+
+def test_error_carries_type_and_request_id():
+    def handler(request):
+        return httpx.Response(400, json={"error_type": "ITEM_ERROR",
+                                         "error_code": "ITEM_LOGIN_REQUIRED",
+                                         "error_message": "login", "request_id": "req-1"})
+
+    with pytest.raises(PlaidError) as ei:
+        _client(handler).accounts_get("access-1")
+    assert ei.value.error_type == "ITEM_ERROR" and ei.value.request_id == "req-1"

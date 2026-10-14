@@ -15,21 +15,29 @@ ERROR_TEXT_LIMIT = 200
 
 
 class PlaidError(Exception):
-    """A Plaid API error (or transport failure) with Plaid's error_code."""
+    """A Plaid API error (or transport failure) with Plaid's error_code.
 
-    def __init__(self, code: str, message: str, status: int) -> None:
+    error_type and request_id are safe to log (request_id is what Plaid support needs).
+    """
+
+    def __init__(self, code: str, message: str, status: int,
+                 error_type: str | None = None, request_id: str | None = None) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
         self.status = status
+        self.error_type = error_type
+        self.request_id = request_id
 
 
 class PlaidAPI(Protocol):
     """The Plaid calls Vārtā uses; implemented by PlaidClient and FakePlaid."""
 
     def link_token_create(self, user_id: str, products: list[str],
-                          required_if_supported: list[str] | None = None,
-                          days_requested: int = MAX_HISTORY_DAYS) -> str: ...
+                          additional_consented: list[str] | None = None,
+                          days_requested: int = MAX_HISTORY_DAYS,
+                          redirect_uri: str | None = None,
+                          access_token: str | None = None) -> str: ...
     def exchange_public_token(self, public_token: str) -> tuple[str, str]: ...
     def accounts_get(self, access_token: str) -> dict: ...
     def transactions_sync(self, access_token: str, cursor: str | None) -> dict: ...
@@ -63,7 +71,8 @@ class PlaidClient:
         if resp.status_code >= 400 or data is None:
             if isinstance(data, dict) and "error_code" in data:
                 raise PlaidError(data["error_code"], data.get("error_message", ""),
-                                 resp.status_code)
+                                 resp.status_code, data.get("error_type"),
+                                 data.get("request_id"))
             raise PlaidError(f"HTTP_{resp.status_code}", resp.text[:ERROR_TEXT_LIMIT],
                              resp.status_code)
         return data
@@ -77,20 +86,32 @@ class PlaidClient:
             raise PlaidError("PLAID_BAD_RESPONSE", f"missing {key}", 0) from exc
 
     def link_token_create(self, user_id: str, products: list[str],
-                          required_if_supported: list[str] | None = None,
-                          days_requested: int = MAX_HISTORY_DAYS) -> str:
-        """Create a Link token. `products` must all be supported by an institution;
-        `required_if_supported` are requested only where available."""
-        body = {
+                          additional_consented: list[str] | None = None,
+                          days_requested: int = MAX_HISTORY_DAYS,
+                          redirect_uri: str | None = None,
+                          access_token: str | None = None) -> str:
+        """Create a Link token.
+
+        `products` must all be supported by an institution; `additional_consented` are
+        consented now and billed only on first use. With `access_token` the token opens
+        Link in update mode (re-login for an existing item; no products). `redirect_uri`
+        (OAuth return URL) goes on every token, update mode included.
+        """
+        body: dict = {
             "client_name": CLIENT_NAME,
             "language": LANGUAGE,
             "country_codes": COUNTRY_CODES,
             "user": {"client_user_id": user_id},
-            "products": products,
-            "transactions": {"days_requested": days_requested},
         }
-        if required_if_supported:
-            body["required_if_supported_products"] = required_if_supported
+        if access_token:
+            body["access_token"] = access_token
+        else:
+            body["products"] = products
+            body["transactions"] = {"days_requested": days_requested}
+            if additional_consented:
+                body["additional_consented_products"] = additional_consented
+        if redirect_uri:
+            body["redirect_uri"] = redirect_uri
         return self._field(self._post("/link/token/create", body), "link_token")
 
     def exchange_public_token(self, public_token: str) -> tuple[str, str]:

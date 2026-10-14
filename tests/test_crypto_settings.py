@@ -113,3 +113,17 @@ def test_wildcard_cors_rejected(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", "https://a.dev,*")
     with pytest.raises(ValueError, match="CORS_ORIGINS"):
         Settings.from_env()
+
+
+@pytest.mark.parametrize("uri", ["http://mac.tail.ts.net/oauth-return",
+                                 "https://*.tail.ts.net/oauth-return",
+                                 "https://mac.tail.ts.net/oauth-return?x=1",
+                                 "https://mac.tail.ts.net/#/oauth-return"])
+def test_plaid_redirect_uri_rejects_bad_values(tmp_path, uri):
+    with pytest.raises(ValueError, match="PLAID_REDIRECT_URI"):
+        Settings(db_path=tmp_path / "v.db", instance="owner", plaid_redirect_uri=uri)
+
+
+def test_plaid_redirect_uri_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("PLAID_REDIRECT_URI", "https://mac.tail.ts.net/oauth-return")
+    assert Settings.from_env().plaid_redirect_uri == "https://mac.tail.ts.net/oauth-return"

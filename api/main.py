@@ -38,7 +38,7 @@ from worker import main as worker_main
 log = logging.getLogger("varta.api")
 REGIME_TTL_SECONDS = 300
 PLAID_PRODUCTS = ["transactions"]
-PLAID_IF_SUPPORTED = ["investments"]
+PLAID_CONSENTED = ["investments"]  # consent at Link, billed on first holdings call
 WORKER_JOIN_SECONDS = 5
 HTTPS_REDIRECT_STATUS = 308  # permanent, keeps method and body
 
@@ -52,6 +52,12 @@ class RegimeOut(BaseModel):
     spy_dd: float
     gold_oil: float
     signals: dict[str, float]
+
+
+class LinkTokenIn(BaseModel):
+    """Optional item_id: create an update-mode (reconnect) token for that item."""
+
+    item_id: str | None = None
 
 
 class LinkTokenOut(BaseModel):
@@ -176,12 +182,21 @@ def create_app(
         settings.db_path, toolbox, llm, settings.llm_model, settings))
 
     @app.post("/api/plaid/link_token", response_model=LinkTokenOut)
-    def plaid_link_token(request: Request) -> LinkTokenOut:
-        """Create a Plaid Link token for this instance's single user."""
+    def plaid_link_token(request: Request, body: LinkTokenIn | None = None) -> LinkTokenOut:
+        """Create a Link token; with item_id, an update-mode token to reconnect that item."""
         p = require_plaid(request)
+        access_token = None
+        if body and body.item_id:
+            with closing(connect(settings.db_path)) as conn:
+                row = conn.execute("SELECT access_token_enc FROM items WHERE item_id=?",
+                                   (body.item_id,)).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="unknown item")
+            access_token = box.open(row["access_token_enc"])
         try:
             return LinkTokenOut(link_token=p.link_token_create(
-                settings.instance, PLAID_PRODUCTS, PLAID_IF_SUPPORTED))
+                settings.instance, PLAID_PRODUCTS, PLAID_CONSENTED,
+                redirect_uri=settings.plaid_redirect_uri, access_token=access_token))
         except PlaidError as exc:
             raise HTTPException(status_code=502, detail=exc.code) from exc
 

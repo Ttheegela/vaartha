@@ -295,7 +295,7 @@ export interface paths {
         put?: never;
         /**
          * Plaid Link Token
-         * @description Create a Plaid Link token for this instance's single user.
+         * @description Create a Link token; with item_id, an update-mode token to reconnect that item.
          */
         post: operations["plaid_link_token_api_plaid_link_token_post"];
         delete?: never;
@@ -650,6 +650,14 @@ export interface components {
             last_synced_at: string | null;
             /** Status */
             status: string;
+        };
+        /**
+         * LinkTokenIn
+         * @description Optional item_id: create an update-mode (reconnect) token for that item.
+         */
+        LinkTokenIn: {
+            /** Item Id */
+            item_id?: string | null;
         };
         /**
          * LinkTokenOut
@@ -1254,7 +1262,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LinkTokenIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1263,6 +1275,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LinkTokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

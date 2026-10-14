@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 INSTANCES = ("owner", "demo")
@@ -11,6 +12,15 @@ PLAID_ENVS = ("sandbox", "production")
 DEMO_CHAT_RATE = 20
 DEMO_ADMIN_RATE = 5  # sync / link_token / exchange calls per IP per hour on the demo
 DEFAULT_TZ = "America/New_York"
+REDIRECT_SCHEME = "https"  # Plaid allows http://localhost only in sandbox; we require https
+
+
+def _check_redirect_uri(uri: str) -> None:
+    """Plaid OAuth redirect: https, a real host, no wildcard, query or fragment."""
+    parts = urlsplit(uri)
+    if parts.scheme != REDIRECT_SCHEME or not parts.hostname or any(c in uri for c in "*?#"):
+        raise ValueError("PLAID_REDIRECT_URI must be an https URL with no wildcard, "
+                         f"query or fragment, got {uri!r}")
 
 
 def local_today(tz: str, now: datetime | None = None) -> date:
@@ -42,12 +52,15 @@ class Settings:
     run_worker: bool = False  # run the scheduler in the API process (single-dyno hosting)
     cors_origins: tuple[str, ...] = ()
     cookie_domain: str | None = None
+    plaid_redirect_uri: str | None = None  # OAuth return URL registered in the Plaid Dashboard
 
     def __post_init__(self) -> None:
         if self.plaid_env not in PLAID_ENVS:
             raise ValueError(f"PLAID_ENV must be one of {PLAID_ENVS}, got {self.plaid_env!r}")
         if self.instance == "demo" and self.plaid_env == "production":
             raise ValueError("the demo instance must use the Plaid sandbox")
+        if self.plaid_redirect_uri:
+            _check_redirect_uri(self.plaid_redirect_uri)
         if "*" in self.cors_origins:
             raise ValueError("CORS_ORIGINS must list explicit origins, not *")
 
@@ -73,6 +86,7 @@ class Settings:
             plaid_env=os.environ.get("PLAID_ENV", "sandbox"),
             plaid_client_id=os.environ.get("PLAID_CLIENT_ID") or None,
             plaid_secret=os.environ.get("PLAID_SECRET") or None,
+            plaid_redirect_uri=os.environ.get("PLAID_REDIRECT_URI") or None,
             token_key=os.environ.get("TOKEN_ENCRYPTION_KEY") or None,
             alpaca_key=os.environ.get("ALPACA_API_KEY") or None,
             alpaca_secret=os.environ.get("ALPACA_SECRET_KEY") or None,

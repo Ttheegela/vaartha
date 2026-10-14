@@ -645,6 +645,24 @@
         "title": "ItemOut",
         "type": "object"
       },
+      "LinkTokenIn": {
+        "description": "Optional item_id: create an update-mode (reconnect) token for that item.",
+        "properties": {
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          }
+        },
+        "title": "LinkTokenIn",
+        "type": "object"
+      },
       "LinkTokenOut": {
         "description": "Plaid Link token for the client.",
         "properties": {
@@ -1697,8 +1715,25 @@
     },
     "/api/plaid/link_token": {
       "post": {
-        "description": "Create a Plaid Link token for this instance's single user.",
+        "description": "Create a Link token; with item_id, an update-mode token to reconnect that item.",
         "operationId": "plaid_link_token_api_plaid_link_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LinkTokenIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -1709,6 +1744,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Plaid Link Token"

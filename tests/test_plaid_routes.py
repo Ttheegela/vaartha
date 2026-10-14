@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from api.crypto import new_key
 from api.main import create_app
 from api.plaid_client import PlaidClient
-from api.plaid_fake import FAKE_ITEM_ID, FakePlaid
+from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_ITEM_ID, FakePlaid
 from api.settings import Settings
 from core.regime import compute_regime
 
@@ -107,3 +107,33 @@ def test_owner_admin_endpoints_not_limited(tmp_path):
     c = TestClient(create_app(s, regime_provider=lambda: NORMAL, today=lambda: TODAY,
                               plaid=FakePlaid(TODAY)))
     assert all(c.post("/api/plaid/link_token").status_code == 200 for _ in range(8))
+
+
+REDIRECT = "https://mac.tail.ts.net/oauth-return"
+
+
+def test_link_token_consents_investments_and_passes_redirect_uri(tmp_path):
+    fake = FakePlaid(TODAY)
+    c = _app(tmp_path, plaid=fake, token_key=new_key(), plaid_redirect_uri=REDIRECT)
+    assert c.post("/api/plaid/link_token").status_code == 200
+    call = fake.link_calls[-1]
+    assert call["products"] == ["transactions"]
+    assert call["additional_consented"] == ["investments"]
+    assert call["redirect_uri"] == REDIRECT and call["access_token"] is None
+
+
+def test_update_mode_link_token_for_item(tmp_path):
+    fake = FakePlaid(TODAY)
+    c = _app(tmp_path, plaid=fake, token_key=new_key(), plaid_redirect_uri=REDIRECT)
+    c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+    r = c.post("/api/plaid/link_token", json={"item_id": FAKE_ITEM_ID})
+    assert r.status_code == 200 and r.json() == {"link_token": "link-fake-1"}
+    call = fake.link_calls[-1]
+    assert call["access_token"] == FAKE_ACCESS_TOKEN and call["redirect_uri"] == REDIRECT
+    assert FAKE_ACCESS_TOKEN not in r.text
+
+
+def test_update_mode_unknown_item_is_404(tmp_path):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    r = c.post("/api/plaid/link_token", json={"item_id": "nope"})
+    assert r.status_code == 404
