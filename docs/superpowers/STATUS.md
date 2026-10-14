@@ -18,9 +18,16 @@ Read this first when resuming. Design: `specs/2026-10-11-varta-v2-design.md`. Pl
 
 Tests: 290 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, tsc, `next build` clean.
 
+## Live
+
+- **Demo:** https://demo.vaartha.tech (web, Heroku `vaartha-web`, Eco) + https://api.vaartha.tech (API, Heroku `vaartha-api`, Basic, embedded scheduler). Deployed 2026-10-13 via `gh workflow run deploy-heroku.yml --ref claude/varta-v2-ec24da`. Verified: HTTPS (ACM), /healthz, Plaid Sandbox seed, news + Jev scoring, briefing on Home, SSE chat with CORS + `.vaartha.tech` cookie, 21st chat/hour → 429.
+- Heroku credit: GitHub Student $312, expires 2028-09-30. Domain vaartha.tech (Namecheap) expires 2027-10-13. Calendar reminders exist for both.
+
 ## Next
 
-**Provision and start (with Tarun):** create the Heroku apps and the `vaartha.dev` custom domain (`demo.<domain>`, `api.<domain>`) per `deploy/heroku.md`, then start the owner instance on the Mac per `deploy/owner-mac.md`. Nothing has been pushed; CI's docker job runs once the branch is pushed; the Heroku release is a manual workflow (see `deploy/heroku.md`).
+1. **Owner instance on the Mac:** create `~/.config/vaartha/owner.env` (mode 600) from `deploy/owner.env.example`, then `scripts/owner.sh check` / `start`, link a real bank (open items 1–2), phone via `tailscale serve`. `start`/`stop`/launchd are not yet verified live.
+2. Merge v2 into `main` when ready (only the deploy workflow is on `main` today).
+3. Watch the demo: cash flow/bills fill in after Plaid Sandbox delivers transactions (6-hourly sync); `heroku logs -t -a vaartha-api` for R14 memory warnings.
 
 ## Open items (need attention)
 

@@ -1,7 +1,7 @@
 # Heroku demo deploy
 
 Two container apps (API + web) on Heroku, released by the `deploy-heroku` GitHub workflow.
-Placeholders: `<domain>` (e.g. vaartha.dev), `<api-app>`, `<web-app>`.
+Placeholders: `<domain>` (live: vaartha.tech, registered at Namecheap), `<api-app>`, `<web-app>`.
 
 **A shared custom domain is REQUIRED.** Use `demo.<domain>` (web) and `api.<domain>` (API) with
 `COOKIE_DOMAIN=.<domain>`. Two `*.herokuapp.com` hosts are cross-site (herokuapp.com is on the
@@ -26,17 +26,17 @@ Public Suffix List), so the visitor cookie (SameSite=Lax) and credentialed brows
 5. GitHub repo Settings, Secrets and variables:
    - Secret `HEROKU_API_KEY` (from `heroku authorizations:create`).
    - Variables `HEROKU_API_APP`, `HEROKU_WEB_APP`, `NEXT_PUBLIC_API_BASE=https://api.<domain>`.
-6. Run the "deploy-heroku" workflow. It only appears in the Actions tab once it is on the default branch: merge to main first, or run `gh workflow run deploy-heroku.yml --ref claude/varta-v2-ec24da`. (Images are built on amd64 runners and released via the Platform API formation endpoint.)
+6. Run the "deploy-heroku" workflow. GitHub only allows dispatching a workflow whose file exists on the default branch, so the workflow file must be on `main` (it is, since PR #14). Then deploy any branch with `gh workflow run deploy-heroku.yml --ref <branch>`. (Images are built on amd64 runners and released via the Platform API formation endpoint.)
 7. Dynos:
    - `heroku ps:type web=basic -a <api-app>`
-   - `heroku ps:type web=eco -a <web-app>` (sleeps) or `web=basic` (always on)
+   - `heroku ps:type web=eco -a <web-app>` (sleeps) or `web=basic` (always on). Eco first needs the account-level Eco plan ($5/month) in Billing, or the command fails with "The app owner has to subscribe to Eco".
    Basic (api) + Eco (web) is $12 a month and fits the $13 credit. Basic + Basic is $14, about $1 a month on the card.
    Then scale both:
    - `heroku ps:scale web=1 -a <api-app>`
    - `heroku ps:scale web=1 -a <web-app>`
 8. Domains:
    - `heroku domains:add api.<domain> -a <api-app>` and `heroku domains:add demo.<domain> -a <web-app>`.
-   - At Name.com add two CNAME records pointing at the DNS targets Heroku prints.
+   - At the registrar (Namecheap → Advanced DNS) add two CNAME records pointing at the DNS targets Heroku prints.
    - `heroku certs:auto:enable -a <app>` on both. ACM is free.
 9. Verify:
    - `curl https://api.<domain>/healthz`
