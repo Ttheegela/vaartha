@@ -13,5 +13,5 @@ export const viewport: Viewport = { colorScheme: "dark", themeColor: "#0a0a0a", 
 export const dynamic = "force-dynamic" // VARTA_INSTANCE is read per request, not frozen at build
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={`dark bg-background ${inter.variable} ${instrumentSerif.variable} ${plexMono.variable}`}><body className="min-h-screen antialiased"><AppShell demo={process.env.VARTA_INSTANCE === "demo"}>{children}</AppShell></body></html>
+  return <html lang="en" className={`dark bg-background ${inter.variable} ${instrumentSerif.variable} ${plexMono.variable}`}><body className="min-h-screen antialiased"><AppShell demo={process.env.VARTA_INSTANCE === "demo"} auth={process.env.VARTA_AUTH === "1"}>{children}</AppShell></body></html>
 }
