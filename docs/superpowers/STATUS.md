@@ -26,6 +26,8 @@ Tests: 290 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, ts
 
 ## Next
 
+0. **Owner instance is live on the Mac (2026-10-14):** `scripts/owner.sh start`, web :3100, tailnet https://taruns-macbook-pro.tail9ec172.ts.net (tailscale serve, tailnet-only). Plaid production: 5 of 10 Trial connections used (Amex, Bilt, Capital One, Chase via OAuth redirect, Robinhood). Plaid company profile + data-security questionnaire still recommended (removes the "building something new" screen).
+
 1. **Owner instance on the Mac:** create `~/.config/vaartha/owner.env` (mode 600) from `deploy/owner.env.example`, then `scripts/owner.sh check` / `start`, link a real bank (open items 1–2), phone via `tailscale serve`. `start`/`stop`/launchd are not yet verified live.
 2. Merge v2 into `main` when ready (only the deploy workflow is on `main` today).
 3. Watch the demo: cash flow/bills fill in after Plaid Sandbox delivers transactions (6-hourly sync); `heroku logs -t -a vaartha-api` for R14 memory warnings.
