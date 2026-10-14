@@ -1,0 +1,52 @@
+name: deploy-heroku
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest # amd64, as Heroku requires
+    env:
+      HEROKU_API_APP: ${{ vars.HEROKU_API_APP }}
+      HEROKU_WEB_APP: ${{ vars.HEROKU_WEB_APP }}
+      NEXT_PUBLIC_API_BASE: ${{ vars.NEXT_PUBLIC_API_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Registry login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          set -euo pipefail
+          : "${HEROKU_API_APP:?}" "${HEROKU_WEB_APP:?}" "${NEXT_PUBLIC_API_BASE:?}"
+          echo "$HEROKU_API_KEY" | docker login registry.heroku.com -u _ --password-stdin
+
+      - name: Build images
+        run: |
+          set -euo pipefail
+          docker build -t "registry.heroku.com/${HEROKU_API_APP}/web" .
+          docker build -t "registry.heroku.com/${HEROKU_WEB_APP}/web" \
+            --build-arg "NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}" web
+
+      - name: Push images
+        run: |
+          set -euo pipefail
+          docker push "registry.heroku.com/${HEROKU_API_APP}/web"
+          docker push "registry.heroku.com/${HEROKU_WEB_APP}/web"
+
+      - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          set -euo pipefail
+          for app in "$HEROKU_API_APP" "$HEROKU_WEB_APP"; do
+            id=$(docker inspect --format '{{.Id}}' "registry.heroku.com/${app}/web")
+            curl -fsS -X PATCH "https://api.heroku.com/apps/${app}/formation" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/vnd.heroku+json; version=3.docker-releases" \
+              -H "Authorization: Bearer ${HEROKU_API_KEY}" \
+              -d "{\"updates\":[{\"type\":\"web\",\"docker_image\":\"${id}\"}]}" > /dev/null
+            echo "released ${app}"
+          done
