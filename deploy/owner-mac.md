@@ -24,7 +24,7 @@ sourced as shell and `check` rejects it otherwise.
 ```
 scripts/owner.sh check
 scripts/owner.sh start      # first start builds the web (needs pnpm, node, uv)
-open http://127.0.0.1:3000
+open http://127.0.0.1:3100
 scripts/owner.sh status | stop
 ```
 
@@ -33,7 +33,7 @@ Logs: `~/Library/Logs/Vaartha`.
 
 ## 3. Phone access (Tailscale)
 
-Install Tailscale on the Mac and phone, then `tailscale serve --bg 3000` and open
+Install Tailscale on the Mac and phone, then `tailscale serve --bg 3100` and open
 `https://<mac>.<tailnet>.ts.net` on the phone. Works only while the Mac is awake.
 Never use `tailscale funnel`: it is public.
 

@@ -2,6 +2,8 @@
 # Run the Vartha owner instance on this Mac: owner.sh start|stop|status|check
 # Never prints values from the env file.
 set -euo pipefail
+# Web port: 3000 is often taken by other local dev tools; override with VAARTHA_WEB_PORT.
+WEB_PORT="${VAARTHA_WEB_PORT:-3100}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${VAARTHA_OWNER_ENV:-$HOME/.config/vaartha/owner.env}"
@@ -39,12 +41,13 @@ alive() {
   local pid
   [ -f "$1" ] || return 1
   pid="$(cat "$1")"
-  if kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= 2>/dev/null | grep -q -- "$2"; then return 0; fi
+  if kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= 2>/dev/null | grep -qE -- "$2"; then return 0; fi
   rm -f "$1"
   return 1
 }
 
-marker() { case "$1" in api) echo uvicorn ;; *) echo server.js ;; esac; }
+# Next renames its process title to next-server, so match either form.
+marker() { case "$1" in api) echo uvicorn ;; *) echo "server.js|next-server" ;; esac; }
 
 start() {
   check
@@ -78,15 +81,15 @@ start() {
       echo $! >"$DATA_DIR/api.pid"
     )
   fi
-  if alive "$DATA_DIR/web.pid" server.js; then echo "web already running"; else
+  if alive "$DATA_DIR/web.pid" "$(marker web)"; then echo "web already running"; else
     (
       cd "$ROOT"
-      HOSTNAME=127.0.0.1 PORT=3000 VARTA_INSTANCE=owner \
+      HOSTNAME=127.0.0.1 PORT="$WEB_PORT" VARTA_INSTANCE=owner \
         nohup node "$STANDALONE/server.js" >>"$LOG_DIR/web.log" 2>&1 &
       echo $! >"$DATA_DIR/web.pid"
     )
   fi
-  echo "started: web http://127.0.0.1:3000, api http://127.0.0.1:8000 (logs: $LOG_DIR)"
+  echo "started: web http://127.0.0.1:$WEB_PORT, api http://127.0.0.1:8000 (logs: $LOG_DIR)"
 }
 
 stop() {
