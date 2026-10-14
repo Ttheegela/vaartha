@@ -284,6 +284,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plaid/link_event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plaid Link Event
+         * @description Log one Link telemetry event as JSON (link_session_id is what Plaid support needs).
+         */
+        post: operations["plaid_link_event_api_plaid_link_event_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plaid/link_token": {
         parameters: {
             query?: never;
@@ -650,6 +670,26 @@ export interface components {
             last_synced_at: string | null;
             /** Status */
             status: string;
+        };
+        /**
+         * LinkEventIn
+         * @description Plaid Link onEvent/onExit/onSuccess metadata. Unknown fields (tokens) are dropped.
+         */
+        LinkEventIn: {
+            /** Error Code */
+            error_code?: string | null;
+            /** Error Type */
+            error_type?: string | null;
+            /** Event */
+            event: string;
+            /** Institution Id */
+            institution_id?: string | null;
+            /** Link Session Id */
+            link_session_id?: string | null;
+            /** Request Id */
+            request_id?: string | null;
+            /** View Name */
+            view_name?: string | null;
         };
         /**
          * LinkTokenIn
@@ -1243,6 +1283,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ExchangeOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plaid_link_event_api_plaid_link_event_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

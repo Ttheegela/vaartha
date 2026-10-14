@@ -3,6 +3,7 @@
 Run: uvicorn --factory api.main:create_app
 """
 
+import json
 import logging
 import threading
 import time
@@ -13,10 +14,10 @@ from datetime import date
 from typing import Literal
 
 import polars as pl
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.advisor import build_advisor_router
 from api.agent import llm_client
@@ -36,11 +37,14 @@ from core.regime import Regime
 from worker import main as worker_main
 
 log = logging.getLogger("varta.api")
+link_log = logging.getLogger("varta.plaid_link")
 REGIME_TTL_SECONDS = 300
 PLAID_PRODUCTS = ["transactions"]
 PLAID_CONSENTED = ["investments"]  # consent at Link, billed on first holdings call
 WORKER_JOIN_SECONDS = 5
 HTTPS_REDIRECT_STATUS = 308  # permanent, keeps method and body
+LINK_EVENT_RATE = 120  # Link telemetry posts per IP per hour on the demo (a session sends ~10)
+LINK_FIELD_MAX = 128
 
 
 class RegimeOut(BaseModel):
@@ -78,6 +82,18 @@ class ExchangeOut(BaseModel):
     item_id: str
 
 
+class LinkEventIn(BaseModel):
+    """Plaid Link onEvent/onExit/onSuccess metadata. Unknown fields (tokens) are dropped."""
+
+    event: str = Field(max_length=LINK_FIELD_MAX)
+    link_session_id: str | None = Field(default=None, max_length=LINK_FIELD_MAX)
+    institution_id: str | None = Field(default=None, max_length=LINK_FIELD_MAX)
+    error_type: str | None = Field(default=None, max_length=LINK_FIELD_MAX)
+    error_code: str | None = Field(default=None, max_length=LINK_FIELD_MAX)
+    view_name: str | None = Field(default=None, max_length=LINK_FIELD_MAX)
+    request_id: str | None = Field(default=None, max_length=LINK_FIELD_MAX)
+
+
 class SyncOut(BaseModel):
     """Per-item sync status: "ok" or a Plaid error code."""
 
@@ -107,6 +123,7 @@ def create_app(
     box = TokenBox(settings.token_key) if settings.token_key else None
 
     admin_limiter = RateLimiter(DEMO_ADMIN_RATE if settings.instance == "demo" else 0)
+    link_event_limiter = RateLimiter(LINK_EVENT_RATE if settings.instance == "demo" else 0)
 
     def require_plaid(request: Request) -> PlaidAPI:
         if not admin_limiter.allow(client_ip(request, settings.trust_proxy)):
@@ -209,6 +226,14 @@ def create_app(
                 return ExchangeOut(item_id=link_item(conn, p, box, body.public_token, today()))
             except PlaidError as exc:
                 raise HTTPException(status_code=502, detail=exc.code) from exc
+
+    @app.post("/api/plaid/link_event", status_code=204)
+    def plaid_link_event(body: LinkEventIn, request: Request) -> Response:
+        """Log one Link telemetry event as JSON (link_session_id is what Plaid support needs)."""
+        if not link_event_limiter.allow(client_ip(request, settings.trust_proxy)):
+            raise HTTPException(status_code=429, detail=f"rate limit: {LINK_EVENT_RATE} per hour")
+        link_log.info(json.dumps(body.model_dump()))
+        return Response(status_code=204)
 
     @app.post("/api/sync", response_model=SyncOut)
     def sync(request: Request) -> SyncOut:

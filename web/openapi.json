@@ -645,6 +645,93 @@
         "title": "ItemOut",
         "type": "object"
       },
+      "LinkEventIn": {
+        "description": "Plaid Link onEvent/onExit/onSuccess metadata. Unknown fields (tokens) are dropped.",
+        "properties": {
+          "error_code": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          },
+          "event": {
+            "maxLength": 128,
+            "title": "Event",
+            "type": "string"
+          },
+          "institution_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution Id"
+          },
+          "link_session_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Session Id"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "view_name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View Name"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "LinkEventIn",
+        "type": "object"
+      },
       "LinkTokenIn": {
         "description": "Optional item_id: create an update-mode (reconnect) token for that item.",
         "properties": {
@@ -1711,6 +1798,38 @@
           }
         },
         "summary": "Plaid Exchange"
+      }
+    },
+    "/api/plaid/link_event": {
+      "post": {
+        "description": "Log one Link telemetry event as JSON (link_session_id is what Plaid support needs).",
+        "operationId": "plaid_link_event_api_plaid_link_event_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plaid Link Event"
       }
     },
     "/api/plaid/link_token": {

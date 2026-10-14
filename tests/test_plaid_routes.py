@@ -1,5 +1,6 @@
 """Plaid routes with FakePlaid injected; configuration errors."""
 
+import json
 from datetime import date
 
 import httpx
@@ -7,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.crypto import new_key
-from api.main import create_app
+from api.main import LINK_EVENT_RATE, create_app
 from api.plaid_client import PlaidClient
 from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_ITEM_ID, FakePlaid
 from api.settings import Settings
@@ -137,3 +138,31 @@ def test_update_mode_unknown_item_is_404(tmp_path):
     c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
     r = c.post("/api/plaid/link_token", json={"item_id": "nope"})
     assert r.status_code == 404
+
+
+def test_link_event_logged_as_json_without_tokens(tmp_path, capsys):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    r = c.post("/api/plaid/link_event", json={
+        "event": "EXIT", "link_session_id": "sess-1", "institution_id": "ins_3",
+        "error_type": "ITEM_ERROR", "error_code": "INVALID_CREDENTIALS",
+        "public_token": "public-secret-1", "link_token": "link-secret-1"})
+    assert r.status_code == 204
+    lines = [json.loads(x) for x in capsys.readouterr().err.splitlines() if "plaid_link" in x]
+    payload = json.loads(lines[-1]["msg"])
+    assert payload == {"event": "EXIT", "link_session_id": "sess-1", "institution_id": "ins_3",
+                       "error_type": "ITEM_ERROR", "error_code": "INVALID_CREDENTIALS",
+                       "view_name": None, "request_id": None}
+    assert "secret" not in json.dumps(lines)
+
+
+def test_link_event_rejects_oversized_fields(tmp_path):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    assert c.post("/api/plaid/link_event", json={"event": "x" * 500}).status_code == 422
+
+
+def test_link_event_has_its_own_demo_limit(tmp_path):
+    c = _app(tmp_path, plaid=FakePlaid(TODAY), token_key=new_key())
+    codes = [c.post("/api/plaid/link_event", json={"event": "OPEN"}).status_code
+             for _ in range(LINK_EVENT_RATE + 1)]
+    assert codes[:LINK_EVENT_RATE] == [204] * LINK_EVENT_RATE and codes[-1] == 429
+    assert c.post("/api/plaid/link_token").status_code == 200  # admin limit untouched
