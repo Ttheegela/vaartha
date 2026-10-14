@@ -43,12 +43,28 @@ URL in the Plaid Dashboard (Developers > API > Allowed redirect URIs, production
 
 ## 4. Start at login
 
+macOS blocks background jobs from reading `~/Desktop`, `~/Documents` and `~/Downloads`
+("Operation not permitted"), so the login agent runs a **runtime copy** outside those folders
+instead of granting a shell Full Disk Access:
+
 ```
-cp deploy/macos/dev.vaartha.owner.plist.template ~/Library/LaunchAgents/dev.vaartha.owner.plist
-# edit it: replace <repo> (repo path) and <user> (your username; PATH needs ~/.local/bin for uv)
+git clone --branch <branch> https://github.com/Ttheegela/vaartha.git ~/Developer/vaartha
+cd ~/Developer/vaartha && uv sync --locked && (cd web && pnpm install --frozen-lockfile)
+sed -e "s#<repo>#$HOME/Developer/vaartha#" -e "s#<user>#$(whoami)#g" \
+  deploy/macos/dev.vaartha.owner.plist.template | grep -v 'Replace <repo>' \
+  > ~/Library/LaunchAgents/dev.vaartha.owner.plist
+plutil -lint ~/Library/LaunchAgents/dev.vaartha.owner.plist
 mkdir -p ~/Library/Logs/Vaartha
-launchctl load ~/Library/LaunchAgents/dev.vaartha.owner.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vaartha.owner.plist
 ```
+
+The agent runs `owner.sh start` once at login and exits; the API and web keep running
+(`AbandonProcessGroup`). Logs: `~/Library/Logs/Vaartha/launchd.log`. The data dir and env file
+are the same as a manual start, so both share one database.
+
+- Update the runtime copy: `cd ~/Developer/vaartha && git pull && uv sync --locked && (cd web && pnpm install --frozen-lockfile) && scripts/owner.sh stop && scripts/owner.sh start` (the web rebuilds when the commit changes).
+- Disable: `launchctl bootout gui/$(id -u)/dev.vaartha.owner && rm ~/Library/LaunchAgents/dev.vaartha.owner.plist`.
+- Run only one copy at a time (manual `owner.sh` from another checkout uses the same ports and pidfiles).
 
 ## Notes
 
