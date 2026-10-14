@@ -1,11 +1,11 @@
 import { PageHeading } from "@/components/page-heading"
-import { LinkAccountButton } from "@/components/link-account-button"
+import { LinkAccountButton, PlaidLinkProvider, ReconnectButton } from "@/components/link-account-button"
 import { SyncButton } from "@/components/sync-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toAccounts } from "@/lib/adapters"
 import type { components } from "@/lib/api-types"
 import { StatusBadge } from "@/components/status-badge"
-import { institutionStatus, itemsWithoutAccounts, reconnectItemId } from "@/lib/items"
+import { REMOVED_BADGE, institutionStatus, itemsWithoutAccounts, reconnectItemId } from "@/lib/items"
 import { relativeTime } from "@/lib/relative-time"
 import { apiGet } from "@/lib/server-api"
 
@@ -20,7 +20,7 @@ export default async function AccountsPage() {
   const emptyItems = data ? itemsWithoutAccounts(data.items, institutions) : []
   const hasItems = !!data && data.items.length > 0
   return (
-    <div>
+    <PlaidLinkProvider><div>
       <PageHeading
         title="Accounts"
         description="Balances across linked financial institutions."
@@ -47,7 +47,8 @@ export default async function AccountsPage() {
               <Card key={it.id}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">{it.title}{it.badge && <StatusBadge tone="warning">{it.badge}</StatusBadge>}</CardTitle>
-                  {it.badge === "Needs re-login" ? <LinkAccountButton itemId={it.id} label="RECONNECT" /> : <CardDescription>Use Sync now to retry.</CardDescription>}
+                  {it.badge === "Needs re-login" ? <ReconnectButton itemId={it.id} />
+                    : <CardDescription>{it.badge === REMOVED_BADGE ? "Plaid no longer has this connection. Use Link account to add the bank again." : "Use Sync now to retry."}</CardDescription>}
                 </CardHeader>
               </Card>
             ))}
@@ -59,7 +60,7 @@ export default async function AccountsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">{inst}{status.needsLogin && <StatusBadge tone="warning">Needs re-login</StatusBadge>}</CardTitle>
                   <CardDescription>Linked via Plaid · Last synced <span className="numeric">{relativeTime(status.lastSyncedAt)}</span></CardDescription>
-                  {reconnectId && <LinkAccountButton itemId={reconnectId} label="RECONNECT" />}
+                  {reconnectId && <ReconnectButton itemId={reconnectId} />}
                 </CardHeader>
                 <CardContent className="flex flex-col gap-1">
                   {accounts.filter((a) => a.institution === inst).map((a) => (
@@ -76,6 +77,6 @@ export default async function AccountsPage() {
           </div>
         </>
       )}
-    </div>
+    </div></PlaidLinkProvider>
   )
 }

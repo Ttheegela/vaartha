@@ -36,3 +36,8 @@ test("reconnectItemId picks the institution's item that needs re-login", () => {
   assert.equal(reconnectItemId(items, "Fidelity"), null)
   assert.equal(reconnectItemId([{ item_id: "z", institution: null, last_synced_at: null, status: "login_required" }], "Unknown"), "z")
 })
+
+test("itemsWithoutAccounts flags items removed at the bank", () => {
+  const all = [{ item_id: "r", institution: "Chase", last_synced_at: "2026-10-10T10:00:00Z", status: "not_found" }]
+  assert.deepEqual(itemsWithoutAccounts(all, []), [{ id: "r", title: "Chase", badge: "Removed at bank — link again" }])
+})
