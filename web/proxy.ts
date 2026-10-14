@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { canonicalRedirectUrl, lockPath, needsSession, SESSION_COOKIE } from "./lib/auth.ts"
+import { canonicalRedirectUrl, lockPath, needsSession, RETURN_PATH_HEADER, returnPath, SESSION_COOKIE } from "./lib/auth.ts"
 import { httpsRedirectUrl } from "./lib/https-redirect.ts"
 
 const HTTPS_REDIRECT_STATUS = 308
@@ -12,15 +12,19 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get("host")
   const target = httpsRedirectUrl(host, pathWithQuery, request.headers.get("x-forwarded-proto"), process.env.FORCE_HTTPS === "1")
   if (target) return NextResponse.redirect(target, HTTPS_REDIRECT_STATUS)
-  if (process.env.VARTA_AUTH !== "1") return NextResponse.next()
+  // Tell server pages where the request was going, so a 401 can return here after unlock.
+  const headers = new Headers(request.headers)
+  headers.set(RETURN_PATH_HEADER, returnPath(request.nextUrl))
+  const pass = () => NextResponse.next({ request: { headers } })
+  if (process.env.VARTA_AUTH !== "1") return pass()
   const effectiveHost = request.headers.get("x-forwarded-host")?.split(",")[0].trim() || host
   const canonical = canonicalRedirectUrl(effectiveHost, pathWithQuery, process.env.PASSKEY_ORIGIN)
   if (canonical) return NextResponse.redirect(canonical, HTTPS_REDIRECT_STATUS)
   if (needsSession(request.nextUrl.pathname) && !request.cookies.has(SESSION_COOKIE)) {
     // Base on the canonical origin: behind `tailscale serve`, nextUrl is http:// on the tailnet host.
-    return NextResponse.redirect(new URL(lockPath(pathWithQuery), process.env.PASSKEY_ORIGIN || request.nextUrl))
+    return NextResponse.redirect(new URL(lockPath(returnPath(request.nextUrl)), process.env.PASSKEY_ORIGIN || request.nextUrl))
   }
-  return NextResponse.next()
+  return pass()
 }
 
 export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] }

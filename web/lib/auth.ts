@@ -3,6 +3,7 @@
 export const SESSION_COOKIE = "varta_session"
 export const VISITOR_COOKIE = "varta_vid"
 export const LOCK_PATH = "/lock"
+export const RETURN_PATH_HEADER = "x-varta-path" // set by proxy.ts (overwriting any client value)
 
 const VISITOR_ID = /^[a-f0-9]{32}$/
 const SESSION_TOKEN = /^[A-Za-z0-9_-]{43}$/ // secrets.token_urlsafe(32)
@@ -10,7 +11,8 @@ const UNSAFE_NEXT = /[\\\u0000-\u001f\u007f]/
 const NEXT_BASE = "http://next.invalid"
 const PUBLIC_PATHS = new Set([LOCK_PATH, "/manifest.webmanifest", "/favicon.ico"])
 const PUBLIC_PREFIXES = ["/api/", "/_next/"]
-const APP_ICON = /^\/(apple-)?icon[\w.-]*$/ // Next metadata icons: /icon.svg, /apple-icon.png
+const APP_ICON = /^\/(apple-)?icon\d*(\.\w+)?$/ // Next metadata icon routes: /icon.svg, /icon1.png, /apple-icon.png
+const RSC_PARAM = "_rsc"
 
 /** Cookie header for the API: the visitor id and session token, each only if well-formed. */
 export function apiCookieHeader(visitorId?: string, sessionToken?: string): string | undefined {
@@ -21,11 +23,19 @@ export function apiCookieHeader(visitorId?: string, sessionToken?: string): stri
   return parts.length ? parts.join("; ") : undefined
 }
 
-/** `raw` if it is a same-site relative path (and not the lock page itself), else "/". */
+/** Normalized `raw` if it is a same-site relative path (and not the lock page itself), else "/". */
 export function safeNext(raw: string | null | undefined): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || UNSAFE_NEXT.test(raw)) return "/"
   const url = new URL(raw, NEXT_BASE)
-  return url.origin === NEXT_BASE && url.pathname !== LOCK_PATH ? raw : "/"
+  if (url.origin !== NEXT_BASE || url.pathname.startsWith("//") || url.pathname === LOCK_PATH) return "/"
+  return url.pathname + url.search + url.hash
+}
+
+/** Path and query to return to after unlocking, without Next's `_rsc` cache-buster. */
+export function returnPath(url: URL): string {
+  const u = new URL(url.href)
+  u.searchParams.delete(RSC_PARAM)
+  return u.pathname + u.search
 }
 
 /** The lock page URL that returns to `pathWithQuery` after unlocking. */
@@ -46,11 +56,11 @@ export function canonicalRedirectUrl(host: string | null, pathWithQuery: string,
   return host.toLowerCase() === want.host ? null : `${want.origin}${pathWithQuery}`
 }
 
-/** Plain-language message for a failed passkey ceremony or verify call. */
-export function ceremonyErrorMessage(err: { name?: string; code?: string; status?: number }): string {
+/** Plain-language message for a failed passkey ceremony or verify call; setup is suggested only when none exists. */
+export function ceremonyErrorMessage(err: { name?: string; code?: string; status?: number }, hasCredentials = true): string {
   if (err.status === 403) return "That setup code is invalid or expired. Make a new one on your Mac."
   if (err.status === 409 || err.code === "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED") return "This device already has a passkey for Vārtā. Unlock instead."
-  if (err.status === 401) return "No passkey for Vārtā on this device. Set one up below."
+  if (err.status === 401) return hasCredentials ? "Couldn't verify the passkey. Try again." : "No passkey for Vārtā yet. Set one up below."
   if (err.name === "NotAllowedError" || err.name === "AbortError") return "Cancelled, or no passkey for Vārtā on this device."
   return "Something went wrong. Try again."
 }

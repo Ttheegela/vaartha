@@ -1,6 +1,6 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
-import { apiCookieHeader, LOCK_PATH, SESSION_COOKIE, VISITOR_COOKIE } from "./auth.ts"
+import { apiCookieHeader, lockPath, RETURN_PATH_HEADER, SESSION_COOKIE, VISITOR_COOKIE } from "./auth.ts"
 
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000"
 const UNAUTHORIZED = 401
@@ -16,7 +16,8 @@ export async function apiGet<T>(path: string): Promise<T | null> {
   } catch {
     return null
   }
-  if (res.status === UNAUTHORIZED) redirect(LOCK_PATH) // throws NEXT_REDIRECT; kept outside any try
+  // redirect() throws NEXT_REDIRECT, so it stays outside any try; lockPath runs the path through safeNext.
+  if (res.status === UNAUTHORIZED) redirect(lockPath((await headers()).get(RETURN_PATH_HEADER) ?? "/"))
   if (!res.ok) return null
   try {
     return (await res.json()) as T

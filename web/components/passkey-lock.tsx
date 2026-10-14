@@ -48,8 +48,7 @@ export function PasskeyLock({ next }: { next: string }) {
       window.location.assign(next) // full load so server pages fetch with the new cookie
     } catch (e) {
       const err = e as CeremonyError
-      setError(ceremonyErrorMessage(err))
-      if (err.status === 401) setSetup(true)
+      setError(ceremonyErrorMessage(err, hasPasskey))
       setBusy(false)
     }
   }
