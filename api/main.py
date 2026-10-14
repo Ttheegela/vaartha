@@ -29,7 +29,7 @@ from api.logs import setup_logging
 from api.news_read import build_news_router
 from api.plaid_client import PlaidAPI, PlaidClient, PlaidError
 from api.settings import DEMO_ADMIN_RATE, Settings, local_today
-from api.sync import link_item, sync_all
+from api.sync import STATUS_NOT_FOUND, institution_linked, link_item, sync_all
 from api.visitor import RateLimiter, client_ip
 from core.live import live_regime
 from core.prices import fetch_closes
@@ -71,9 +71,10 @@ class LinkTokenOut(BaseModel):
 
 
 class ExchangeIn(BaseModel):
-    """Public token returned by Plaid Link."""
+    """Public token returned by Plaid Link, plus the institution from onSuccess metadata."""
 
     public_token: str
+    institution_id: str | None = None
 
 
 class ExchangeOut(BaseModel):
@@ -205,10 +206,12 @@ def create_app(
         access_token = None
         if body and body.item_id:
             with closing(connect(settings.db_path)) as conn:
-                row = conn.execute("SELECT access_token_enc FROM items WHERE item_id=?",
+                row = conn.execute("SELECT access_token_enc, status FROM items WHERE item_id=?",
                                    (body.item_id,)).fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail="unknown item")
+            if row["status"] == STATUS_NOT_FOUND:
+                raise HTTPException(status_code=409, detail="item removed at Plaid; link again")
             access_token = box.open(row["access_token_enc"])
         try:
             return LinkTokenOut(link_token=p.link_token_create(
@@ -219,9 +222,11 @@ def create_app(
 
     @app.post("/api/plaid/exchange", response_model=ExchangeOut)
     def plaid_exchange(body: ExchangeIn, request: Request) -> ExchangeOut:
-        """Exchange Link's public token and run the first sync."""
+        """Exchange Link's public token and run the first sync; refuse a duplicate bank."""
         p = require_plaid(request)
         with closing(connect(settings.db_path)) as conn:
+            if body.institution_id and institution_linked(conn, body.institution_id):
+                raise HTTPException(status_code=409, detail="institution already linked")
             try:
                 return ExchangeOut(item_id=link_item(conn, p, box, body.public_token, today()))
             except PlaidError as exc:

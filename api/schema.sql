@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS items (
   item_id TEXT PRIMARY KEY,
   access_token_enc BLOB NOT NULL,
   institution TEXT,
+  institution_id TEXT,
   txn_cursor TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   last_synced_at TEXT

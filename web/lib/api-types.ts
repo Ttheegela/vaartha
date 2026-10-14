@@ -275,7 +275,7 @@ export interface paths {
         put?: never;
         /**
          * Plaid Exchange
-         * @description Exchange Link's public token and run the first sync.
+         * @description Exchange Link's public token and run the first sync; refuse a duplicate bank.
          */
         post: operations["plaid_exchange_api_plaid_exchange_post"];
         delete?: never;
@@ -600,9 +600,11 @@ export interface components {
         };
         /**
          * ExchangeIn
-         * @description Public token returned by Plaid Link.
+         * @description Public token returned by Plaid Link, plus the institution from onSuccess metadata.
          */
         ExchangeIn: {
+            /** Institution Id */
+            institution_id?: string | null;
             /** Public Token */
             public_token: string;
         };

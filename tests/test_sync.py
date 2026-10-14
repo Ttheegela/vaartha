@@ -6,7 +6,13 @@ import pytest
 
 from api.crypto import TokenBox, new_key
 from api.db import connect, init_db
-from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_INSTITUTION, FAKE_ITEM_ID, FakePlaid
+from api.plaid_fake import (
+    FAKE_ACCESS_TOKEN,
+    FAKE_INSTITUTION,
+    FAKE_INSTITUTION_ID,
+    FAKE_ITEM_ID,
+    FakePlaid,
+)
 from api.sync import link_item, sync_all, sync_item
 
 TODAY = date(2026, 10, 12)
@@ -185,3 +191,38 @@ def test_sync_all_survives_failing_tail(env, monkeypatch):
 
     monkeypatch.setattr("api.sync.refresh_recurring", boom)
     assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: "ok"}
+
+
+@pytest.mark.parametrize("code", ["INVALID_CREDENTIALS", "ITEM_LOCKED", "ACCESS_NOT_GRANTED"])
+def test_user_action_codes_mark_item_for_reconnect(env, code):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    plaid.fail_next["accounts_get"] = code
+    assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: code}
+    assert conn.execute("SELECT status FROM items").fetchone()[0] == "login_required"
+
+
+def test_item_not_found_purges_token_and_is_skipped(env):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    plaid.fail_next["accounts_get"] = "ITEM_NOT_FOUND"
+    assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: "ITEM_NOT_FOUND"}
+    row = conn.execute("SELECT status, access_token_enc FROM items").fetchone()
+    assert row["status"] == "not_found" and row["access_token_enc"] == b""
+    plaid.fail_next["accounts_get"] = "SHOULD_NOT_BE_CALLED"
+    assert sync_all(conn, plaid, box, TODAY) == {FAKE_ITEM_ID: "ITEM_NOT_FOUND"}
+
+
+def test_sync_stores_institution_id(env):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    assert conn.execute("SELECT institution_id FROM items").fetchone()[0] == FAKE_INSTITUTION_ID
+
+
+def test_sync_failure_logs_request_id(env, caplog):
+    conn, plaid, box = env
+    link_item(conn, plaid, box, "public-fake-1", TODAY)
+    plaid.fail_next["accounts_get"] = "INSTITUTION_DOWN"
+    with caplog.at_level("WARNING", logger="varta.sync"):
+        sync_all(conn, plaid, box, TODAY)
+    assert "req-fake" in caplog.text and FAKE_ACCESS_TOKEN not in caplog.text

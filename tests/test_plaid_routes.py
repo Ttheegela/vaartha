@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from api.crypto import new_key
 from api.main import LINK_EVENT_RATE, create_app
 from api.plaid_client import PlaidClient
-from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_ITEM_ID, FakePlaid
+from api.plaid_fake import FAKE_ACCESS_TOKEN, FAKE_INSTITUTION_ID, FAKE_ITEM_ID, FakePlaid
 from api.settings import Settings
 from core.regime import compute_regime
 
@@ -166,3 +166,24 @@ def test_link_event_has_its_own_demo_limit(tmp_path):
              for _ in range(LINK_EVENT_RATE + 1)]
     assert codes[:LINK_EVENT_RATE] == [204] * LINK_EVENT_RATE and codes[-1] == 429
     assert c.post("/api/plaid/link_token").status_code == 200  # admin limit untouched
+
+
+def test_exchange_refuses_duplicate_institution(tmp_path):
+    fake = FakePlaid(TODAY)
+    c = _app(tmp_path, plaid=fake, token_key=new_key())
+    c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+    fake.fail_next["exchange_public_token"] = "SHOULD_NOT_BE_CALLED"
+    r = c.post("/api/plaid/exchange",
+               json={"public_token": "public-fake-2", "institution_id": FAKE_INSTITUTION_ID})
+    assert r.status_code == 409 and r.json() == {"detail": "institution already linked"}
+    assert len(c.get("/api/accounts").json()["items"]) == 1
+
+
+def test_update_mode_refused_for_removed_item(tmp_path):
+    fake = FakePlaid(TODAY)
+    c = _app(tmp_path, plaid=fake, token_key=new_key())
+    c.post("/api/plaid/exchange", json={"public_token": "public-fake-1"})
+    fake.fail_next["accounts_get"] = "ITEM_NOT_FOUND"
+    c.post("/api/sync")
+    r = c.post("/api/plaid/link_token", json={"item_id": FAKE_ITEM_ID})
+    assert r.status_code == 409

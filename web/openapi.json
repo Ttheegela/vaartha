@@ -430,8 +430,19 @@
         "type": "object"
       },
       "ExchangeIn": {
-        "description": "Public token returned by Plaid Link.",
+        "description": "Public token returned by Plaid Link, plus the institution from onSuccess metadata.",
         "properties": {
+          "institution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution Id"
+          },
           "public_token": {
             "title": "Public Token",
             "type": "string"
@@ -1763,7 +1774,7 @@
     },
     "/api/plaid/exchange": {
       "post": {
-        "description": "Exchange Link's public token and run the first sync.",
+        "description": "Exchange Link's public token and run the first sync; refuse a duplicate bank.",
         "operationId": "plaid_exchange_api_plaid_exchange_post",
         "requestBody": {
           "content": {

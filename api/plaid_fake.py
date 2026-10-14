@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from api.plaid_client import PlaidError
 
 FAKE_INSTITUTION = "First Platypus Bank"
+FAKE_INSTITUTION_ID = "ins_109508"
 FAKE_ITEM_ID = "item-fake-1"
 FAKE_ACCESS_TOKEN = "access-fake-1"
 HISTORY_DAYS = 400
@@ -131,7 +132,7 @@ class FakePlaid:
     def _maybe_fail(self, method: str) -> None:
         code = self.fail_next.pop(method, None)
         if code:
-            raise PlaidError(code, "simulated", 400)
+            raise PlaidError(code, "simulated", 400, request_id="req-fake")
 
     def link_token_create(self, user_id, products, additional_consented=None,
                           days_requested=730, redirect_uri=None, access_token=None):
@@ -150,7 +151,8 @@ class FakePlaid:
         if access_token in self.login_required_tokens:
             raise PlaidError("ITEM_LOGIN_REQUIRED", "simulated", 400)
         return {"accounts": self.data["accounts"],
-                "item": {"item_id": FAKE_ITEM_ID, "institution_name": FAKE_INSTITUTION}}
+                "item": {"item_id": FAKE_ITEM_ID, "institution_id": FAKE_INSTITUTION_ID,
+                         "institution_name": FAKE_INSTITUTION}}
 
     def transactions_sync(self, access_token, cursor):
         self._maybe_fail("transactions_sync")

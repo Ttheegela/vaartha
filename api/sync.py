@@ -18,7 +18,12 @@ log = logging.getLogger("varta.sync")
 ASSET_TYPES = ("depository", "investment")
 LIABILITY_TYPES = ("credit", "loan")
 RESTART_CODE = "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION"
-LOGIN_REQUIRED = "ITEM_LOGIN_REQUIRED"
+# Errors only the user can fix; update mode (Reconnect) is the path back.
+NEEDS_RECONNECT = {"ITEM_LOGIN_REQUIRED", "INVALID_CREDENTIALS", "ITEM_LOCKED",
+                   "ACCESS_NOT_GRANTED"}
+ITEM_NOT_FOUND = "ITEM_NOT_FOUND"  # item removed or revoked: unrecoverable, needs a fresh link
+STATUS_RECONNECT = "login_required"
+STATUS_NOT_FOUND = "not_found"
 NO_INVESTMENTS = {"PRODUCTS_NOT_SUPPORTED", "NO_INVESTMENT_ACCOUNTS", "PRODUCT_NOT_ENABLED",
                   "ADDITIONAL_CONSENT_REQUIRED", "PRODUCT_NOT_READY"}
 MAX_SYNC_RESTARTS = 3
@@ -49,8 +54,15 @@ def link_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
         snapshot_networth(conn, today)
     except Exception as exc:  # noqa: BLE001 - the item is stored; never log the token
         code = getattr(exc, "code", type(exc).__name__)
-        log.warning("first sync failed for %s: %s", item_id, code)
+        log.warning("first sync failed for %s: %s request_id=%s", item_id, code,
+                    getattr(exc, "request_id", None))
     return item_id
+
+
+def institution_linked(conn: sqlite3.Connection, institution_id: str) -> bool:
+    """True if a stored item (not removed at Plaid) is already at this institution."""
+    return conn.execute("SELECT 1 FROM items WHERE institution_id=? AND status!=?",
+                        (institution_id, STATUS_NOT_FOUND)).fetchone() is not None
 
 
 def _pull_transactions(plaid: PlaidAPI, token: str, cursor: str | None):
@@ -95,15 +107,20 @@ def sync_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
                 raise
             inv = {"holdings": [], "securities": []}
     except PlaidError as exc:
-        if exc.code == LOGIN_REQUIRED:
-            conn.execute("UPDATE items SET status='login_required' WHERE item_id=?", (item_id,))
+        if exc.code in NEEDS_RECONNECT:
+            conn.execute("UPDATE items SET status=? WHERE item_id=?", (STATUS_RECONNECT, item_id))
+            conn.commit()
+        elif exc.code == ITEM_NOT_FOUND:  # purge the dead token; keep history until unlinked
+            conn.execute("UPDATE items SET status=?, access_token_enc=? WHERE item_id=?",
+                         (STATUS_NOT_FOUND, b"", item_id))
             conn.commit()
         raise
 
     with conn:
-        conn.execute("UPDATE items SET institution=?, txn_cursor=?, status='active', "
-                     "last_synced_at=? WHERE item_id=?",
-                     (acc["item"].get("institution_name"), cursor, _now(), item_id))
+        conn.execute("UPDATE items SET institution=?, institution_id=?, txn_cursor=?, "
+                     "status='active', last_synced_at=? WHERE item_id=?",
+                     (acc["item"].get("institution_name"), acc["item"].get("institution_id"),
+                      cursor, _now(), item_id))
         conn.executemany(
             "INSERT INTO accounts (account_id, item_id, name, type, subtype, mask, "
             "balance_current, balance_available, currency) VALUES (?,?,?,?,?,?,?,?,?) "
@@ -113,7 +130,8 @@ def sync_item(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
             "balance_available=excluded.balance_available, currency=excluded.currency",
             [(a["account_id"], item_id, a["name"], a["type"], a["subtype"], a.get("mask"),
               a["balances"].get("current"), a["balances"].get("available"),
-              a["balances"].get("iso_currency_code")) for a in acc["accounts"]])
+              a["balances"].get("iso_currency_code")
+              or a["balances"].get("unofficial_currency_code")) for a in acc["accounts"]])
         conn.executemany(
             "INSERT OR REPLACE INTO transactions (txn_id, account_id, date, amount, merchant, "
             "pfc_primary, pfc_detailed, pending) VALUES (?,?,?,?,?,?,?,?)",
@@ -171,12 +189,16 @@ def sync_all(conn: sqlite3.Connection, plaid: PlaidAPI, box: TokenBox,
              today: date) -> dict[str, str]:
     """Sync every item; one failing item never blocks the others."""
     results: dict[str, str] = {}
-    for (item_id,) in conn.execute("SELECT item_id FROM items").fetchall():
+    for item_id, status in conn.execute("SELECT item_id, status FROM items").fetchall():
+        if status == STATUS_NOT_FOUND:
+            results[item_id] = ITEM_NOT_FOUND
+            continue
         try:
             sync_item(conn, plaid, box, item_id)
             results[item_id] = "ok"
-        except PlaidError as exc:
-            log.warning("sync failed for %s: %s", item_id, exc.code)
+        except PlaidError as exc:  # failed items retry on the next scheduled sync
+            log.warning("sync failed for %s: %s request_id=%s", item_id, exc.code,
+                        exc.request_id)
             results[item_id] = exc.code
         except Exception as exc:  # noqa: BLE001 - isolate items; never log the token
             log.warning("sync failed for %s: %s", item_id, type(exc).__name__)
