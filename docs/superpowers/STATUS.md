@@ -32,6 +32,8 @@ Tests: 290 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, ts
 2. Merge v2 into `main` when ready (only the deploy workflow is on `main` today).
 3. Watch the demo: cash flow/bills fill in after Plaid Sandbox delivers transactions (6-hourly sync); `heroku logs -t -a vaartha-api` for R14 memory warnings.
 
+0b. **Passkey lock + Dock app (2026-10-14):** owner instance gated by a passkey (`PASSKEY_RP_ID`/`PASSKEY_ORIGIN` required in `owner.env`; `git pull` in `~/Developer/vaartha` and set them before the next start); setup/recovery in `deploy/owner-mac.md` §5–6.
+
 ## Open items (need attention)
 
 1. **Plaid Link UI flow: fix in, browser click-through pending.** Likely cause of the missing `onSuccess` was react-plaid-link re-inserting link-initialize.js under StrictMode ("embedded more than once"); the web now loads the script once before mounting Link (2026-10-14). Backend verified against Sandbox; see `PLAID_PLAN.md` (build-kit plan, human tasks, rules checked).

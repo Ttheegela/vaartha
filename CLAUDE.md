@@ -15,6 +15,7 @@ Personal finance + investing advisor agent (Origin-style). Two instances from on
 - `evals/` advisor evals: `uv run python -m evals.run --model ID --base-url URL` (live, manual), `--report` writes `evals/RESULTS.md`; CI replays `evals/recordings/`
 - `worker/` scheduler loop (`python -m worker.main`); `deploy/` Compose + Caddy + runbook (`deploy/README.md`)
 - Hosting: demo on Heroku (`deploy/heroku.md`), owner on the Mac (`deploy/owner-mac.md`, `scripts/owner.sh`); VPS alternative in `deploy/README.md`
+- Owner lock: passkey (WebAuthn) via `PASSKEY_RP_ID`/`PASSKEY_ORIGIN`; CLI `uv run python -m scripts.passkey setup-code|reset|list`; see `deploy/owner-mac.md`
 - `legacy/` v1 Streamlit app — frozen, reference only, never edit
 
 ## Rules
