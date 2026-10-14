@@ -15,6 +15,7 @@ from typing import Literal
 import polars as pl
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from api.advisor import build_advisor_router
@@ -39,6 +40,7 @@ REGIME_TTL_SECONDS = 300
 PLAID_PRODUCTS = ["transactions"]
 PLAID_IF_SUPPORTED = ["investments"]
 WORKER_JOIN_SECONDS = 5
+HTTPS_REDIRECT_STATUS = 308  # permanent, keeps method and body
 
 
 class RegimeOut(BaseModel):
@@ -128,6 +130,15 @@ def create_app(
         app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
                            allow_credentials=True, allow_methods=["GET", "POST"],
                            allow_headers=["content-type"])
+    if settings.trust_proxy:
+        @app.middleware("http")
+        async def force_https(request: Request, call_next):
+            """Redirect plain-http requests (per X-Forwarded-Proto) to https."""
+            if request.headers.get("x-forwarded-proto") == "http":
+                return RedirectResponse(str(request.url.replace(scheme="https")),
+                                        status_code=HTTPS_REDIRECT_STATUS)
+            return await call_next(request)
+
     # ponytail: single-process in-memory cache; move to the DB if the api runs >1 worker
     cache: dict[str, tuple[float, Regime]] = {}
 

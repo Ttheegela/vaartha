@@ -22,7 +22,7 @@ Public Suffix List), so the visitor cookie (SameSite=Lax) and credentialed brows
    - `CHAT_RATE_PER_HOUR=20`, `VARTA_TZ`, `TRUST_PROXY=1`, `RUN_WORKER=1`
    - `CORS_ORIGINS=https://demo.<domain>`, `COOKIE_DOMAIN=.<domain>`, `VARTA_DB_PATH=/tmp/varta.db`
    - `VARTA_BACKUP_DIR=/tmp/backups` (the filesystem is ephemeral)
-4. Web config vars: `heroku config:set API_URL=https://api.<domain> VARTA_INSTANCE=demo -a <web-app>`.
+4. Web config vars: `heroku config:set API_URL=https://api.<domain> VARTA_INSTANCE=demo FORCE_HTTPS=1 -a <web-app>`.
 5. GitHub repo Settings, Secrets and variables:
    - Secret `HEROKU_API_KEY` (from `heroku authorizations:create`).
    - Variables `HEROKU_API_APP`, `HEROKU_WEB_APP`, `NEXT_PUBLIC_API_BASE=https://api.<domain>`.

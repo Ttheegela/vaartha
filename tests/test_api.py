@@ -53,3 +53,27 @@ def test_regime_is_cached_within_ttl(tmp_path):
     now[0] = REGIME_TTL_SECONDS + 1
     client.get("/api/regime")
     assert len(calls) == 2
+
+
+def _proxy_client(tmp_path, trust_proxy):
+    settings = Settings(db_path=tmp_path / "v.db", instance="demo", trust_proxy=trust_proxy)
+    return TestClient(create_app(settings, regime_provider=lambda: NORMAL),
+                      follow_redirects=False)
+
+
+def test_http_redirects_to_https_behind_proxy(tmp_path):
+    c = _proxy_client(tmp_path, True)
+    r = c.get("/api/x?y=1", headers={"x-forwarded-proto": "http"})
+    assert r.status_code == 308
+    assert r.headers["location"] == "https://testserver/api/x?y=1"
+    assert c.get("/healthz", headers={"x-forwarded-proto": "http"}).status_code == 308
+
+
+def test_https_passes_behind_proxy(tmp_path):
+    r = _proxy_client(tmp_path, True).get("/healthz", headers={"x-forwarded-proto": "https"})
+    assert r.status_code == 200
+
+
+def test_no_redirect_without_trust_proxy(tmp_path):
+    r = _proxy_client(tmp_path, False).get("/healthz", headers={"x-forwarded-proto": "http"})
+    assert r.status_code == 200
