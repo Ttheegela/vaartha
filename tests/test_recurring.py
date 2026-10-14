@@ -149,3 +149,38 @@ def test_null_categories_still_detected():
     s = _one(detect_recurring(_df(rows), TODAY), "Mystery Sub")
     assert s["frequency"] == "MONTHLY"
     assert s["kind"] == "subscription"
+
+
+def test_one_off_restaurant_a_year_apart_not_subscription():
+    # Real case: two unrelated meals at Samudhra 368 days apart looked "annual".
+    rows = [("a1", d, a, "Samudhra", "FOOD_AND_DRINK", "FOOD_AND_DRINK_RESTAURANT")
+            for d, a in ((date(2025, 5, 7), 59.71), (date(2026, 5, 10), 139.58))]
+    assert detect_recurring(_df(rows), TODAY).height == 0
+
+
+def test_annual_subscription_needs_near_identical_price():
+    rows = _monthly("Bookshop", [date(2025, 9, 16), date(2026, 9, 17)], 20.88)
+    rows[-1] = ("a1", date(2026, 9, 17), 17.26, "Bookshop", "ENTERTAINMENT", "ENTERTAINMENT_X")
+    assert detect_recurring(_df(rows), TODAY).height == 0
+
+
+def test_monthly_varying_amounts_not_subscription():
+    days = [date(2026, m, 15) for m in (6, 7, 8, 9)]
+    rows = [("a1", d, a, "Cafe", "FOOD_AND_DRINK", "FOOD_AND_DRINK_COFFEE")
+            for d, a in zip(days, (4.5, 12.75, 31.0, 8.25), strict=True)]
+    assert detect_recurring(_df(rows), TODAY).height == 0
+
+
+def test_intro_price_then_stable_still_subscription():
+    days = [date(2025, m, 7) for m in (9, 10, 11, 12)]
+    rows = [("a1", d, a, "Six Flags", "ENTERTAINMENT", "ENTERTAINMENT_X")
+            for d, a in zip(days, (39.43, 7.45, 7.45, 7.45), strict=True)]
+    s = _one(detect_recurring(_df(rows), date(2025, 12, 20)), "Six Flags")
+    assert s["frequency"] == "MONTHLY"
+
+
+def test_bill_amounts_may_vary():
+    days = [date(2026, m, 3) for m in (6, 7, 8, 9)]
+    rows = [("a1", d, a, "PSEG", "RENT_AND_UTILITIES", "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY")
+            for d, a in zip(days, (61.0, 140.0, 182.0, 95.0), strict=True)]
+    assert _one(detect_recurring(_df(rows), TODAY), "PSEG")["kind"] == "bill"

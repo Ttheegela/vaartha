@@ -35,6 +35,10 @@ BILL_DETAILED_PREFIX = "GENERAL_SERVICES_INSURANCE"
 # plus INCOME. Kept local because core must not import from api.
 RECURRING_EXCLUDED_PRIMARY = ("TRANSFER_IN", "TRANSFER_OUT", "INCOME")
 RECURRING_EXCLUDED_DETAILED = "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT"
+# Subscriptions charge a fixed price: the last MIN_<freq> charges stay within this max/min ratio.
+# Annual is tighter because two charges a year apart is weak evidence. Bills may vary (utilities).
+PRICE_RATIO = {"WEEKLY": 1.25, "MONTHLY": 1.25, "ANNUALLY": 1.10}
+MIN_CHARGES = {"WEEKLY": MIN_WEEKLY, "MONTHLY": MIN_MONTHLY, "ANNUALLY": MIN_ANNUAL}
 STREAM_ID_LENGTH = 16
 AMOUNT_DECIMALS = 2
 
@@ -79,6 +83,12 @@ def _kind(primary: str | None, detailed: str | None) -> str:
     return "subscription"
 
 
+def _stable_price(amounts: list[float], frequency: str) -> bool:
+    """True when the most recent charges look like one fixed price (allows an older intro price)."""
+    recent = amounts[-MIN_CHARGES[frequency]:]
+    return max(recent) <= min(recent) * PRICE_RATIO[frequency]
+
+
 def detect_recurring(txns: pl.DataFrame, today: date) -> pl.DataFrame:
     """Return one row per detected outflow stream (columns: STREAM_COLUMNS)."""
     rows = []
@@ -102,6 +112,9 @@ def detect_recurring(txns: pl.DataFrame, today: date) -> pl.DataFrame:
             frequency = _cadence(dates)
             if frequency is None:
                 continue
+            kind = _kind(g["pfc_primary"], g["pfc_detailed"])
+            if kind == "subscription" and not _stable_price(amounts, frequency):
+                continue
             anchor = (dates[-1].day if frequency == "ANNUALLY"
                       else max(d.day for d in dates[-ANCHOR_WINDOW:]))
             nxt = _next_date(dates[-1], frequency, anchor)
@@ -109,7 +122,7 @@ def detect_recurring(txns: pl.DataFrame, today: date) -> pl.DataFrame:
             sid = digest[:STREAM_ID_LENGTH]
             rows.append({
                 "stream_id": sid, "account_id": g["account_id"], "direction": "outflow",
-                "kind": _kind(g["pfc_primary"], g["pfc_detailed"]), "merchant": g["merchant"],
+                "kind": kind, "merchant": g["merchant"],
                 "avg_amount": round(statistics.fmean(amounts), AMOUNT_DECIMALS),
                 "last_amount": amounts[-1], "frequency": frequency, "last_date": dates[-1],
                 "predicted_next_date": nxt, "status": "MATURE",
