@@ -688,6 +688,21 @@
         "title": "LinkTokenOut",
         "type": "object"
       },
+      "LoginVerifyIn": {
+        "description": "The browser's navigator.credentials.get() result (JSON).",
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "title": "Credential",
+            "type": "object"
+          }
+        },
+        "required": [
+          "credential"
+        ],
+        "title": "LoginVerifyIn",
+        "type": "object"
+      },
       "MerchantSpendOut": {
         "description": "Total spend and transaction count for one merchant.",
         "properties": {
@@ -858,6 +873,18 @@
         "title": "NewsItemOut",
         "type": "object"
       },
+      "OkOut": {
+        "description": "Unlocked.",
+        "properties": {
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "title": "OkOut",
+        "type": "object"
+      },
       "RecurringListOut": {
         "description": "Subscriptions and bills with active monthly totals.",
         "properties": {
@@ -1009,6 +1036,26 @@
         "title": "RegimeOut",
         "type": "object"
       },
+      "RegisterVerifyIn": {
+        "description": "Setup code plus the browser's navigator.credentials.create() result (JSON).",
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "title": "Credential",
+            "type": "object"
+          },
+          "setup_code": {
+            "title": "Setup Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "setup_code",
+          "credential"
+        ],
+        "title": "RegisterVerifyIn",
+        "type": "object"
+      },
       "SentimentPoint": {
         "description": "Confidence-weighted mean sentiment for one day and channel.",
         "properties": {
@@ -1040,6 +1087,20 @@
           "items"
         ],
         "title": "SentimentPoint",
+        "type": "object"
+      },
+      "SetupCodeIn": {
+        "description": "One-time setup code from the CLI.",
+        "properties": {
+          "setup_code": {
+            "title": "Setup Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "setup_code"
+        ],
+        "title": "SetupCodeIn",
         "type": "object"
       },
       "SourceOut": {
@@ -1129,6 +1190,30 @@
           "cash_flow"
         ],
         "title": "SpendingOut",
+        "type": "object"
+      },
+      "StatusOut": {
+        "description": "Lock state for the web app.",
+        "properties": {
+          "auth_required": {
+            "title": "Auth Required",
+            "type": "boolean"
+          },
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "has_credentials": {
+            "title": "Has Credentials",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "auth_required",
+          "authenticated",
+          "has_credentials"
+        ],
+        "title": "StatusOut",
         "type": "object"
       },
       "SyncOut": {
@@ -1324,6 +1409,169 @@
           }
         },
         "summary": "Dismiss"
+      }
+    },
+    "/api/auth/login/options": {
+      "post": {
+        "description": "PublicKeyCredentialRequestOptions for a discoverable passkey (empty allowCredentials).",
+        "operationId": "login_options_api_auth_login_options_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Login Options"
+      }
+    },
+    "/api/auth/login/verify": {
+      "post": {
+        "description": "Verify the assertion against a stored passkey; 401 on any failure.",
+        "operationId": "login_verify_api_auth_login_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginVerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login Verify"
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "description": "Delete this browser's session server-side and clear the cookie.",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout"
+      }
+    },
+    "/api/auth/register/options": {
+      "post": {
+        "description": "PublicKeyCredentialCreationOptions; needs a valid setup code (403 otherwise).",
+        "operationId": "register_options_api_auth_register_options_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupCodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Options"
+      }
+    },
+    "/api/auth/register/verify": {
+      "post": {
+        "description": "Burn the setup code, verify the attestation, store the passkey and unlock.",
+        "operationId": "register_verify_api_auth_register_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterVerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Verify"
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "description": "Whether the lock is on, this browser is unlocked, and any passkey exists.",
+        "operationId": "status_api_auth_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status"
       }
     },
     "/api/briefing": {

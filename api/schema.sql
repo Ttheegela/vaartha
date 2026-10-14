@@ -80,3 +80,13 @@ CREATE TABLE IF NOT EXISTS crowd_odds (
   end_date TEXT, url TEXT, category TEXT, fetched_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS auth_credentials (
+  credential_id TEXT PRIMARY KEY, public_key BLOB NOT NULL, sign_count INTEGER NOT NULL,
+  transports TEXT, created_at TEXT NOT NULL, last_used_at TEXT
+);
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  token_hash TEXT PRIMARY KEY, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS auth_challenges (
+  challenge TEXT PRIMARY KEY, kind TEXT NOT NULL, expires_at TEXT NOT NULL
+);

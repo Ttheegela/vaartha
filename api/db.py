@@ -8,6 +8,7 @@ TABLES = (
     "items", "accounts", "transactions", "securities", "holdings", "recurring_streams",
     "budgets", "goals", "networth_snapshots", "news_items", "news_scores", "alerts",
     "briefings", "agent_messages", "crowd_odds", "app_state",
+    "auth_credentials", "auth_sessions", "auth_challenges",
 )
 MIGRATIONS = [
     ("news_scores", "channel", "TEXT NOT NULL DEFAULT 'news'"),

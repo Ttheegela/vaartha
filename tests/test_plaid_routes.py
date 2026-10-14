@@ -19,7 +19,8 @@ NORMAL = compute_regime([100.0] * 40, [100.0] * 40, [1800.0] * 40)
 
 
 def _app(tmp_path, plaid=None, instance="demo", **settings_kw):
-    s = Settings(db_path=tmp_path / "v.db", instance=instance, **settings_kw)
+    s = Settings(db_path=tmp_path / "v.db", instance=instance, auth_required=False,
+                 **settings_kw)  # passkey lock is covered in test_auth.py
     app = create_app(s, regime_provider=lambda: NORMAL, today=lambda: TODAY, plaid=plaid)
     return TestClient(app)
 
@@ -112,7 +113,8 @@ def test_demo_link_token_has_its_own_limit(tmp_path):
 
 
 def test_owner_admin_endpoints_not_limited(tmp_path):
-    s = Settings(db_path=tmp_path / "v.db", instance="owner", token_key=new_key())
+    s = Settings(db_path=tmp_path / "v.db", instance="owner", token_key=new_key(),
+                 auth_required=False)
     c = TestClient(create_app(s, regime_provider=lambda: NORMAL, today=lambda: TODAY,
                               plaid=FakePlaid(TODAY)))
     assert all(c.post("/api/plaid/link_token").status_code == 200 for _ in range(8))

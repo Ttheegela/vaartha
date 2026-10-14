@@ -47,7 +47,8 @@ class FakeLLM:
 
 
 def _client(tmp_path, llm, instance="demo"):
-    settings = Settings(db_path=tmp_path / "v.db", instance=instance, llm_model="test-model")
+    settings = Settings(db_path=tmp_path / "v.db", instance=instance, llm_model="test-model",
+                        auth_required=False)  # passkey lock is covered in test_auth.py
     app = create_app(settings, regime_provider=lambda: NORMAL, today=lambda: TODAY, llm=llm)
     return TestClient(app), settings
 

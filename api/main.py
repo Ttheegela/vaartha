@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field, ValidationError
 from api.advisor import build_advisor_router
 from api.agent import llm_client
 from api.agent_tools import build_toolbox
+from api.auth import build_auth_router, session_middleware
 from api.crypto import TokenBox
 from api.db import connect, init_db
 from api.finance import build_finance_router
@@ -115,6 +116,7 @@ def create_app(
     """Build the API: initialise the DB and register routes."""
     setup_logging()
     settings = settings or Settings.from_env()
+    settings.check_auth_config()  # fail closed: owner lock on but passkey config missing/bad
     today = today or (lambda: local_today(settings.tz))
     with closing(connect(settings.db_path)) as conn:
         init_db(conn)
@@ -154,6 +156,10 @@ def create_app(
             thread.join(WORKER_JOIN_SECONDS)
 
     app = FastAPI(title="Vārtā API", lifespan=lifespan)
+    # Middleware added first runs innermost: the lock sits inside CORS (preflights and 401s
+    # keep their CORS headers) and inside the HTTPS redirect.
+    if settings.auth_required:
+        app.middleware("http")(session_middleware(settings))
     if settings.cors_origins:
         app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
                            allow_credentials=True, allow_methods=["GET", "POST"],
@@ -195,6 +201,7 @@ def create_app(
             log.warning("regime unavailable: %s", exc)
             raise HTTPException(status_code=503, detail="regime unavailable") from exc
 
+    app.include_router(build_auth_router(settings))
     app.include_router(build_finance_router(settings.db_path, today))
     app.include_router(build_news_router(settings.db_path, today))
     if llm is None and settings.llm_configured:

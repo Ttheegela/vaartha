@@ -64,6 +64,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/login/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login Options
+         * @description PublicKeyCredentialRequestOptions for a discoverable passkey (empty allowCredentials).
+         */
+        post: operations["login_options_api_auth_login_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login Verify
+         * @description Verify the assertion against a stored passkey; 401 on any failure.
+         */
+        post: operations["login_verify_api_auth_login_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Delete this browser's session server-side and clear the cookie.
+         */
+        post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/register/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Options
+         * @description PublicKeyCredentialCreationOptions; needs a valid setup code (403 otherwise).
+         */
+        post: operations["register_options_api_auth_register_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/register/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Verify
+         * @description Burn the setup code, verify the attestation, store the passkey and unlock.
+         */
+        post: operations["register_verify_api_auth_register_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Status
+         * @description Whether the lock is on, this browser is unlocked, and any passkey exists.
+         */
+        get: operations["status_api_auth_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/briefing": {
         parameters: {
             query?: never;
@@ -692,6 +812,16 @@ export interface components {
             link_token: string;
         };
         /**
+         * LoginVerifyIn
+         * @description The browser's navigator.credentials.get() result (JSON).
+         */
+        LoginVerifyIn: {
+            /** Credential */
+            credential: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * MerchantSpendOut
          * @description Total spend and transaction count for one merchant.
          */
@@ -756,6 +886,17 @@ export interface components {
             topics: string[];
             /** Url */
             url: string | null;
+        };
+        /**
+         * OkOut
+         * @description Unlocked.
+         */
+        OkOut: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
         };
         /**
          * RecurringListOut
@@ -827,6 +968,18 @@ export interface components {
             spy_dd: number;
         };
         /**
+         * RegisterVerifyIn
+         * @description Setup code plus the browser's navigator.credentials.create() result (JSON).
+         */
+        RegisterVerifyIn: {
+            /** Credential */
+            credential: {
+                [key: string]: unknown;
+            };
+            /** Setup Code */
+            setup_code: string;
+        };
+        /**
          * SentimentPoint
          * @description Confidence-weighted mean sentiment for one day and channel.
          */
@@ -842,6 +995,14 @@ export interface components {
             items: number;
             /** Sentiment */
             sentiment: number;
+        };
+        /**
+         * SetupCodeIn
+         * @description One-time setup code from the CLI.
+         */
+        SetupCodeIn: {
+            /** Setup Code */
+            setup_code: string;
         };
         /**
          * SourceOut
@@ -870,6 +1031,18 @@ export interface components {
             cash_flow: components["schemas"]["CashFlowMonth"][];
             /** Month */
             month: string;
+        };
+        /**
+         * StatusOut
+         * @description Lock state for the web app.
+         */
+        StatusOut: {
+            /** Auth Required */
+            auth_required: boolean;
+            /** Authenticated */
+            authenticated: boolean;
+            /** Has Credentials */
+            has_credentials: boolean;
         };
         /**
          * SyncOut
@@ -993,6 +1166,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_options_api_auth_login_options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    login_verify_api_auth_login_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginVerifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    register_options_api_auth_register_options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupCodeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_verify_api_auth_register_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterVerifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_auth_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusOut"];
                 };
             };
         };

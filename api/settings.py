@@ -13,6 +13,9 @@ DEMO_CHAT_RATE = 20
 DEMO_ADMIN_RATE = 5  # sync / link_token / exchange calls per IP per hour on the demo
 DEFAULT_TZ = "America/New_York"
 REDIRECT_SCHEME = "https"  # Plaid allows http://localhost only in sandbox; we require https
+AUTH_IDLE_MINUTES = 15  # owner session idle timeout (env AUTH_IDLE_MINUTES)
+PASSKEY_RP_NAME = "Vārtā"
+DEV_HOST = "localhost"  # the only host allowed a plain-http passkey origin
 
 
 def _check_redirect_uri(uri: str) -> None:
@@ -21,6 +24,24 @@ def _check_redirect_uri(uri: str) -> None:
     if parts.scheme != REDIRECT_SCHEME or not parts.hostname or any(c in uri for c in "*?#"):
         raise ValueError("PLAID_REDIRECT_URI must be an https URL with no wildcard, "
                          f"query or fragment, got {uri!r}")
+
+
+def _check_passkey_config(rp_id: str | None, origin: str | None) -> None:
+    """Fail closed: the owner lock needs an RP ID and an exact https origin on that RP ID.
+
+    http is allowed only for http://localhost[:port] (local dev).
+    """
+    if not rp_id or not origin:
+        raise ValueError("PASSKEY_RP_ID and PASSKEY_ORIGIN are required when the owner lock is on "
+                         "(set OWNER_AUTH=0 to disable it for local dev)")
+    parts = urlsplit(origin)
+    host = parts.hostname or ""
+    exact = origin == f"{parts.scheme}://{parts.netloc}" and "@" not in parts.netloc
+    secure = parts.scheme == "https" or (parts.scheme == "http" and host == DEV_HOST)
+    on_rp = host == rp_id or host.endswith("." + rp_id)
+    if not (host and exact and secure and on_rp):
+        raise ValueError(f"PASSKEY_ORIGIN must be https://<host on PASSKEY_RP_ID> "
+                         f"(or http://localhost), got {origin!r} for RP ID {rp_id!r}")
 
 
 def local_today(tz: str, now: datetime | None = None) -> date:
@@ -53,6 +74,11 @@ class Settings:
     cors_origins: tuple[str, ...] = ()
     cookie_domain: str | None = None
     plaid_redirect_uri: str | None = None  # OAuth return URL registered in the Plaid Dashboard
+    auth_required: bool | None = None  # None = on for the owner instance (fail closed)
+    passkey_rp_id: str | None = None
+    passkey_origin: str | None = None
+    passkey_rp_name: str = PASSKEY_RP_NAME
+    auth_idle_minutes: int = AUTH_IDLE_MINUTES
 
     def __post_init__(self) -> None:
         if self.plaid_env not in PLAID_ENVS:
@@ -63,6 +89,15 @@ class Settings:
             _check_redirect_uri(self.plaid_redirect_uri)
         if "*" in self.cors_origins:
             raise ValueError("CORS_ORIGINS must list explicit origins, not *")
+        if self.auth_required is None:
+            object.__setattr__(self, "auth_required", self.instance == "owner")
+        if self.auth_idle_minutes <= 0:
+            raise ValueError("AUTH_IDLE_MINUTES must be positive")
+
+    def check_auth_config(self) -> None:
+        """Raise unless the passkey lock is off or fully configured (called at app startup)."""
+        if self.auth_required:
+            _check_passkey_config(self.passkey_rp_id, self.passkey_origin)
 
     @property
     def plaid_configured(self) -> bool:
@@ -76,7 +111,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        """Read VARTA_*, PLAID_*, TOKEN_ENCRYPTION_KEY and news keys; reject bad combinations."""
+        """Read VARTA_*, PLAID_*, PASSKEY_*, TOKEN_ENCRYPTION_KEY, news keys; reject bad combos."""
         instance = os.environ.get("VARTA_INSTANCE", "demo")
         if instance not in INSTANCES:
             raise ValueError(f"VARTA_INSTANCE must be one of {INSTANCES}, got {instance!r}")
@@ -104,4 +139,9 @@ class Settings:
             cors_origins=tuple(o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",")
                                if o.strip()),
             cookie_domain=os.environ.get("COOKIE_DOMAIN") or None,
+            auth_required=instance == "owner" and os.environ.get("OWNER_AUTH") != "0",
+            passkey_rp_id=os.environ.get("PASSKEY_RP_ID") or None,
+            passkey_origin=os.environ.get("PASSKEY_ORIGIN") or None,
+            passkey_rp_name=os.environ.get("PASSKEY_RP_NAME") or PASSKEY_RP_NAME,
+            auth_idle_minutes=int(os.environ.get("AUTH_IDLE_MINUTES") or AUTH_IDLE_MINUTES),
         )
