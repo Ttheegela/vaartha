@@ -13,7 +13,7 @@ chmod 600 ~/.config/vaartha/owner.env
 Set: `PLAID_ENV=production` with `PLAID_CLIENT_ID` / `PLAID_SECRET` (Trial keys) and a new
 `TOKEN_ENCRYPTION_KEY` (`uv run python -m scripts.new_token_key`); the news keys
 (`FINNHUB_API_KEY`, `TYPESAFE_API_KEY`, `SEC_USER_AGENT`); `OPENROUTER_API_KEY` (owner key with its
-own cap), `LLM_BASE_URL`, `LLM_MODEL`; `VARTA_TZ`. Do not set `VARTA_INSTANCE=demo`. The script
+own cap), `LLM_BASE_URL`, `LLM_MODEL`; `VARTA_TZ`; `OWNER_NAME` (your first name for the home greeting). Do not set `VARTA_INSTANCE=demo`. The script
 forces the instance, DB and backup paths, and the worker.
 
 Values containing spaces must be quoted, e.g. `SEC_USER_AGENT="Your Name you@example.com"`; the file is
