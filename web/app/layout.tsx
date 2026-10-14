@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const instrumentSerif = Instrument_Serif({ subsets: ["latin", "latin-ext"], variable: "--font-instrument-serif", weight: "400", style: ["normal", "italic"] })
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-plex-mono", weight: ["400", "500", "600"] })
 
-export const metadata: Metadata = { title: { default: "Vārtā — your proactive financial advisor", template: "%s · Vārtā" }, description: "A calm, proactive personal finance and investing advisor." }
+export const metadata: Metadata = { title: { default: "Vārtā — your proactive financial advisor", template: "%s · Vārtā" }, description: "A calm, proactive personal finance and investing advisor.", appleWebApp: { capable: true, title: "Vārtā", statusBarStyle: "black-translucent" } }
 export const viewport: Viewport = { colorScheme: "dark", themeColor: "#0a0a0a", userScalable: true }
 
 export const dynamic = "force-dynamic" // VARTA_INSTANCE is read per request, not frozen at build

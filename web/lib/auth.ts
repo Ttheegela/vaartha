@@ -11,7 +11,7 @@ const UNSAFE_NEXT = /[\\\u0000-\u001f\u007f]/
 const NEXT_BASE = "http://next.invalid"
 const PUBLIC_PATHS = new Set([LOCK_PATH, "/manifest.webmanifest", "/favicon.ico"])
 const PUBLIC_PREFIXES = ["/api/", "/_next/"]
-const APP_ICON = /^\/(apple-)?icon\d*(\.\w+)?$/ // Next metadata icon routes: /icon.svg, /icon1.png, /apple-icon.png
+const APP_ICON = /^\/(apple-)?icon(\d*(\.\w+)?|\/\d+)$/ // Next metadata icon routes: /icon.svg, /icon1.png, /apple-icon.png, /icon/192
 const RSC_PARAM = "_rsc"
 
 /** Cookie header for the API: the visitor id and session token, each only if well-formed. */
