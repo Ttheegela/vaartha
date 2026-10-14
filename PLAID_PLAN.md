@@ -135,7 +135,14 @@ not_applicable. Evidence: API booted against Sandbox and every new endpoint answ
 unknown item 404, update mode 200, link_event 204, bad public token 502, duplicate bank 409, sync 200);
 sandbox personas user_good (14 accounts, 13 holdings, 394 transactions, 9 recurring streams) and
 user_transactions_dynamic (7 accounts, 392 transactions); reset_login → login_required → update-mode
-token 200. Not done: clicking through Link in a browser (the preview tool could not start `pnpm dev`).
+token 200.
+
+Fix round 1 (2026-10-14): browser click-through on Sandbox passed (coordinator: new link → onSuccess →
+exchange → sync → 14 accounts; this round: Reconnect on a reset_login item opened Link straight at the
+bank, onSuccess re-synced without an exchange, item back to active, one link-initialize.js tag and one
+Plaid iframe throughout, saved session cleared; `/oauth-return` with an invalid saved token shows "Start
+again from Accounts"). API log had no token strings. Removed-item double counting covered by
+`test_removed_item_not_double_counted_after_relink`. Acceptance verdict unchanged: open human tasks only.
 
 ## Maintenance
 
@@ -163,7 +170,12 @@ token 200. Not done: clicking through Link in a browser (the preview tool could 
 - **Link script loading**: the app loads link-initialize.js itself (once, module-level promise) and mounts `usePlaidLink` only after it is present, so react-plaid-link's loader finds the existing tag and never re-inserts it.
 - **Redirect URI validation**: https only, even in sandbox (Plaid would allow http://localhost there); no wildcard, query or fragment.
 - **Reconnect codes**: ITEM_LOGIN_REQUIRED, INVALID_CREDENTIALS, ITEM_LOCKED, ACCESS_NOT_GRANTED all surface as `login_required` → Reconnect.
-- **ITEM_NOT_FOUND**: token purged, history kept until the user runs `scripts/remove_item.py`.
+- **ITEM_NOT_FOUND**: token purged, holdings dropped, transaction/account history kept until the user runs `scripts/remove_item.py`. Accounts of such items are left out of every total (accounts, spending, budgets, goals, recurring, net-worth snapshots, and the advisor tools that read those endpoints) through one shared SQL predicate (`LIVE_ACCOUNT` in `api/sync.py`), so re-linking the bank (new account_ids) does not double count. The Accounts page shows "Removed at bank — link again".
+- **One Plaid handler per page**: `PlaidLinkProvider` owns it. "Link account" pre-initializes on page load (CONV-003, WEB-001); Reconnect fetches its update-mode token only on click, takes over the handler (the old one is destroyed first, WEB-011) and opens it, then the new-link handler comes back with a fresh token.
+- **Demo rate limits**: `/api/plaid/link_token` has its own per-IP budget (20/h) separate from exchange/sync (5/h), so page loads cannot starve the exchange after a visitor finishes Link. `/api/plaid/link_event` has its own 120/h and rejects bodies over 4 KB (413) before parsing.
+- **Accepted risk (demo)**: any demo visitor can request a Reconnect (update-mode) link token for any sandbox item_id. Sandbox only, rate-limited, and the response is a link_token, never an access_token; the owner instance is Tailscale-only.
+- **Dedupe granularity**: one item per `institution_id` (stored at exchange time from Link's onSuccess metadata, then refreshed from `/accounts/get`). ITEM-011's finer check (persistent_account_id, else account mask + subtype) is deferred: one user, one login per bank. Comment at the dedupe in `api/main.py`.
+- **Demo has no redirect URI**: `PLAID_REDIRECT_URI` is unset on Heroku (sandbox, non-OAuth test banks only); documented in `deploy/heroku.md`.
 - **Recurring**: own detector stays primary; Plaid Recurring Transactions is an add-later candidate.
 
 ## Open questions
@@ -172,4 +184,4 @@ token 200. Not done: clicking through Link in a browser (the preview tool could 
 2. Flag or hide accounts Plaid no longer returns (TXN-012; STATUS open item 2).
 3. Show an "importing history" state after linking (TXN-008)? Without webhooks it would key off `transactions_update_status` from the sync response.
 4. Switch subscriptions/bills to Plaid Recurring Transactions now that it is entitled (TXN-016)?
-5. The browser flow (StrictMode fix, OAuth return, Reconnect) is covered by typecheck/build, unit tests and a backend sandbox run; it still needs one manual click-through in a browser.
+5. Real OAuth return (a bank redirect back to `/oauth-return`) is untested until the redirect URI is registered (H2); Sandbox Platypus OAuth Bank is the first check after that.
