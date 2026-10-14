@@ -142,7 +142,13 @@ exchange → sync → 14 accounts; this round: Reconnect on a reset_login item o
 bank, onSuccess re-synced without an exchange, item back to active, one link-initialize.js tag and one
 Plaid iframe throughout, saved session cleared; `/oauth-return` with an invalid saved token shows "Start
 again from Accounts"). API log had no token strings. Removed-item double counting covered by
-`test_removed_item_not_double_counted_after_relink`. Acceptance verdict unchanged: open human tasks only.
+`test_removed_item_not_double_counted_after_relink`.
+
+Verdict after fix round 1: FAIL on CHECK-007 and CHECK-009 (open human tasks) and CHECK-003. CHECK-003
+failed because a browser-inspection script during verification printed one Sandbox update-mode
+link_token (read from localStorage) into the agent transcript. No client_id, secret or access_token was
+exposed. Link tokens cannot be rotated; this one was Sandbox-only and expired 30 minutes after creation.
+Future browser checks must report whether the saved session exists, never its value.
 
 ## Maintenance
 
