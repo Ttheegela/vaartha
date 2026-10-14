@@ -20,7 +20,8 @@ Tests: 290 Python (`uv run pytest -q`), 55 web (`cd web && pnpm test`); ruff, ts
 
 ## Live
 
-- **Demo:** https://demo.vaartha.tech (web, Heroku `vaartha-web`, Eco) + https://api.vaartha.tech (API, Heroku `vaartha-api`, Basic, embedded scheduler). Deployed 2026-10-13 via `gh workflow run deploy-heroku.yml --ref claude/varta-v2-ec24da`. Verified: HTTPS (ACM), /healthz, Plaid Sandbox seed, news + Jev scoring, briefing on Home, SSE chat with CORS + `.vaartha.tech` cookie, 21st chat/hour → 429.
+- **Demo:** https://demo.vaartha.tech (web, Heroku `vaartha-web`, Eco) + https://api.vaartha.tech (API, Heroku `vaartha-api`, Basic, embedded scheduler). Deployed 2026-10-13 via `gh workflow run deploy-heroku.yml --ref claude/varta-v2-ec24da`. Verified: HTTPS (ACM), /healthz, Plaid Sandbox seed, news + Jev scoring, briefing on Home, SSE chat with CORS + `.vaartha.tech` cookie, 21st chat/hour → 429. HTTP → HTTPS 308 redirects on both hosts (2026-10-13).
+- Plaid trial commitments: secret scanning + push protection + Dependabot security updates on (0 alerts), weekly Dependabot version PRs, `scripts/remove_item.py` unlinks a bank and deletes its data, FileVault on for the owner DB. MFA + password manager are Tarun's to keep.
 - Heroku credit: GitHub Student $312, expires 2028-09-30. Domain vaartha.tech (Namecheap) expires 2027-10-13. Calendar reminders exist for both.
 
 ## Next
