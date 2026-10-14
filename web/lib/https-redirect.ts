@@ -1,7 +1,10 @@
-/** Where to send a plain-http request behind a TLS-terminating proxy, or null to pass through. */
-export function httpsRedirectUrl(url: string, proto: string | null, force: boolean): string | null {
-  if (!force || proto !== "http") return null
-  const u = new URL(url)
-  u.protocol = "https:"
-  return u.toString()
+/** Public https URL for a plain-http request behind a TLS proxy, or null to pass through. */
+export function httpsRedirectUrl(
+  host: string | null,
+  pathWithQuery: string,
+  proto: string | null,
+  force: boolean,
+): string | null {
+  if (!force || proto !== "http" || !host) return null
+  return `https://${host}${pathWithQuery}`
 }
