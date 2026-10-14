@@ -51,3 +51,7 @@ launchctl load ~/Library/LaunchAgents/dev.vaartha.owner.plist
 - Scheduled jobs catch up on wake.
 - Backups: `~/Library/Application Support/Vaartha/backups`.
 - Moving to a VPS later: restore the backup and follow `docs/superpowers/plans/2026-10-12-deploy.md`.
+
+## Stop using Vārtā
+
+Run `scripts/remove_item.py` for each item (`--list` shows them; it revokes access at Plaid and deletes the item's local data), then `scripts/owner.sh stop` and delete `~/Library/Application Support/Vaartha` and `~/.config/vaartha`.

@@ -175,6 +175,10 @@ class FakePlaid:
     def sandbox_public_token_create(self, institution_id, products):
         return "public-fake-1"
 
+    def item_remove(self, access_token):
+        """Pretend to unlink the item."""
+        self._maybe_fail("item_remove")
+
     def modify_and_remove(self, modified_id: str, new_amount: float, removed_id: str) -> None:
         """Queue a modified and a removed transaction for the next incremental sync."""
         txn = next(t for t in self.data["transactions"] if t["transaction_id"] == modified_id)

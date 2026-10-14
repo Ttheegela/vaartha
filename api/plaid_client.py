@@ -35,6 +35,7 @@ class PlaidAPI(Protocol):
     def transactions_sync(self, access_token: str, cursor: str | None) -> dict: ...
     def investments_holdings_get(self, access_token: str) -> dict: ...
     def sandbox_public_token_create(self, institution_id: str, products: list[str]) -> str: ...
+    def item_remove(self, access_token: str) -> None: ...
 
 
 class PlaidClient:
@@ -120,3 +121,7 @@ class PlaidClient:
             "options": {"transactions": {"days_requested": MAX_HISTORY_DAYS}},
         })
         return self._field(data, "public_token")
+
+    def item_remove(self, access_token: str) -> None:
+        """Invalidate the access token and stop Plaid's access to the item (/item/remove)."""
+        self._post("/item/remove", {"access_token": access_token})
