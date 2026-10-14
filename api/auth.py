@@ -2,7 +2,7 @@
 
 Only one person uses the owner instance, so there are no user accounts: any registered passkey
 unlocks it. Registering a passkey always needs a fresh one-time setup code from the CLI
-(`python -m scripts.passkey setup-code`). Tokens, challenges and codes are never logged.
+(`scripts/owner.sh passkey setup-code`). Tokens, challenges and codes are never logged.
 """
 
 import hashlib
