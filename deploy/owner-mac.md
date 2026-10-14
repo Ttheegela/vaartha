@@ -54,4 +54,8 @@ launchctl load ~/Library/LaunchAgents/dev.vaartha.owner.plist
 
 ## Stop using Vārtā
 
-Run `scripts/remove_item.py` for each item (`--list` shows them; it revokes access at Plaid and deletes the item's local data), then `scripts/owner.sh stop` and delete `~/Library/Application Support/Vaartha` and `~/.config/vaartha`.
+1. `scripts/owner.sh stop`.
+2. Run `scripts/remove_item.py` for each item (`--list` shows them; it revokes access at Plaid and deletes the item's local data).
+3. Delete `~/Library/Application Support/Vaartha` and `~/.config/vaartha`.
+
+Net-worth snapshots keep aggregate history until the data dir is deleted.

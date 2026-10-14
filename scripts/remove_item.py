@@ -63,6 +63,8 @@ def main(argv: list[str] | None = None, settings: Settings | None = None) -> Non
     institution = next((i for k, i, _ in items if k == args.item_id), None)
     if institution is None and not any(k == args.item_id for k, _, _ in items):
         raise SystemExit(f"no such item: {args.item_id}")
+    if institution is None and not args.yes:
+        raise SystemExit("institution name unknown; re-run with --yes to confirm")
     prompt = f"Type the institution name to confirm ({institution}): "
     if not args.yes and input(prompt) != institution:
         raise SystemExit("not confirmed; nothing removed")
