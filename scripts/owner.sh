@@ -33,7 +33,21 @@ check() {
     echo "VARTA_INSTANCE=demo in env file; the owner instance must not be demo" >&2
     return 1
   fi
+  if [ "$(envval OWNER_AUTH)" != "0" ]; then
+    local v
+    for v in PASSKEY_RP_ID PASSKEY_ORIGIN; do
+      if [ -z "$(envval "$v")" ]; then
+        echo "$v is not set in the env file (or set OWNER_AUTH=0 to disable the passkey lock)" >&2
+        return 1
+      fi
+    done
+  fi
   echo "ok: $ENV_FILE"
+}
+
+# envval NAME: value of NAME from the env file, read in a clean shell (never echoed by callers).
+envval() {
+  env -i HOME="$HOME" PATH="$PATH" bash -c 'set -a; . "$1" >/dev/null 2>&1; eval "printf %s \"\${$2:-}\""' _ "$ENV_FILE" "$1"
 }
 
 # alive PIDFILE MARKER: pid is live AND its command contains MARKER (guards recycled pids after reboot/crash).
@@ -84,12 +98,30 @@ start() {
   if alive "$DATA_DIR/web.pid" "$(marker web)"; then echo "web already running"; else
     (
       cd "$ROOT"
-      HOSTNAME=127.0.0.1 PORT="$WEB_PORT" VARTA_INSTANCE=owner \
+      auth=1; [ "$(envval OWNER_AUTH)" = "0" ] && auth=0
+      HOSTNAME=127.0.0.1 PORT="$WEB_PORT" VARTA_INSTANCE=owner VARTA_AUTH="$auth" \
+        PASSKEY_ORIGIN="$(envval PASSKEY_ORIGIN)" \
         nohup node "$STANDALONE/server.js" >>"$LOG_DIR/web.log" 2>&1 &
       echo $! >"$DATA_DIR/web.pid"
     )
   fi
   echo "started: web http://127.0.0.1:$WEB_PORT, api http://127.0.0.1:8000 (logs: $LOG_DIR)"
+  passkey_hint
+}
+
+# Print the setup line when the API is up, auth is on and no passkey is registered yet. Never fails start.
+passkey_hint() {
+  local i st
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    st="$(curl -s -m 2 http://127.0.0.1:8000/api/auth/status 2>/dev/null || true)"
+    [ -n "$st" ] && break
+    sleep 1
+  done
+  case "$st" in
+    *'"auth_required":true'*'"has_credentials":false'* | *'"has_credentials":false'*'"auth_required":true'*)
+      echo "No passkey yet: run 'uv run python -m scripts.passkey setup-code' and open $(envval PASSKEY_ORIGIN)/lock" ;;
+  esac
+  return 0
 }
 
 stop() {

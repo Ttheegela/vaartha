@@ -41,7 +41,7 @@ def test_demo_instance_refused(tmp_path):
 
 
 def test_valid_and_no_values_printed(tmp_path):
-    r = _check(tmp_path, f"VARTA_INSTANCE=owner\nTOKEN={SENTINEL}\n")
+    r = _check(tmp_path, f"VARTA_INSTANCE=owner\nOWNER_AUTH=0\nTOKEN={SENTINEL}\n")
     assert r.returncode == 0
     assert SENTINEL not in r.stdout + r.stderr
 
@@ -49,6 +49,16 @@ def test_valid_and_no_values_printed(tmp_path):
 def test_sentinel_not_printed_on_failure(tmp_path):
     r = _check(tmp_path, f"VARTA_INSTANCE=demo\nTOKEN={SENTINEL}\n")
     assert SENTINEL not in r.stdout + r.stderr
+
+
+def test_passkey_vars_required_unless_auth_off(tmp_path):
+    r = _check(tmp_path, f"TOKEN={SENTINEL}\nPASSKEY_RP_ID=\n")
+    assert r.returncode == 1
+    assert "PASSKEY_RP_ID" in r.stdout + r.stderr and SENTINEL not in r.stdout + r.stderr
+    r = _check(tmp_path, "PASSKEY_RP_ID=h.example\n")
+    assert r.returncode == 1 and "PASSKEY_ORIGIN" in r.stdout + r.stderr
+    assert _check(tmp_path, "PASSKEY_RP_ID=h.example\nPASSKEY_ORIGIN=https://h.example\n").returncode == 0
+    assert _check(tmp_path, "OWNER_AUTH=0\n").returncode == 0
 
 
 def test_unquoted_spaces_rejected(tmp_path):
@@ -61,7 +71,7 @@ def test_unquoted_spaces_rejected(tmp_path):
 
 def test_shell_instance_not_inherited(tmp_path):
     env_file = tmp_path / "owner.env"
-    env_file.write_text("FOO=1\n")
+    env_file.write_text("OWNER_AUTH=0\n")
     env_file.chmod(0o600)
     env = {**os.environ, "VAARTHA_OWNER_ENV": str(env_file), "VARTA_INSTANCE": "demo"}
     r = subprocess.run(["bash", str(SCRIPT), "check"], env=env, capture_output=True, text=True)
