@@ -17,7 +17,7 @@ test("lockPath carries the encoded path and query", () => {
 })
 
 test("needsSession skips lock, api and app assets, but not pages like oauth-return", () => {
-  for (const p of ["/", "/accounts", "/oauth-return", "/settings", "/lockdown", "/apis", "/icons", "/iconic-page", "/apple-icons", "/icon/", "/icon/abc", "/icon/192/x", "/manifest.webmanifest.x"]) assert.equal(needsSession(p), true, p)
+  for (const p of ["/", "/accounts", "/oauth-return", "/settings", "/lockdown", "/apis", "/icons", "/iconic-page", "/apple-icons", "/icon/", "/apple-icon/123", "/icon/abc", "/icon/192/x", "/manifest.webmanifest.x"]) assert.equal(needsSession(p), true, p)
   for (const p of ["/lock", "/api/auth/status", "/api/accounts", "/manifest.webmanifest", "/icon.svg", "/icon", "/icon1.png", "/icon/192", "/icon/512", "/apple-icon.png", "/apple-icon", "/favicon.ico", "/_next/static/x.js"])
     assert.equal(needsSession(p), false, p)
 })

@@ -11,5 +11,5 @@ export function generateImageMetadata() {
 
 export default async function Icon({ id }: { id: Promise<string> }) {
   const s = Number(await id)
-  return markImage(s, Math.round(s * 0.28))
+  return await markImage(s, Math.round(s * 0.28))
 }
